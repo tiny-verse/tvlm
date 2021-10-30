@@ -5,6 +5,8 @@
 #include "common/helpers.h"
 #include "common/ast.h"
 
+#include <memory>
+
 namespace tvlm {
 
     using ASTBase = tiny::ASTBase;
@@ -369,7 +371,7 @@ class BasicBlock {
         }
 
     private:
-        friend class Builder;
+        friend class ILBuilder;
 
         ASTBase const * ast_;
 
