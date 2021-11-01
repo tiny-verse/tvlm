@@ -6,6 +6,7 @@ namespace tvlm {
 
     class ILBuilder {
     public:
+
         struct Context {
             BasicBlock * breakTarget;
             BasicBlock * continueTarget;

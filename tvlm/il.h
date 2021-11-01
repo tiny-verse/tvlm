@@ -108,18 +108,18 @@ namespace tvlm {
     class Instruction::ImmValue : public Instruction {
     public:
 
-        int value() {
+        int64_t value() {
             return value_;   
         }
 
     protected:
 
-        ImmValue(int value, ASTBase const * ast):
+        ImmValue(int64_t value, ASTBase const * ast):
             Instruction{ResultType::Integer, ast},
             value_{value} {
         }
 
-        int value_;
+        int64_t value_;
     };
 
     class Instruction::BinaryOperator : public Instruction {
@@ -279,7 +279,7 @@ namespace tvlm {
 };
 #define ImmSize(ENCODING) (size_t size, ASTBase const * ast) : Instruction::ENCODING{size, ast} {}
 #define ImmIndex(ENCODING) (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast} {}
-#define ImmValue(ENCODING) (int value, ASTBase const * ast) : Instruction::ENCODING{value, ast} {}
+#define ImmValue(ENCODING) (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast} {}
 #define BinaryOperator(ENCODING) (Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{lhs, rhs, ast} {}
 #define UnaryOperator(ENCODING) (Instruction * operand, ASTBase const * ast): Instruction::ENCODING{operand, ast} {}
 #define Terminator0(ENCODING) (ASTBase const * ast): Instruction::ENCODING{ast} {}
@@ -369,7 +369,7 @@ class BasicBlock {
         }
 
     private:
-        friend class Builder;
+        friend class ILBuilder;
 
         ASTBase const * ast_;
 
