@@ -1,7 +1,9 @@
 #pragma once
 
 #include "il.h"
-
+namespace tinyc {
+    class ASTtoIL;
+};
 namespace tvlm {
 
     class ILBuilder {
@@ -41,6 +43,7 @@ namespace tvlm {
                 else
                     ins->setName(STR("g" << (globalRegisterCounter_++)));
             }
+            lastInstr_ = ins;
             return ins;
         }
 
@@ -124,7 +127,16 @@ namespace tvlm {
             return alloc;
         }
 
-        Instruction * getStringLiteral(std::string const & lit);
+        Instruction * getStringLiteral(std::string const & lit, const tiny::ASTBase * ast){
+            auto i = stringLiterals_.find(lit);
+            if (i == stringLiterals_.end()) {
+                Instruction * addr = globals_->add(new tvlm::AllocG{lit.size() + 1, ast});
+                stringLiterals_.insert(std::make_pair(lit, addr));
+                return addr;
+            } else {
+                return i->second;
+            }
+        }
 
         void print(tiny::ASTPrettyPrinter & p) const {
             globals_->print(p);
@@ -132,14 +144,36 @@ namespace tvlm {
                 i.second->print(p);
         }
 
-    /*
-        size_t sizeOfType(Type * t) {
-            return 4;
+        Program finish(){
+            return Program(std::move(stringLiterals_),
+                           std::move(functions_),
+                           std::move(globals_));
         }
-    */
+
+        const std::unordered_map<Symbol, std::unique_ptr<Function>> & functions()const {
+            return functions_;
+        }
+
+        Function * findFnc(Symbol & name) const{
+            auto r = functions_.find(name);
+            return (r != functions_.end()) ? r->second.get() : nullptr;
+        }
+
+//        size_t sizeOfType(Type * t) {
+//            return 4; //TODO
+//        }
+
+        Instruction * lastInstr()const {
+            return lastInstr_;
+        }
+
+
+        bool globalEnv(){
+            return env_->parent == nullptr;
+        }
 
     private:
-
+        friend class tinyc::ASTtoIL;
         // wrappers to backend who manages the types for us
         /*
         Type * getType(Symbol symbol);
@@ -186,6 +220,8 @@ namespace tvlm {
 
         size_t localRegisterCounter_ = 0;
         size_t globalRegisterCounter_ = 0;
+
+        Instruction * lastInstr_ = nullptr;
     }; // Builder
 
 

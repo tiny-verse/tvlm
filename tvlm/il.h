@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <memory>
+
 #include "common/helpers.h"
 #include "common/ast.h"
 
@@ -35,8 +37,15 @@ namespace tvlm {
         class StoreAddress;
         class Terminator;
         class Terminator0;
+        class Returnator;
         class Terminator1;
         class TerminatorN;
+        class SrcInstruction;
+        class PhiInstruction;
+        class VoidInstruction;
+        class CallInstruction;
+        class DirectCallInstruction;
+        class IndirectCallInstruction;
 
         virtual ~Instruction() = default;
 
@@ -53,6 +62,7 @@ namespace tvlm {
         void setName(std::string const & value) {
             name_ = value;
         }
+
 
     protected:
 
@@ -111,15 +121,24 @@ namespace tvlm {
         int64_t value() {
             return value_;   
         }
+        int64_t fvalue() {
+            return fvalue_;
+        }
 
     protected:
 
         ImmValue(int64_t value, ASTBase const * ast):
             Instruction{ResultType::Integer, ast},
-            value_{value} {
+            value_{value}, fvalue_{0}{
+        }
+
+        ImmValue(double value, ASTBase const * ast):
+                Instruction{ResultType::Double, ast},
+                value_{0}, fvalue_{value} {
         }
 
         int64_t value_;
+        double fvalue_;
     };
 
     class Instruction::BinaryOperator : public Instruction {
@@ -133,8 +152,9 @@ namespace tvlm {
         }
 
     protected:
-        BinaryOperator(Instruction * lhs, Instruction * rhs, ASTBase const * ast):
+        BinaryOperator(Symbol op, Instruction * lhs, Instruction * rhs, ASTBase const * ast):
             Instruction{GetResultType(lhs, rhs), ast},
+            op_{op},
             lhs_{lhs},
             rhs_{rhs} {
         }        
@@ -148,6 +168,7 @@ namespace tvlm {
         }
 
     private:
+        Symbol op_;
         Instruction * lhs_;
         Instruction * rhs_;    
     };
@@ -158,13 +179,16 @@ namespace tvlm {
             return operand_;
         }
     protected:
-        UnaryOperator(Instruction * operand, ASTBase const * ast):
+        UnaryOperator(Symbol op, Instruction * operand, ASTBase const * ast):
             Instruction{operand->resultType(), ast},
+            op_{op},
             operand_{operand} {
         }
 
     private:
+        Symbol op_;
         Instruction * operand_;
+
     }; 
 
     class Instruction::LoadAddress : public Instruction {
@@ -174,8 +198,8 @@ namespace tvlm {
 
     protected:
 
-        LoadAddress(Instruction * address, ASTBase const * ast):
-            Instruction{ResultType::Integer, ast},
+        LoadAddress(Instruction * address,ResultType type, ASTBase const * ast):
+            Instruction{type, ast},
             address_{address} {
         }
     private:
@@ -216,7 +240,7 @@ namespace tvlm {
         Terminator(ASTBase const * ast):
             Instruction{ResultType::Void, ast} {
         }
-    };
+    }; // Instruction::Terminator
 
     class Instruction::Terminator0 : public Instruction::Terminator {
     public:
@@ -229,7 +253,20 @@ namespace tvlm {
         Terminator0(ASTBase const * ast):
             Terminator{ast} {
         }
-    };
+    }; // Instruction::Terminator0
+
+    class Instruction::Returnator : public Instruction::Terminator0 {
+    public:
+        Instruction * returnValue()const{
+            return returnValue_;
+        }
+    protected:
+
+        Returnator(Instruction * retValue, ASTBase const * ast):
+            Terminator0{ast}, returnValue_{retValue} {
+        }
+        Instruction * returnValue_;
+    }; // Instruction::Returnator
 
     class Instruction::Terminator1 : public Instruction::Terminator {
     public:
@@ -246,7 +283,7 @@ namespace tvlm {
 
     private:
         BasicBlock * target_;
-    };
+    }; // Instruction::Terminator1
 
     class Instruction::TerminatorN : public Instruction::Terminator {
     public:
@@ -271,26 +308,129 @@ namespace tvlm {
     private:
         Instruction * cond_;
         std::vector<BasicBlock *> targets_;
-    };
+    }; // Instruction::TerminatorN
+
+    class Instruction::SrcInstruction : public Instruction{
+    public:
+        Instruction * src(){
+            return src_;
+        }
+    protected:
+        SrcInstruction(Instruction * src, ResultType type, ASTBase const * ast):
+                Instruction{type, ast},
+                src_{src}{
+
+        }
+    private:
+        Instruction * src_;
+    }; // Instruction::SrcInstruction
+
+    class Instruction::VoidInstruction : public Instruction{
+    public:
+    protected:
+        VoidInstruction( ResultType type, ASTBase const * ast):
+                Instruction{type, ast}{
+
+        }
+    }; // Instruction::VoidInstruction
+
+    class Instruction::PhiInstruction : public Instruction{
+    public:
+        void addIncomming( Instruction * src, BasicBlock * bb){
+            contents_.emplace(bb, src);
+        }
+
+    protected:
+        PhiInstruction( ResultType type, ASTBase const * ast):
+                Instruction{type, ast}{
+
+        }
+    private:
+        std::unordered_map<BasicBlock*, Instruction *> contents_;
+    }; // Instruction::PhiInstruction
+
+    class Instruction::CallInstruction : public Instruction{
+    public:
+        Instruction * operator [] (size_t i) const {
+            assert(i < args_.size());
+            return args_[i];
+        }
+
+
+    protected:
+        CallInstruction(std::vector<Instruction*> && args, ASTBase const * ast ):
+                Instruction{ResultType::Void, ast},
+                args_{args}{
+
+        }
+        std::vector<Instruction *> args_;
+    }; // Instruction::CallInstruction
+
+    class Instruction::DirectCallInstruction : public CallInstruction{
+    public:
+        Function * f() const {
+            return f_;
+        }
+
+    protected:
+        DirectCallInstruction(Function * f, std::vector<Instruction*> && args,const ASTBase * ast ):
+                CallInstruction{std::move(args), ast},
+                f_{f}
+                {
+
+        }
+        Function * f_;
+    }; // Instruction::DirectCallInstruction
+
+    class Instruction::IndirectCallInstruction : public CallInstruction{
+    public:
+        Instruction * f() const {
+            return f_;
+        }
+
+    protected:
+        IndirectCallInstruction(Instruction * f, std::vector<Instruction*> && args,const ASTBase * ast ):
+                CallInstruction{std::move(args), ast},
+                f_{f}
+                {
+
+        }
+        Instruction * f_;
+    }; // Instruction::IndirectCallInstruction
 
 #define INS(NAME, ENCODING) class NAME : public Instruction::ENCODING { \
     public: \
-        NAME ENCODING(ENCODING) \
+        ENCODING(NAME, ENCODING) \
 };
-#define ImmSize(ENCODING) (size_t size, ASTBase const * ast) : Instruction::ENCODING{size, ast} {}
-#define ImmIndex(ENCODING) (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast} {}
-#define ImmValue(ENCODING) (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast} {}
-#define BinaryOperator(ENCODING) (Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{lhs, rhs, ast} {}
-#define UnaryOperator(ENCODING) (Instruction * operand, ASTBase const * ast): Instruction::ENCODING{operand, ast} {}
-#define Terminator0(ENCODING) (ASTBase const * ast): Instruction::ENCODING{ast} {}
-#define Terminator1(ENCODING) (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast} {}
-#define TerminatorN(ENCODING) (Instruction * condition, ASTBase const * ast): Instruction::ENCODING{condition, ast} {}
-#define LoadAddress(ENCODING) (Instruction * address, ASTBase const * ast): Instruction::ENCODING{address, ast} {}
-#define StoreAddress(ENCODING) (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast} {}
+#define ImmSize(NAME, ENCODING) NAME (size_t size, ASTBase const * ast) : Instruction::ENCODING{size, ast} {}
+#define ImmIndex(NAME, ENCODING) NAME (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast} {}
+#define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast} {} \
+                                 NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast} {}
+#define BinaryOperator(NAME, ENCODING) NAME (Symbol op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, lhs, rhs, ast} {}
+#define UnaryOperator(NAME, ENCODING) NAME (Symbol op, Instruction * operand, ASTBase const * ast): Instruction::ENCODING{op, operand, ast} {}
+#define Terminator0(NAME, ENCODING) NAME (ASTBase const * ast): Instruction::ENCODING{ast} {}
+#define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, ASTBase const * ast): Instruction::ENCODING{returnValue, ast} {}
+#define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast} {}
+#define TerminatorN(NAME, ENCODING) NAME (Instruction * condition, ASTBase const * ast): Instruction::ENCODING{condition, ast} {}
+#define LoadAddress(NAME, ENCODING) NAME (Instruction * address, ResultType type, ASTBase const * ast): Instruction::ENCODING{address, type, ast} {}
+#define StoreAddress(NAME, ENCODING) NAME (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast} {}
+#define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast} {}
+#define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast} {}
+#define PhiInstruction(NAME, ENCODING) NAME ( ResultType type, ASTBase const * ast): Instruction::ENCODING{type, ast} {}
+
+
+#define INSTYPE(NAME, ENCODING, TYPE) class NAME : public Instruction::ENCODING { \
+    public: \
+        ENCODING(NAME, ENCODING, TYPE) \
+};
+
+#define SrcInstruction(NAME, ENCODING, TYPE) NAME (Instruction * src, ASTBase const * ast): Instruction::ENCODING{src, TYPE, ast} {}
+#define VoidInstruction(NAME, ENCODING, TYPE) NAME (ASTBase const * ast): Instruction::ENCODING{TYPE, ast} {}
 
 #include "il_insns.h"
 
-class BasicBlock {
+
+    class BasicBlock {
     public:
 
         Instruction * add(Instruction * ins) {
@@ -330,7 +470,7 @@ class BasicBlock {
     private:
         std::string name_;
         std::vector<std::unique_ptr<Instruction>> insns_;
-    };
+    }; // BasicBlock
 
     class Function {
     public:
@@ -356,16 +496,16 @@ class BasicBlock {
         }
 
         void print(tiny::ASTPrettyPrinter & p) const {
-            /*
-            p << p.comment << "function: " << ast_->type()->toString();
+
+            p << p.comment << "function: " ; //<< ast_->type()->toString();
             p.newline();
-            p << p.identifier << name_.name() << p.symbol << ":";
+            p << p.identifier << name_ << p.symbol << ":";
             p.indent();
             p.newline();
             for (auto & i : bbs_)
                 i->print(p);
             p.dedent();
-            */
+
         }
 
     private:
@@ -377,10 +517,19 @@ class BasicBlock {
 
         std::vector<std::unique_ptr<BasicBlock>> bbs_;
 
-    };   
+    };   // tvlm::Function
 
     class Program {
+    public:
+        Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
+                 std::unordered_map<Symbol, std::unique_ptr<Function>> && functions,
+                 std::unique_ptr<BasicBlock> && globals
+        ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)), globals_(std::move(globals)){}
 
+    private:
+        std::unordered_map<std::string, Instruction*> stringLiterals_;
+        std::unordered_map<Symbol, std::unique_ptr<Function>> functions_;
+        std::unique_ptr<BasicBlock> globals_;
     } ; // tvlm::Program
 
 } // namespace tvlm
