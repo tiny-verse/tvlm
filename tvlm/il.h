@@ -6,14 +6,18 @@
 
 #include "common/helpers.h"
 #include "common/ast.h"
+#include "tinyc/types.h"
 
 namespace tvlm {
 
     using ASTBase = tiny::ASTBase;
     using Symbol = tiny::Symbol;
+    using Type = tinyc::Type;
 
     class BasicBlock;
     class Function;
+
+
 
     /** Result type of an instruction. 
      */ 
@@ -22,7 +26,94 @@ namespace tvlm {
         Double,
         Void,
     }; // tinyc::il::ResultType 
-
+//
+//    class Type{
+//    public:
+//        class Struct;
+//        class Integer;
+//        class Float;
+//        class Pointer;
+//        virtual ~Type() = default;
+//
+//        virtual int size() const  = 0;
+//        std::string toString() const {
+//            std::stringstream ss;
+//            toStream(ss);
+//            return ss.str();
+//        }
+//    private:
+//        virtual void toStream(std::ostream & s) const = 0;
+//    };
+//
+//    class Type::Integer : public Type{
+//    public:
+//        explicit Integer(){}
+//        int size() const {
+//            return 4;
+//        }
+//    private:
+//        void toStream(std::ostream & s) const override {
+//            s << "int";
+//        }
+//    };
+//    class Type::Float : public Type{
+//    public:
+//        Float(){}
+//        int size() const {
+//            return 8;
+//        }
+//    private:
+//
+//        void toStream(std::ostream & s) const override {
+//            s << "float";
+//        }
+//    };
+//    class Type::Pointer : public Type{
+//    public:
+//        Pointer(Type * base) : base_{base}{}
+//        int size()const{
+//            return 4;
+//        }
+//    private:
+//        void toStream(std::ostream & s) const override {
+//            base_->toStream(s);
+//            s << "*";
+//        }
+//        Type * base_;
+//    };
+//    class Type::Struct : public Type{
+//    public:
+//        Struct() {}
+//        int size()const{
+//            int size = 0;
+//            for(auto & i : fields_){
+//                size += i.second->size();
+//            }
+//            return size ? size : 4; //every struct has to have a memory footprint
+//        }
+//        void addField(Symbol name, Type * type) {
+//            //hope duplicity is already checked
+//            //            for (auto & i : fields_)
+//            //                if (i.first == name)
+//            //                    throw ParserError{STR("Field " << name.name() << " already defined "), ast->location()};
+//            fields_.push_back(std::make_pair(name, type));
+//        }
+//
+//        Type * getFieldType(Symbol name) const {
+//            for (auto & i : fields_)
+//                if (i.first == name)
+//                    return i.second;
+//            return nullptr;
+//        }
+//    private:
+//
+//        void toStream(std::ostream & s) const override {
+//            s << "struct " << ast_->name.name();
+//        }
+//
+//        std::vector<std::pair<Symbol, Type *>> fields_;
+//
+//    };
 
     /** Base class for intermediate language instructions. 
      */ 
@@ -63,14 +154,19 @@ namespace tvlm {
             name_ = value;
         }
 
+        virtual void print(tiny::ASTPrettyPrinter & p) const {
+            p << name_ <<": " << instrName_;
+        }
+
 
     protected:
 
         /** Creates the instruction with given return type and corresponding abstract syntax tree. 
          */
-        Instruction(ResultType resultType, ASTBase const * ast):
+        Instruction(ResultType resultType, ASTBase const * ast, const std::string & instrName):
             resultType_{resultType},
-            ast_{ast} {
+            ast_{ast} ,
+            instrName_{instrName}{
         }    
 
     private:
@@ -79,6 +175,7 @@ namespace tvlm {
         ResultType resultType_;
         ASTBase const * ast_;
         std::string name_;
+        std::string instrName_;
 
     }; // tinyc::il::Instruction
 
@@ -91,8 +188,8 @@ namespace tvlm {
 
     protected:
 
-        ImmSize(size_t size, ASTBase const * ast):
-            Instruction{ResultType::Integer, ast},
+        ImmSize(size_t size, ASTBase const * ast, const std::string & instrName):
+            Instruction{ResultType::Integer, ast, instrName},
             size_{size} {
         }
         size_t size_;
@@ -107,8 +204,8 @@ namespace tvlm {
 
     protected:
 
-        ImmIndex(size_t index, ASTBase const * ast):
-            Instruction{ResultType::Integer, ast},
+        ImmIndex(size_t index, ASTBase const * ast, const std::string & instrName):
+            Instruction{ResultType::Integer, ast, instrName},
             index_{index} {
         }
 
@@ -127,13 +224,13 @@ namespace tvlm {
 
     protected:
 
-        ImmValue(int64_t value, ASTBase const * ast):
-            Instruction{ResultType::Integer, ast},
+        ImmValue(int64_t value, ASTBase const * ast, const std::string & instrName):
+            Instruction{ResultType::Integer, ast, instrName},
             value_{value}, fvalue_{0}{
         }
 
-        ImmValue(double value, ASTBase const * ast):
-                Instruction{ResultType::Double, ast},
+        ImmValue(double value, ASTBase const * ast, const std::string & instrName):
+                Instruction{ResultType::Double, ast, instrName},
                 value_{0}, fvalue_{value} {
         }
 
@@ -152,8 +249,8 @@ namespace tvlm {
         }
 
     protected:
-        BinaryOperator(Symbol op, Instruction * lhs, Instruction * rhs, ASTBase const * ast):
-            Instruction{GetResultType(lhs, rhs), ast},
+        BinaryOperator(Symbol op, Instruction * lhs, Instruction * rhs, ASTBase const * ast, const std::string & instrName):
+            Instruction{GetResultType(lhs, rhs), ast, instrName},
             op_{op},
             lhs_{lhs},
             rhs_{rhs} {
@@ -179,8 +276,8 @@ namespace tvlm {
             return operand_;
         }
     protected:
-        UnaryOperator(Symbol op, Instruction * operand, ASTBase const * ast):
-            Instruction{operand->resultType(), ast},
+        UnaryOperator(Symbol op, Instruction * operand, ASTBase const * ast, const std::string & instrName):
+            Instruction{operand->resultType(), ast, instrName},
             op_{op},
             operand_{operand} {
         }
@@ -198,8 +295,8 @@ namespace tvlm {
 
     protected:
 
-        LoadAddress(Instruction * address,ResultType type, ASTBase const * ast):
-            Instruction{type, ast},
+        LoadAddress(Instruction * address,ResultType type, ASTBase const * ast, const std::string & instrName):
+            Instruction{type, ast, instrName},
             address_{address} {
         }
     private:
@@ -217,8 +314,8 @@ namespace tvlm {
 
     protected:
 
-        StoreAddress(Instruction * value, Instruction * address, ASTBase const * ast):
-            Instruction{ResultType::Integer, ast},
+        StoreAddress(Instruction * value, Instruction * address, ASTBase const * ast, const std::string & instrName):
+            Instruction{ResultType::Integer, ast, instrName},
             value_{value},
             address_{address} {
         }
@@ -237,8 +334,8 @@ namespace tvlm {
         virtual BasicBlock * getTarget(size_t i) const = 0;        
 
     protected:
-        Terminator(ASTBase const * ast):
-            Instruction{ResultType::Void, ast} {
+        Terminator(ASTBase const * ast, const std::string & instrName):
+            Instruction{ResultType::Void, ast, instrName} {
         }
     }; // Instruction::Terminator
 
@@ -250,8 +347,8 @@ namespace tvlm {
 
     protected:
 
-        Terminator0(ASTBase const * ast):
-            Terminator{ast} {
+        Terminator0(ASTBase const * ast, const std::string & instrName):
+            Terminator{ast, instrName} {
         }
     }; // Instruction::Terminator0
 
@@ -262,8 +359,8 @@ namespace tvlm {
         }
     protected:
 
-        Returnator(Instruction * retValue, ASTBase const * ast):
-            Terminator0{ast}, returnValue_{retValue} {
+        Returnator(Instruction * retValue, ASTBase const * ast, const std::string & instrName):
+            Terminator0{ast, instrName}, returnValue_{retValue} {
         }
         Instruction * returnValue_;
     }; // Instruction::Returnator
@@ -276,8 +373,8 @@ namespace tvlm {
 
     protected:
 
-        Terminator1(BasicBlock * target, ASTBase const * ast):
-            Terminator{ast},
+        Terminator1(BasicBlock * target, ASTBase const * ast, const std::string & instrName):
+            Terminator{ast, instrName},
             target_{target} {
         }
 
@@ -300,8 +397,8 @@ namespace tvlm {
 
     protected:
 
-        TerminatorN(Instruction * cond, ASTBase const * ast):
-            Terminator{ast},
+        TerminatorN(Instruction * cond, ASTBase const * ast, const std::string & instrName):
+            Terminator{ast, instrName},
             cond_{cond} {
         }
 
@@ -316,8 +413,8 @@ namespace tvlm {
             return src_;
         }
     protected:
-        SrcInstruction(Instruction * src, ResultType type, ASTBase const * ast):
-                Instruction{type, ast},
+        SrcInstruction(Instruction * src, ResultType type, ASTBase const * ast, const std::string & instrName):
+                Instruction{type, ast, instrName},
                 src_{src}{
 
         }
@@ -328,8 +425,8 @@ namespace tvlm {
     class Instruction::VoidInstruction : public Instruction{
     public:
     protected:
-        VoidInstruction( ResultType type, ASTBase const * ast):
-                Instruction{type, ast}{
+        VoidInstruction( ResultType type, ASTBase const * ast, const std::string & instrName):
+                Instruction{type, ast, instrName}{
 
         }
     }; // Instruction::VoidInstruction
@@ -341,8 +438,8 @@ namespace tvlm {
         }
 
     protected:
-        PhiInstruction( ResultType type, ASTBase const * ast):
-                Instruction{type, ast}{
+        PhiInstruction( ResultType type, ASTBase const * ast, const std::string & instrName):
+                Instruction{type, ast, instrName}{
 
         }
     private:
@@ -358,8 +455,8 @@ namespace tvlm {
 
 
     protected:
-        CallInstruction(std::vector<Instruction*> && args, ASTBase const * ast ):
-                Instruction{ResultType::Void, ast},
+        CallInstruction(std::vector<Instruction*> && args, ASTBase const * ast, const std::string & instrName ):
+                Instruction{ResultType::Void, ast, instrName},
                 args_{args}{
 
         }
@@ -373,8 +470,8 @@ namespace tvlm {
         }
 
     protected:
-        DirectCallInstruction(Function * f, std::vector<Instruction*> && args,const ASTBase * ast ):
-                CallInstruction{std::move(args), ast},
+        DirectCallInstruction(Function * f, std::vector<Instruction*> && args,const ASTBase * ast , const std::string & instrName):
+                CallInstruction{std::move(args), ast, instrName},
                 f_{f}
                 {
 
@@ -389,8 +486,8 @@ namespace tvlm {
         }
 
     protected:
-        IndirectCallInstruction(Instruction * f, std::vector<Instruction*> && args,const ASTBase * ast ):
-                CallInstruction{std::move(args), ast},
+        IndirectCallInstruction(Instruction * f, std::vector<Instruction*> && args,const ASTBase * ast, const std::string & instrName ):
+                CallInstruction{std::move(args), ast, instrName},
                 f_{f}
                 {
 
@@ -402,21 +499,21 @@ namespace tvlm {
     public: \
         ENCODING(NAME, ENCODING) \
 };
-#define ImmSize(NAME, ENCODING) NAME (size_t size, ASTBase const * ast) : Instruction::ENCODING{size, ast} {}
-#define ImmIndex(NAME, ENCODING) NAME (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast} {}
-#define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast} {} \
-                                 NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast} {}
-#define BinaryOperator(NAME, ENCODING) NAME (Symbol op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, lhs, rhs, ast} {}
-#define UnaryOperator(NAME, ENCODING) NAME (Symbol op, Instruction * operand, ASTBase const * ast): Instruction::ENCODING{op, operand, ast} {}
-#define Terminator0(NAME, ENCODING) NAME (ASTBase const * ast): Instruction::ENCODING{ast} {}
-#define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, ASTBase const * ast): Instruction::ENCODING{returnValue, ast} {}
-#define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast} {}
-#define TerminatorN(NAME, ENCODING) NAME (Instruction * condition, ASTBase const * ast): Instruction::ENCODING{condition, ast} {}
-#define LoadAddress(NAME, ENCODING) NAME (Instruction * address, ResultType type, ASTBase const * ast): Instruction::ENCODING{address, type, ast} {}
-#define StoreAddress(NAME, ENCODING) NAME (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast} {}
-#define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast} {}
-#define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast} {}
-#define PhiInstruction(NAME, ENCODING) NAME ( ResultType type, ASTBase const * ast): Instruction::ENCODING{type, ast} {}
+#define ImmSize(NAME, ENCODING) NAME (size_t size, ASTBase const * ast) : Instruction::ENCODING{size, ast, #NAME} {}
+#define ImmIndex(NAME, ENCODING) NAME (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast, #NAME} {}
+#define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME} {} \
+                                 NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME} {}
+#define BinaryOperator(NAME, ENCODING) NAME (Symbol op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, lhs, rhs, ast, #NAME} {}
+#define UnaryOperator(NAME, ENCODING) NAME (Symbol op, Instruction * operand, ASTBase const * ast): Instruction::ENCODING{op, operand, ast, #NAME} {}
+#define Terminator0(NAME, ENCODING) NAME (ASTBase const * ast): Instruction::ENCODING{ast, #NAME} {}
+#define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, ASTBase const * ast): Instruction::ENCODING{returnValue, ast, #NAME} {}
+#define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast, #NAME} {}
+#define TerminatorN(NAME, ENCODING) NAME (Instruction * condition, ASTBase const * ast): Instruction::ENCODING{condition, ast, #NAME} {}
+#define LoadAddress(NAME, ENCODING) NAME (Instruction * address, ResultType type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME} {}
+#define StoreAddress(NAME, ENCODING) NAME (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast, #NAME} {}
+#define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME} {}
+#define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME} {}
+#define PhiInstruction(NAME, ENCODING) NAME ( ResultType type, ASTBase const * ast): Instruction::ENCODING{type, ast, #NAME} {}
 
 
 #define INSTYPE(NAME, ENCODING, TYPE) class NAME : public Instruction::ENCODING { \
@@ -424,8 +521,8 @@ namespace tvlm {
         ENCODING(NAME, ENCODING, TYPE) \
 };
 
-#define SrcInstruction(NAME, ENCODING, TYPE) NAME (Instruction * src, ASTBase const * ast): Instruction::ENCODING{src, TYPE, ast} {}
-#define VoidInstruction(NAME, ENCODING, TYPE) NAME (ASTBase const * ast): Instruction::ENCODING{TYPE, ast} {}
+#define SrcInstruction(NAME, ENCODING, TYPE) NAME (Instruction * src, ASTBase const * ast): Instruction::ENCODING{src, TYPE, ast, #NAME} {}
+#define VoidInstruction(NAME, ENCODING, TYPE) NAME (ASTBase const * ast): Instruction::ENCODING{TYPE, ast, #NAME} {}
 
 #include "il_insns.h"
 
@@ -451,7 +548,7 @@ namespace tvlm {
             p.newline();
             for (auto & i : insns_) {
                 // TODO add printing of instructions in some nice way
-                //i->print(p);
+                i->print(p);
                 p.newline();
             }
             p.dedent();

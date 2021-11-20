@@ -1,9 +1,7 @@
 #pragma once
 
 #include "il.h"
-namespace tinyc {
-    class ASTtoIL;
-};
+
 namespace tvlm {
 
     class ILBuilder {
@@ -26,8 +24,7 @@ namespace tvlm {
             }
         };
 
-        ILBuilder(/*Backend & backend */):
-            //backend_{backend},
+        ILBuilder( ):
             globals_{new BasicBlock{}},
             env_{new Environment{}} {
             globals_->setName("globals");
@@ -173,7 +170,6 @@ namespace tvlm {
         }
 
     private:
-        friend class tinyc::ASTtoIL;
         // wrappers to backend who manages the types for us
         /*
         Type * getType(Symbol symbol);
@@ -185,6 +181,7 @@ namespace tvlm {
         bool isPOD(Type * t);
         bool convertsToBool(Type * t);
         */
+
 
         struct Environment {
             Environment * parent = nullptr;
@@ -202,6 +199,15 @@ namespace tvlm {
                     return i->second;
                 else if (parent != nullptr)
                     return parent->getVariableAddress(name);
+                else
+                    return nullptr;
+            }
+            Instruction * getVariableType(Symbol name) {
+                auto i = names.find(name);
+                if (i != names.end())
+                    return i->second;
+                else if (parent != nullptr)
+                    return parent->getVariableType(name);
                 else
                     return nullptr;
             }

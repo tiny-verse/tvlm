@@ -66,7 +66,9 @@ INS(CondJump, TerminatorN)
  */
 INS(Jump, Terminator1)
 
-
+/**
+ * Ends the program
+ */
 INS(Halt, Terminator0)
 
 /**
@@ -110,8 +112,6 @@ INSTYPE(Truncate, SrcInstruction, ResultType::Integer)
  * indexes of a member are added by function `addIndex` // TODO
  */
 INSTYPE(ElemAddr,VoidInstruction , ResultType::Integer)
-
-
 
 
 
