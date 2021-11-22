@@ -155,7 +155,10 @@ namespace tvlm {
         }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const {
-            p << name_ <<": " << instrName_;
+            if (resultType_ != ResultType::Void) {
+                printRegister(p, this);
+                p << p.symbol << "= ";
+            }
         }
 
 
@@ -167,15 +170,26 @@ namespace tvlm {
             resultType_{resultType},
             ast_{ast} ,
             instrName_{instrName}{
-        }    
+        }
 
+
+        void printRegister(tiny::ASTPrettyPrinter & p, Instruction const * reg) const {
+            p << p.identifier << reg->name() << p.symbol << ": " << p.keyword << (reg->resultType_ == ResultType::Integer ? "int " : "double ");
+        }
+
+        void printRegisterAddress(tiny::ASTPrettyPrinter & p, Instruction const * reg) const {
+            p << p.symbol << "[" << p.identifier << reg->name() << p.symbol << "] ";
+        }
+
+
+
+        std::string instrName_;
     private:
 
 
         ResultType resultType_;
         ASTBase const * ast_;
         std::string name_;
-        std::string instrName_;
 
     }; // tinyc::il::Instruction
 
@@ -185,6 +199,12 @@ namespace tvlm {
         size_t size() {
             return size_;   
         }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " " << p.numberLiteral << size_;
+        };
 
     protected:
 
@@ -201,6 +221,10 @@ namespace tvlm {
         size_t index() {
             return index_;   
         }
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " " << p.numberLiteral << index_;
+        };
 
     protected:
 
@@ -215,27 +239,36 @@ namespace tvlm {
     class Instruction::ImmValue : public Instruction {
     public:
 
-        int64_t value() {
-            return value_;   
+        int64_t valueInt() {
+            return value_.i;
         }
-        int64_t fvalue() {
-            return fvalue_;
+        int64_t valueFloat() {
+            return value_.f;
         }
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " " << p.numberLiteral << (resultType() == ResultType::Integer ? value_.i : value_.f);
+        };
+
 
     protected:
 
         ImmValue(int64_t value, ASTBase const * ast, const std::string & instrName):
-            Instruction{ResultType::Integer, ast, instrName},
-            value_{value}, fvalue_{0}{
+        Instruction{ResultType::Integer, ast, instrName}
+        {
+            value_.i = value;
         }
 
         ImmValue(double value, ASTBase const * ast, const std::string & instrName):
-                Instruction{ResultType::Double, ast, instrName},
-                value_{0}, fvalue_{value} {
+        Instruction{ResultType::Double, ast, instrName}
+        {
+             value_.f = value;
         }
 
-        int64_t value_;
-        double fvalue_;
+        union {
+            int64_t i;
+            double f;
+        } value_;
     };
 
     class Instruction::BinaryOperator : public Instruction {
@@ -247,6 +280,13 @@ namespace tvlm {
         Instruction * rhs() const {
             return rhs_;
         }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << op_.name() << " ";
+            printRegister(p, lhs_);
+            printRegister(p, rhs_);
+        };
 
     protected:
         BinaryOperator(Symbol op, Instruction * lhs, Instruction * rhs, ASTBase const * ast, const std::string & instrName):
@@ -275,6 +315,12 @@ namespace tvlm {
         Instruction * operand() const {
             return operand_;
         }
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << op_.name() << " ";
+            printRegister(p, operand_);
+        };
+
     protected:
         UnaryOperator(Symbol op, Instruction * operand, ASTBase const * ast, const std::string & instrName):
             Instruction{operand->resultType(), ast, instrName},
@@ -292,6 +338,12 @@ namespace tvlm {
     public:
 
         Instruction * address() const { return address_; }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " ";
+            printRegisterAddress(p, address_);
+        };
 
     protected:
 
@@ -311,6 +363,13 @@ namespace tvlm {
         Instruction * value() const { return value_; }
 
         Instruction * address() const { return address_; }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << "store ";
+            printRegisterAddress(p, address_);
+            printRegister(p, value_);
+        };
 
     protected:
 
@@ -345,6 +404,10 @@ namespace tvlm {
 
         BasicBlock * getTarget(size_t i) const override { return nullptr; }
 
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " ";
+        }
     protected:
 
         Terminator0(ASTBase const * ast, const std::string & instrName):
@@ -357,6 +420,13 @@ namespace tvlm {
         Instruction * returnValue()const{
             return returnValue_;
         }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " ";
+            printRegister(p, returnValue_);
+        }
+
     protected:
 
         Returnator(Instruction * retValue, ASTBase const * ast, const std::string & instrName):
@@ -370,6 +440,8 @@ namespace tvlm {
         size_t numTargets() const override { return 1; }
 
         BasicBlock * getTarget(size_t i) const override { return i == 1 ? target_ : nullptr; }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override ;
 
     protected:
 
@@ -395,6 +467,8 @@ namespace tvlm {
             targets_.push_back(target);
         }
 
+        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+
     protected:
 
         TerminatorN(Instruction * cond, ASTBase const * ast, const std::string & instrName):
@@ -412,6 +486,13 @@ namespace tvlm {
         Instruction * src(){
             return src_;
         }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " ";
+            printRegister(p, src_);
+        }
+
     protected:
         SrcInstruction(Instruction * src, ResultType type, ASTBase const * ast, const std::string & instrName):
                 Instruction{type, ast, instrName},
@@ -424,6 +505,10 @@ namespace tvlm {
 
     class Instruction::VoidInstruction : public Instruction{
     public:
+        virtual void print(tinyc::ASTPrettyPrinter & p) const override{
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " ";
+        }
     protected:
         VoidInstruction( ResultType type, ASTBase const * ast, const std::string & instrName):
                 Instruction{type, ast, instrName}{
@@ -436,6 +521,8 @@ namespace tvlm {
         void addIncomming( Instruction * src, BasicBlock * bb){
             contents_.emplace(bb, src);
         }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override;
 
     protected:
         PhiInstruction( ResultType type, ASTBase const * ast, const std::string & instrName):
@@ -453,7 +540,6 @@ namespace tvlm {
             return args_[i];
         }
 
-
     protected:
         CallInstruction(std::vector<Instruction*> && args, ASTBase const * ast, const std::string & instrName ):
                 Instruction{ResultType::Void, ast, instrName},
@@ -469,6 +555,7 @@ namespace tvlm {
             return f_;
         }
 
+        virtual void print(tiny::ASTPrettyPrinter & p) const override;
     protected:
         DirectCallInstruction(Function * f, std::vector<Instruction*> && args,const ASTBase * ast , const std::string & instrName):
                 CallInstruction{std::move(args), ast, instrName},
@@ -484,6 +571,16 @@ namespace tvlm {
         Instruction * f() const {
             return f_;
         }
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " ";
+            printRegisterAddress(p, f_);
+            p << p.symbol << "(";
+            for (auto & i : args_)
+                printRegister(p, i);
+            p << p.symbol << ")";
+        };
 
     protected:
         IndirectCallInstruction(Instruction * f, std::vector<Instruction*> && args,const ASTBase * ast, const std::string & instrName ):
