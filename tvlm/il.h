@@ -8,6 +8,8 @@
 #include "common/ast.h"
 #include "tinyc/types.h"
 
+#include <memory>
+
 namespace tvlm {
 
     using ASTBase = tiny::ASTBase;
