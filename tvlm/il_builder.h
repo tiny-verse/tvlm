@@ -127,7 +127,7 @@ namespace tvlm {
         Instruction * getStringLiteral(std::string const & lit, const tiny::ASTBase * ast){
             auto i = stringLiterals_.find(lit);
             if (i == stringLiterals_.end()) {
-                Instruction * addr = globals_->add(new tvlm::AllocG{lit.size() + 1, ast});
+                Instruction * addr = globals_->add(new tvlm::AllocG{lit.size() + 1,nullptr , ast});
                 stringLiterals_.insert(std::make_pair(lit, addr));
                 return addr;
             } else {
@@ -140,9 +140,12 @@ namespace tvlm {
             for (auto & i : functions_)
                 i.second->print(p);
         }
+        void finalize(){
+//            add(new Halt{nullptr}); // TODO append halt instr
+        }
 
-        Program finish(){
-            return Program(std::move(stringLiterals_),
+        tvlm::Program finish(){
+            return tvlm::Program(std::move(stringLiterals_),
                            std::move(functions_),
                            std::move(globals_));
         }

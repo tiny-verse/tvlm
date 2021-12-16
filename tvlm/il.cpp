@@ -11,7 +11,7 @@ namespace tvlm {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier;
         for(auto & t : targets_){
-            p << t->name();
+            p << t->name() << " ";
         }
     }
 
@@ -33,5 +33,16 @@ namespace tvlm {
 
         }
     };
+
+    void Instruction::ElemInstruction::print(tiny::ASTPrettyPrinter &p) const {
+        Instruction::print(p);
+        p << p.keyword << instrName_ << " " ;
+        printRegister(p, base_); p << " ";
+        for(auto & c: contents_){
+            printRegister(p, c.first);
+            p << "x " << p.numberLiteral << c.second << " ";
+        }
+
+    }
 }
 

@@ -1,0 +1,9 @@
+#pragma once
+
+#include "tvlm/tvlm.h"
+#include "tvlm/t86_backend.h"
+
+namespace tiny {
+
+    using tvlm_backend = tvlm::t86_Backend;
+}

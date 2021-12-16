@@ -55,7 +55,7 @@ INS(Return, Returnator)
 /**
  * Performs conditional jump according specified condition @condition
  *  if @condiditon results false, jump to 0th element in @targets
- *  otherwise jump to 1st emelent in @targets
+ *  otherwise jump to 1st element in @targets
  *
  *  @targets are created by calling 'addTarget' function
  */
@@ -74,7 +74,7 @@ INS(Halt, Terminator0)
 /**
  *
  */
-INS(Load, LoadAddress)
+ INS(Load, LoadAddress)
 
 /**
  *
@@ -95,7 +95,7 @@ INSTYPE(PutChar, SrcInstruction, ResultType::Void)
  * stops execution until a input is given by user
  * represents: value supplied by user
  */
-INSTYPE(Getchar,VoidInstruction, ResultType::Integer)
+INSTYPE(GetChar,VoidInstruction, ResultType::Integer)
 
 
 INS(Phi, PhiInstruction)
@@ -107,11 +107,11 @@ INS(CallStatic,DirectCallInstruction)
 INSTYPE(Extend, SrcInstruction, ResultType::Double)
 INSTYPE(Truncate, SrcInstruction, ResultType::Integer)
 
-/** Performs computation of address of a subelement of an aggregate data structure. Such as struct or array
+/** Performs computation of address of a subElement of an aggregate data structure. Such as struct or array
  * represents: Address of member in a structure
  * indexes of a member are added by function `addIndex` // TODO
  */
-INSTYPE(ElemAddr,VoidInstruction , ResultType::Integer)
+INS(ElemAddr,ElemInstruction )
 
 
 
