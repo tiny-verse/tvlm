@@ -37,18 +37,20 @@ INS(ArgAddr, ImmIndex)
 //INS(Xor, BinaryOperator)
 //INS(Not, UnaryOperator)
 
-/** Performs binary operation @op between @lhs and @rhs
+/**
+ * Performs binary operation @op between @lhs and @rhs
  * represents: result of binary operation
  */
 INS(BinOp, BinaryOperator)
 
-/** Performs unary operation @op on @operand
+/**
+ * Performs unary operation @op on @operand
  * represents: result of unary operation
  */
 INS(UnOp, UnaryOperator)
 
-/** Performs return from function call initiated with Call instruction
- *
+/**
+ * Performs return from function call initiated with Call instruction
  */
 INS(Return, Returnator)
 
@@ -72,17 +74,17 @@ INS(Jump, Terminator1)
 INS(Halt, Terminator0)
 
 /**
- *
+ * Interacts with the Memory, loads memory cell at 'address' differing by type specified by argument 'type'
  */
  INS(Load, LoadAddress)
 
 /**
- *
+ * Interacts with the Memory, stores register value into cell at 'address'
  */
 INS(Store, StoreAddress)
 
 /**
- *
+ * Copies value from src instruction
  */
 INSTYPE(Copy, SrcInstruction, src->resultType())
 
@@ -97,14 +99,30 @@ INSTYPE(PutChar, SrcInstruction, ResultType::Void)
  */
 INSTYPE(GetChar,VoidInstruction, ResultType::Integer)
 
-
+/**
+ * Instruction by which is possible to carry information about regAllocation
+ * it is used to specify single register for multiple assignments,
+ * which would normally consume as many regs as there is assignments
+ * represents unification among registers (so there is no need to carry it threw memory)
+ */
 INS(Phi, PhiInstruction)
 
-
+/**
+ * Represents a call to a function that is not known. 'indirection by function pointers'
+ */
 INS(Call,IndirectCallInstruction)
+
+/**
+ * Represents a call to a statically known function. 'main(args...)'
+ */
 INS(CallStatic,DirectCallInstruction)
 
+/**
+ */
 INSTYPE(Extend, SrcInstruction, ResultType::Double)
+
+/**
+ */
 INSTYPE(Truncate, SrcInstruction, ResultType::Integer)
 
 /** Performs computation of address of a subElement of an aggregate data structure. Such as struct or array

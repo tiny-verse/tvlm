@@ -1,21 +1,28 @@
 #pragma once
 
 #include <unordered_set>
+#include <utility>
 #include "il.h"
 #include "t86/program/programbuilder.h"
 
 
 namespace tvlm {
 
+    using Opcode = tvlm::Instruction::Opcode;
 
 
     class DAG;
+
+
     class Rule {
     public:
-        virtual bool compareTo(Instruction * ins) const {
-            return false;
+        virtual bool matchesOpcode(Instruction * ins) const =0;
+        int num() const{
+            return num_;
         }
-        Rule(int cost) : cost_(cost), num_(counter++){ }
+        Rule(int cost, int num = counter++) : cost_(cost), num_(num){ }
+
+        virtual Rule * makeCopy() const = 0;
         virtual bool operator== (const DAG * other) const = 0;
         virtual const Rule * operator[] (size_t idx) const = 0;
     protected:
@@ -28,246 +35,205 @@ namespace tvlm {
 
     class DummyRule : public Rule{
     public:
-        DummyRule(DummyRule & other) = delete;
-
+        virtual bool matchesOpcode(Instruction * ins) const {
+            return false;
+        }
         void operator=(const DummyRule &) = delete;
 
+        virtual Rule * makeCopy() const {
+            return new DummyRule(*this);
+        }
         static DummyRule *get();
+        virtual bool operator== (const DAG * other) const override;
+
+        virtual const Rule * operator[] (size_t idx) const override{
+            return nullptr;
+        }
 
 
     protected:
+        DummyRule(const DummyRule & other) = default;
         DummyRule():Rule(0){}
 
-        virtual bool operator== (const DAG * other) const override;
-        virtual const Rule * operator[] (size_t idx) const override{
-            return nullptr;
+        virtual bool matchesOpcode(Instruction::Opcode ins) const {
+            return false;
         }
 
     private:
         static DummyRule * dummy;
     };
 
-    template<typename T>
-    class SpecializedRule : public Rule{
-    public:
-
-        // recursive comparison
-        explicit SpecializedRule(  int cost, const std::vector<const Rule*> & children = std::vector<const Rule*>())
-                :Rule( cost), children_(children){
-        }
-        explicit SpecializedRule( int cost, int size)
-                :Rule( cost), children_(std::move(std::vector<const Rule*> (size, DummyRule::get())) ){
-
-        }
-        virtual bool compareTo(Instruction * ins) const {
-            return dynamic_cast<T*>(ins);
-        }
-        bool operator== (const DAG * other) const override;
-        virtual const Rule * operator[] (size_t idx) const override{
-            return children_[idx];
-        }
-        const std::vector<const Rule*> & children_;
-    private:
-    };
-
 
 
     class DAG {
     public:
-        virtual bool compareTo(Instruction * ins) const {
-            return false;
+        friend class SpecializedRule;
+
+        virtual bool matchesOpcode(Opcode opcode) const {
+            return src_->opcode_  == opcode;
         }
-        DAG(Instruction * src) :  src_(src){}
 
-        virtual std::unordered_set<const Rule*> tile(const std::unordered_map<Instruction *, std::unordered_set<const Rule*>> & allRules) const = 0;
 
-        virtual bool operator==(const Rule * other) const = 0;
+        std::set<std::unique_ptr<Rule>> labels_;
+        Rule * selectedRule_;
+
+
+        explicit DAG( Instruction *src, Instruction::Opcode type, const std::vector<DAG*> & children = std::vector<DAG*>())
+        :src_( src), children_(children), type_(type){
+        }
+
+        virtual void tile();
+    private:
+        Opcode type_;
+        std::vector<DAG*> children_;
 
     protected:
         Instruction * src_;
         std::vector<tiny::t86::Instruction *> code_;
     };
 
-    template<typename T>
-    class SpecializedDAG : public DAG{
+    class SpecializedRule : public Rule{
     public:
-
         // recursive comparison
-        explicit SpecializedDAG( T *src, const std::vector<DAG*> & children = std::vector<DAG*>())
-        :DAG( src), children_(children){
+        explicit SpecializedRule( Instruction::Opcode opcode, int cost, std::vector<const Rule*>  children = std::vector<const Rule*>(), std::function<bool(const Rule * rule, const DAG * dag)> customMatcher = nullptr)
+                :Rule( cost), children_(std::move(children)), opcode_(opcode), customMatcher_(std::move(customMatcher)){
         }
-        bool operator== (const Rule * other) const override{ //TODO maybe rename matches
-            auto ot = dynamic_cast<const SpecializedRule<T>*>(other);
-            bool ret = ot;
-            auto it = children_.begin(), otit = ot->children_.begin();
-            if(children_.size() != ot->children_.size()) return false; // different arity
-            while(ret && it !=children_.end()){
-                ret = (**it == *otit || dynamic_cast<const DummyRule*>(*otit) );// compare recursively or ignore subtree simulated for REG
-                it++;otit++;
-            }
-            if(it == children_.end()) return true; // all compared
+        explicit SpecializedRule(Instruction::Opcode opcode, int cost, int size, std::function<bool(const Rule * rule, const DAG * dag)>  customMatcher = nullptr)
+                :Rule( cost), children_(std::move(std::vector<const Rule*> (size, DummyRule::get())) ), customMatcher_(std::move(customMatcher)),
+                 opcode_(opcode){
 
-            return ret;
+        }
+        SpecializedRule(const SpecializedRule & r) :Rule(r.cost_, r.num_),
+        children_(r.children_), opcode_(r.opcode_) {
+
+        }
+        virtual bool matchesOpcode(Instruction * ins) const {
+            return ins->opcode_ == opcode_;
         }
 
-        virtual std::unordered_set<const Rule*> tile(const std::unordered_map<Instruction *, std::unordered_set<const Rule*>> & allRules) const override {
-            //labels empty
-            std::unordered_set<const Rule *> labels;
-            std::vector<std::unordered_set<const Rule*>> tiledChildren;
-            tiledChildren.resize(children_.size());
-            for (int i = 0; i < children_.size(); i++) {
-                tiledChildren[i] = children_[i]->tile(allRules);
-            }
-
-
-//            auto it = allRules.find(src_); // BAD
-            auto it = allRules.begin(); //mathces type
-            for(; it != allRules.end();it++ ){
-                if( dynamic_cast<const T*>(it->first)){
-                    break;
-                }
-            }
-            if(it == allRules.end()) {
-                std::cerr << "no rules matches this instruction! ch:"<< children_.size() << "src: " << src_->name() << std::endl;
-                return labels;
-            }
-            for (auto & r : it->second) { //all that  matches operation
-                bool ret = true;
-                for(int i = 0; i < tiledChildren.size();i++){
-                    auto & chLabels = tiledChildren[i];
-                    const Rule *  tmp = (*r)[i];
-                    auto chIt = chLabels.find(tmp); // find rule in
-                    if(chIt == chLabels.end()){
-                        ret = false; break; //does not satisfy childs label
-                    }
-                }
-                if(ret){ // all satisfied
-                    labels.emplace(r);
-                }
-            }
-
-
-            return labels;
+        virtual Rule * makeCopy() const{
+            return new SpecializedRule(*this);
         }
+
+        bool matchRuleToDAG(const DAG * dag)const ;
+        bool operator== (const DAG * other) const override;
+        virtual const Rule * operator[] (size_t idx) const override{
+            return children_[idx];
+        }
+        const std::vector<const Rule*> children_;
     private:
-         std::vector<DAG*> children_;
-//        std::unordered_set<Rule*> labels_;
+        Instruction::Opcode opcode_;
+        std::function<bool (const Rule *, const tvlm::DAG* ) > customMatcher_;
     };
 
 
-    template<typename T>
-    bool SpecializedRule<T>::operator==(const DAG *other) const {
-        return *other == this;
+            //
+            //    template<typename T>
+            //    class BinaryDAG : public DAG{
+            //    public:
+            //
+            //        // recursive comparison
+            //        BinaryDAG(int cost, T *src, DAG * lhs, DAG * rhs ):DAG(cost, src), lhs_(lhs), rhs_(rhs){
+            //        }
+            //        bool operator== (const DAG * other) const{
+            //            auto ot = dynamic_cast<BinaryDAG<T>>(other);
+            //            return ot && ot.lhs_ == this->operand_ && ot.rhs_;
+            //        }
+            //    private:
+            //        DAG* lhs_;
+            //        DAG* rhs_;
+            //    };
+            //
+            //    template<typename T>
+            //    class UnaryDAG : public DAG{
+            //    public:
+            //        UnaryDAG(int cost, T *src, DAG * operand ):DAG(cost, src), operand_(operand){
+            //        }
+            //
+            //        // recursive comparison
+            //        bool operator== (const DAG * other) const{
+            //            auto ot = dynamic_cast<UnaryDAG<T>>(other);
+            //            return ot && ot.operand_ == this->operand_;
+            //        }
+            //    private:
+            //        DAG* operand_;
+            //    };
+            //
+            //    template<typename T>
+            //    class LeafDAG : public DAG{
+            //    public:
+            //        LeafDAG(int cost, T *src):DAG(cost, src){
+            //        }
+            //
+            //        // recursive comparison
+            //        bool operator== (const DAG * other) const{
+            //            return  dynamic_cast<UnaryDAG<T>>(other);
+            //        }
+            //
+            //    private:
+            //
+            //    };
 
-    }
-
-//
-//    template<typename T>
-//    class BinaryDAG : public DAG{
-//    public:
-//
-//        // recursive comparison
-//        BinaryDAG(int cost, T *src, DAG * lhs, DAG * rhs ):DAG(cost, src), lhs_(lhs), rhs_(rhs){
-//        }
-//        bool operator== (const DAG * other) const{
-//            auto ot = dynamic_cast<BinaryDAG<T>>(other);
-//            return ot && ot.lhs_ == this->operand_ && ot.rhs_;
-//        }
-//    private:
-//        DAG* lhs_;
-//        DAG* rhs_;
-//    };
-//
-//    template<typename T>
-//    class UnaryDAG : public DAG{
-//    public:
-//        UnaryDAG(int cost, T *src, DAG * operand ):DAG(cost, src), operand_(operand){
-//        }
-//
-//        // recursive comparison
-//        bool operator== (const DAG * other) const{
-//            auto ot = dynamic_cast<UnaryDAG<T>>(other);
-//            return ot && ot.operand_ == this->operand_;
-//        }
-//    private:
-//        DAG* operand_;
-//    };
-//
-//    template<typename T>
-//    class LeafDAG : public DAG{
-//    public:
-//        LeafDAG(int cost, T *src):DAG(cost, src){
-//        }
-//
-//        // recursive comparison
-//        bool operator== (const DAG * other) const{
-//            return  dynamic_cast<UnaryDAG<T>>(other);
-//        }
-//
-//    private:
-//
-//    };
-
-//
-//    class DAG{
-//    public:
-//        DAG(Instruction * ins, DAG * next = nullptr) :ins_(ins), next_(next){}
-//        Instruction * ins_;
-//        DAG * next_;
-//    };
-//    class DAGBuilder : public ILVisitor {
-//    public:
-//    protected:
-//
-//        void visit(Instruction::Terminator0 * ins) override;
-//        void visit(Instruction::Terminator1 * ins) override;
-//        void visit(Instruction::TerminatorN * ins) override;
-//        void visit(Instruction::Returnator * ins) override;
-//        void visit(Instruction::DirectCallInstruction * ins) override;
-//        void visit(Instruction::IndirectCallInstruction * ins) override;
-//        void visit(Instruction::SrcInstruction * ins) override;
-//        void visit(Instruction::BinaryOperator * ins) override;
-//        void visit(Instruction::UnaryOperator * ins) override;
-//        void visit(Instruction::ImmIndex * ins) override;
-//        void visit(Instruction::ImmSize * ins) override;
-//        void visit(Instruction::ImmValue * ins) override;
-//        void visit(Instruction::VoidInstruction * ins) override;
-//        void visit(Instruction::LoadAddress * ins) override;
-//        void visit(Instruction::StoreAddress * ins) override;
-//        void visit(Instruction::PhiInstruction * ins) override;
-//
-//        void visit(BasicBlock * bb) override;
-//        void visit(Function * fce) override;
-//        void visit(Program * p) override;
-//
-//        std::unordered_map<Instruction *, DAG*> compiled_;
-//        DAG * lastIns_;
-//    private:
-//        DAG*  visitChild(IL * il) {
-//            ILVisitor::visitChild(il);
-//            return lastIns_;
-//        }
-//
-//        template<typename T>
-//        DAG* visitChild(std::unique_ptr<T> const &ptr) {
-//            return visitChild(ptr.get());
-//        }
-//
-//
-//        DAG* add(Instruction * ins) {
-//            lastIns_ = new DAG(ins, nullptr);
-//            if(ins != nullptr ) compiled_.emplace(ins, lastIns_);
-//            return lastIns_;
-//        }
-//
-//        DAG* find(Instruction * ins){
-//            auto it = compiled_.find(ins);
-//            if(it == compiled_.end()){
-//                return nullptr;
-//            }
-//            return it->second;
-//        }
-//    };
+            //
+            //    class DAG{
+            //    public:
+            //        DAG(Instruction * ins, DAG * next = nullptr) :ins_(ins), next_(next){}
+            //        Instruction * ins_;
+            //        DAG * next_;
+            //    };
+            //    class DAGBuilder : public ILVisitor {
+            //    public:
+            //    protected:
+            //
+            //        void visit(Instruction::Terminator0 * ins) override;
+            //        void visit(Instruction::Terminator1 * ins) override;
+            //        void visit(Instruction::TerminatorN * ins) override;
+            //        void visit(Instruction::Returnator * ins) override;
+            //        void visit(Instruction::DirectCallInstruction * ins) override;
+            //        void visit(Instruction::IndirectCallInstruction * ins) override;
+            //        void visit(Instruction::SrcInstruction * ins) override;
+            //        void visit(Instruction::BinaryOperator * ins) override;
+            //        void visit(Instruction::UnaryOperator * ins) override;
+            //        void visit(Instruction::ImmIndex * ins) override;
+            //        void visit(Instruction::ImmSize * ins) override;
+            //        void visit(Instruction::ImmValue * ins) override;
+            //        void visit(Instruction::VoidInstruction * ins) override;
+            //        void visit(Instruction::LoadAddress * ins) override;
+            //        void visit(Instruction::StoreAddress * ins) override;
+            //        void visit(Instruction::PhiInstruction * ins) override;
+            //
+            //        void visit(BasicBlock * bb) override;
+            //        void visit(Function * fce) override;
+            //        void visit(Program * p) override;
+            //
+            //        std::unordered_map<Instruction *, DAG*> compiled_;
+            //        DAG * lastIns_;
+            //    private:
+            //        DAG*  visitChild(IL * il) {
+            //            ILVisitor::visitChild(il);
+            //            return lastIns_;
+            //        }
+            //
+            //        template<typename T>
+            //        DAG* visitChild(std::unique_ptr<T> const &ptr) {
+            //            return visitChild(ptr.get());
+            //        }
+            //
+            //
+            //        DAG* add(Instruction * ins) {
+            //            lastIns_ = new DAG(ins, nullptr);
+            //            if(ins != nullptr ) compiled_.emplace(ins, lastIns_);
+            //            return lastIns_;
+            //        }
+            //
+            //        DAG* find(Instruction * ins){
+            //            auto it = compiled_.find(ins);
+            //            if(it == compiled_.end()){
+            //                return nullptr;
+            //            }
+            //            return it->second;
+            //        }
+            //    };
 
 
     class ILTiler : public ILVisitor{
@@ -280,13 +246,16 @@ namespace tvlm {
             ILTiler v;
             v.visit( &prog);
             std::cerr << "huh" << std::endl;
+            v.functionTable_.begin()->second->tile();
 
-            std::unordered_set<const Rule *> globLabels = v.globals_->tile(allRules_);
+            auto & globLabels = v.functionTable_.begin()->second->labels_;
 
             std::cerr << "huh" << globLabels.size() << std::endl;
             tiny::t86::ProgramBuilder pb;
             return pb.program();
         }
+        static  std::unordered_map<Opcode, std::set<std::unique_ptr<tvlm::Rule>>> allRules_ ;
+
 
     protected:
         ILTiler(): lastIns_(nullptr){
@@ -315,6 +284,8 @@ namespace tvlm {
         void visit(BasicBlock * bb) override;
         void visit(Function * fce) override;
         void visit(Program * p) override;
+
+
 
     private:
         DAG * visitChild(IL * il) {
@@ -351,15 +322,8 @@ namespace tvlm {
         std::unordered_map<Instruction *, DAG*> compiled_;
         DAG *  globals_;
 
-        static std::unordered_map<Instruction *, std::unordered_set<const Rule*>> allRules_ ;
-        static std::unordered_map<Instruction *, std::unordered_set<const Rule*>> AllRulesInit();
-        static std::unordered_map<Instruction *, std::unordered_set<const Rule*>> allRules() {
-            if(allRules_.empty()){
-                allRules_ = AllRulesInit();
-            }
-            return allRules_;
-        }
-
+//        static std::unordered_map<Opcode , std::set<std::unique_ptr<Rule>>> allRules_ ;
+        static std::unordered_map<Opcode, std::set<std::unique_ptr<tvlm::Rule>>> AllRulesInit();
 
         std::unordered_set<Rule*> lastTiled_;
         std::unordered_map<Instruction*, std::unordered_set<Rule*>> tiled_;
@@ -450,6 +414,11 @@ namespace tvlm {
 
 
     };
+
+
+
+
+
 
     class t86_Backend{
     public:

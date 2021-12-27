@@ -238,6 +238,7 @@ namespace tvlm {
             ArgAddr,
         };
 
+        Opcode opcode_;
     protected:
 
         friend class ILVisitor;
@@ -263,7 +264,6 @@ namespace tvlm {
 
 
         std::string instrName_;
-        Opcode opcode_;
         ASTBase const * ast_;
     private:
 
@@ -359,8 +359,31 @@ namespace tvlm {
         } value_;
     };
 
+    enum class BinOpType{
+
+        ADD,
+        SUB,
+
+        MOD,
+        MUL,
+
+        DIV,
+        AND,
+        OR,
+        XOR,
+        LSH,
+        RSH,
+
+        NEQ,
+        EQ,
+        LTE,
+        LT,
+        GT,
+        GTE,
+    };
     class Instruction::BinaryOperator : public Instruction {
     public:
+
         Opcode op() const {
             return op_;
         }
@@ -374,17 +397,56 @@ namespace tvlm {
             return rhs_;
         }
 
+
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
-            p << p.keyword << operator_.name() << " ";
+            p << p.keyword << resolve_operator() << " ";
             printRegister(p, lhs_);
             printRegister(p, rhs_);
         };
 
     protected:
+        const char *  resolve_operator() const{
+            switch (operator_) {
+                case BinOpType::ADD:
+                    return "Add ";
+                case BinOpType::SUB:
+                    return "Sub ";
+                case BinOpType::MUL:
+                    return "Mul ";
+                case BinOpType::DIV:
+                    return "Div ";
+                case BinOpType::MOD:
+                    return "Mod ";
+                case BinOpType::LSH:
+                    return "Lsh ";
+                case BinOpType::RSH:
+                    return "Rsh ";
+                case BinOpType::AND:
+                    return "And ";
+                case BinOpType::OR:
+                    return "Or ";
+                case BinOpType::XOR:
+                    return "Xor ";
+                case BinOpType::EQ:
+                    return "Eq ";
+                case BinOpType::NEQ:
+                    return "Neq ";
+                case BinOpType::GT:
+                    return "Gt ";
+                case BinOpType::LT:
+                    return "Lt ";
+                case BinOpType::GTE:
+                    return "Gte ";
+                case BinOpType::LTE:
+                    return "Lte ";
+                default:
+                    throw "unknown opcode";
+            }
+        }
         void accept(ILVisitor * v) override;
 
-        BinaryOperator(Opcode op, Symbol oper, Instruction * lhs, Instruction * rhs, ASTBase const * ast, const std::string & instrName):
+        BinaryOperator(Opcode op, BinOpType oper, Instruction * lhs, Instruction * rhs, ASTBase const * ast, const std::string & instrName):
             Instruction{GetResultType(lhs, rhs), ast, instrName, op},
             op_{op},
             operator_{oper},
@@ -402,11 +464,17 @@ namespace tvlm {
 
     private:
         Opcode op_;
-        Symbol operator_;
+        BinOpType operator_;
         Instruction * lhs_;
         Instruction * rhs_;    
     };
 
+    enum class UnOpType{
+        UNSUB,
+        NOT,
+        INC,
+        DEC,
+    };
     class Instruction::UnaryOperator : public Instruction {
     public:
         Instruction * operand() const {
@@ -414,21 +482,35 @@ namespace tvlm {
         }
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
-            p << p.keyword << operator_.name() << " ";
+            p << p.keyword << resolve_operator() << " ";
             printRegister(p, operand_);
         };
 
     protected:
+        const char *  resolve_operator() const{
+            switch (operator_) {
+                case UnOpType::UNSUB:
+                    return "Sub ";
+                case UnOpType::INC:
+                    return "Inc ";
+                case UnOpType::DEC:
+                    return "Dec ";
+                case UnOpType::NOT:
+                    return "Not ";
+                default:
+                    throw "unknown opcode";
+            }
+        }
         void accept(ILVisitor * v) override;
 
-        UnaryOperator( Opcode op, Symbol oper, Instruction * operand, ASTBase const * ast, const std::string & instrName):
+        UnaryOperator( Opcode op, UnOpType oper, Instruction * operand, ASTBase const * ast, const std::string & instrName):
             Instruction{operand->resultType(), ast, instrName, op},
             operator_{oper},
             operand_{operand} {
         }
 
     private:
-        Symbol operator_;
+        UnOpType operator_;
         Instruction * operand_;
 
     }; 
@@ -645,8 +727,12 @@ namespace tvlm {
 
     class Instruction::ElemInstruction : public Instruction{
     public:
+//        enum class Type
         void addIndex( Instruction * src, size_t size){
             contents_.emplace_back( src, size);
+        }
+        void addOffset(  size_t size){
+            contents_.emplace_back( nullptr, size);
         }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override;
@@ -740,8 +826,8 @@ namespace tvlm {
 #define ImmIndex(NAME, ENCODING) NAME (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {} \
                                  NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {}
-#define BinaryOperator(NAME, ENCODING) NAME (Symbol oper, Opcode op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, oper, lhs, rhs, ast, #NAME} {}
-#define UnaryOperator(NAME, ENCODING) NAME (Symbol oper, Opcode op, Instruction * operand, ASTBase const * ast): Instruction::ENCODING{op, oper, operand, ast, #NAME} {}
+#define BinaryOperator(NAME, ENCODING) NAME (BinOpType oper, Opcode op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, oper, lhs, rhs, ast, #NAME} {}
+#define UnaryOperator(NAME, ENCODING) NAME (UnOpType oper, Opcode op, Instruction * operand, ASTBase const * ast): Instruction::ENCODING{op, oper, operand, ast, #NAME} {}
 #define Terminator0(NAME, ENCODING) NAME (ASTBase const * ast): Instruction::ENCODING{ast, #NAME, Instruction::Opcode::NAME} {}
 #define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, ASTBase const * ast): Instruction::ENCODING{returnValue, ast, #NAME, Instruction::Opcode::NAME} {}
 #define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast, #NAME, Instruction::Opcode::NAME} {}
