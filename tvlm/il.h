@@ -8,6 +8,9 @@
 #include "common/ast.h"
 #include "tinyc/types.h"
 
+namespace tvlm{
+    class CfgBuilder;
+}
 namespace tvlm {
 
     using ASTBase = tiny::ASTBase;
@@ -116,7 +119,7 @@ namespace tvlm {
 //    private:
 //
 //        void toStream(std::ostream & s) const override {
-//            s << "struct " << ast_->name.name();
+//            s << "struct " << il_->name.name();
 //        }
 //
 //        std::vector<std::pair<Symbol, Type *>> fields_;
@@ -157,6 +160,9 @@ namespace tvlm {
 
         std::string const & name() const {
             return name_;
+        }
+        const ASTBase  * ast()const {
+            return ast_;
         }
 
         void setName(std::string const & value) {
@@ -894,6 +900,7 @@ namespace tvlm {
         friend class ILVisitor;
         friend class ILTiler;
         friend class ILtoISNaive;
+        friend class tvlm::CfgBuilder;
     private:
         std::string name_;
         std::vector<std::unique_ptr<Instruction>> insns_;
@@ -924,7 +931,7 @@ namespace tvlm {
 
         void print(tiny::ASTPrettyPrinter & p) const {
 
-            p << p.comment << "function: " ; //<< ast_->type()->toString();
+            p << p.comment << "function: " ; //<< il_->type()->toString();
             p.newline();
             p << p.identifier << name_ << p.symbol << ":";
             p.indent();
@@ -935,6 +942,11 @@ namespace tvlm {
 
         }
 
+        const ASTBase * ast(){
+            return ast_;
+        }
+
+        friend class CfgBuilder;
     protected:
 
         void accept(ILVisitor * v) override;
@@ -960,6 +972,9 @@ namespace tvlm {
                  std::unique_ptr<BasicBlock> && globals
         ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)), globals_(std::move(globals)){}
 
+        const std::unordered_map<Symbol, std::unique_ptr<Function>> & functions() const {
+            return functions_;
+        }
     protected:
         friend class ILVisitor;
         friend class ILTiler;

@@ -177,8 +177,8 @@ namespace tvlm {
             //
             //    class DAG{
             //    public:
-            //        DAG(Instruction * ins, DAG * next = nullptr) :ins_(ins), next_(next){}
-            //        Instruction * ins_;
+            //        DAG(Instruction * ins, DAG * next = nullptr) :il_(ins), next_(next){}
+            //        Instruction * il_;
             //        DAG * next_;
             //    };
             //    class DAGBuilder : public ILVisitor {
