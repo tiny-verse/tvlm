@@ -180,16 +180,11 @@ namespace tvlm {
         //enum opcode TODO
         enum class Opcode {
             ADD,
-            FADD,
             SUB,
             UNSUB,
-            FSUB,
-
             MOD,
             MUL,
-            FMUL,
             DIV,
-            FDIV,
             AND,
             OR,
             XOR,
@@ -205,19 +200,6 @@ namespace tvlm {
             LT,
             GT,
             GTE,
-//            CMP,
-//            FCMP,
-//            JMP,
-//            JZ,
-//            RET,
-//            PUTCHAR,
-//            GETCHAR,
-//            EXT,
-//            NRW,
-//            POP,
-//            FPOP,
-//            PUSH,
-//            FPUSH,
 
 
             BinOp,
@@ -412,44 +394,7 @@ namespace tvlm {
         };
 
     protected:
-        const char *  resolve_operator() const{
-            switch (operator_) {
-                case BinOpType::ADD:
-                    return "Add ";
-                case BinOpType::SUB:
-                    return "Sub ";
-                case BinOpType::MUL:
-                    return "Mul ";
-                case BinOpType::DIV:
-                    return "Div ";
-                case BinOpType::MOD:
-                    return "Mod ";
-                case BinOpType::LSH:
-                    return "Lsh ";
-                case BinOpType::RSH:
-                    return "Rsh ";
-                case BinOpType::AND:
-                    return "And ";
-                case BinOpType::OR:
-                    return "Or ";
-                case BinOpType::XOR:
-                    return "Xor ";
-                case BinOpType::EQ:
-                    return "Eq ";
-                case BinOpType::NEQ:
-                    return "Neq ";
-                case BinOpType::GT:
-                    return "Gt ";
-                case BinOpType::LT:
-                    return "Lt ";
-                case BinOpType::GTE:
-                    return "Gte ";
-                case BinOpType::LTE:
-                    return "Lte ";
-                default:
-                    throw "unknown opcode";
-            }
-        }
+        const char *  resolve_operator() const;
         void accept(ILVisitor * v) override;
 
         BinaryOperator(Opcode op, BinOpType oper, Instruction * lhs, Instruction * rhs, ASTBase const * ast, const std::string & instrName):
@@ -493,20 +438,7 @@ namespace tvlm {
         };
 
     protected:
-        const char *  resolve_operator() const{
-            switch (operator_) {
-                case UnOpType::UNSUB:
-                    return "Sub ";
-                case UnOpType::INC:
-                    return "Inc ";
-                case UnOpType::DEC:
-                    return "Dec ";
-                case UnOpType::NOT:
-                    return "Not ";
-                default:
-                    throw "unknown opcode";
-            }
-        }
+        const char *  resolve_operator() const;
         void accept(ILVisitor * v) override;
 
         UnaryOperator( Opcode op, UnOpType oper, Instruction * operand, ASTBase const * ast, const std::string & instrName):
@@ -976,6 +908,13 @@ namespace tvlm {
                  std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,
                  std::unique_ptr<BasicBlock> && globals
         ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)), globals_(std::move(globals)){}
+
+        Program(Program && p):
+        stringLiterals_(std::move(p.stringLiterals_)),
+        functions_(std::move(p.functions_)),
+        globals_(std::move(p.globals_)){
+        }
+        Program(const Program & p) = delete;
 
         const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions() const {
             return functions_;

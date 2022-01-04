@@ -55,5 +55,60 @@ namespace tvlm {
     {
 
     }
+    const char *Instruction::BinaryOperator::resolve_operator() const{
+        switch (operator_) {
+            case BinOpType::ADD:
+                return "Add ";
+            case BinOpType::SUB:
+                return "Sub ";
+            case BinOpType::MUL:
+                return "Mul ";
+            case BinOpType::DIV:
+                return "Div ";
+            case BinOpType::MOD:
+                return "Mod ";
+            case BinOpType::LSH:
+                return "Lsh ";
+            case BinOpType::RSH:
+                return "Rsh ";
+            case BinOpType::AND:
+                return "And ";
+            case BinOpType::OR:
+                return "Or ";
+            case BinOpType::XOR:
+                return "Xor ";
+            case BinOpType::EQ:
+                return "Eq ";
+            case BinOpType::NEQ:
+                return "Neq ";
+            case BinOpType::GT:
+                return "Gt ";
+            case BinOpType::LT:
+                return "Lt ";
+            case BinOpType::GTE:
+                return "Gte ";
+            case BinOpType::LTE:
+                return "Lte ";
+            default:
+                throw "unknown opcode";
+        }
+    }
+
+    const char *Instruction::UnaryOperator::resolve_operator() const {
+        switch (operator_) {
+            case UnOpType::UNSUB:
+                return "Sub ";
+            case UnOpType::INC:
+                return "Inc ";
+            case UnOpType::DEC:
+                return "Dec ";
+            case UnOpType::NOT:
+                return "Not ";
+            default:
+                throw "unknown opcode";
+        }
+    }
+
+
 }
 

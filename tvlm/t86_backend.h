@@ -252,7 +252,7 @@ namespace tvlm {
 
             std::cerr << "huh" << globLabels.size() << std::endl;
             tiny::t86::ProgramBuilder pb;
-            return pb.program();
+            return std::move(pb.program());
         }
         static  std::unordered_map<Opcode, std::set<std::unique_ptr<tvlm::Rule>>> allRules_ ;
 

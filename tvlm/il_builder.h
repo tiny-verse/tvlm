@@ -44,6 +44,15 @@ namespace tvlm {
             return ins;
         }
 
+        Instruction * globalAdd(Instruction * ins){
+            globals_->add(ins);
+            if(ins->name().empty()){
+                ins->setName(STR("g" << (globalRegisterCounter_++)));
+            }
+            lastInstr_ = ins;
+            return ins;
+        }
+
         BasicBlock * createBasicBlock(std::string const & name) {
             assert(f_ != nullptr);
             BasicBlock * result = new BasicBlock{};
@@ -127,7 +136,7 @@ namespace tvlm {
         Instruction * getStringLiteral(std::string const & lit, const tiny::ASTBase * ast){
             auto i = stringLiterals_.find(lit);
             if (i == stringLiterals_.end()) {
-                Instruction * addr = globals_->add(new tvlm::AllocG{lit.size() + 1,nullptr , ast});
+                Instruction * addr = globalAdd(new tvlm::AllocG{lit.size() + 1,nullptr , ast});
                 stringLiterals_.insert(std::make_pair(lit, addr));
                 return addr;
             } else {
@@ -145,9 +154,9 @@ namespace tvlm {
         }
 
         tvlm::Program finish(){
-            return tvlm::Program(std::move(stringLiterals_),
+            return {std::move(stringLiterals_),
                            std::move(functions_),
-                           std::move(globals_));
+                           std::move(globals_)};
         }
 
         const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions()const {
