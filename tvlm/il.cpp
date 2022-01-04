@@ -39,10 +39,20 @@ namespace tvlm {
         p << p.keyword << instrName_ << " " ;
         printRegister(p, base_);
         for(auto & c: contents_){
+            p << p.keyword<<  "+ ";
             if(c.first) printRegister(p, c.first);
             else p << p.numberLiteral <<  "1 ";
-            p << p.keyword<<  "x " << p.numberLiteral << c.second << p.keyword <<" + " ;
+            p << p.keyword<<  "x " << p.numberLiteral << c.second;
         }
+
+    }
+
+    Instruction::DirectCallInstruction::DirectCallInstruction(Function *f, std::vector<Instruction *> &&args,
+                                                              const ASTBase *ast, const std::string &instrName,
+                                                              Instruction::Opcode opcode) :
+            Instruction::CallInstruction{std::move(args), ast, instrName, opcode, f->getResultType()},
+            f_{f}
+    {
 
     }
 }

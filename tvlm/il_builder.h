@@ -82,7 +82,7 @@ namespace tvlm {
         }
 
         Function * enterFunction(Function * f) {
-            functions_.insert(std::make_pair(f->name(), f));
+            functions_.emplace_back(f->name(), f);
             f_ = f;
             enterBasicBlock(createBasicBlock());
             // enter new environment for the function
@@ -150,12 +150,13 @@ namespace tvlm {
                            std::move(globals_));
         }
 
-        const std::unordered_map<Symbol, std::unique_ptr<Function>> & functions()const {
+        const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions()const {
             return functions_;
         }
 
         Function * findFnc(Symbol & name) const{
-            auto r = functions_.find(name);
+            auto r = functions_.begin();
+            for(;r != functions_.end();r++){if(r->first == name) break;}
             return (r != functions_.end()) ? r->second.get() : nullptr;
         }
 
@@ -220,7 +221,7 @@ namespace tvlm {
         //Backend & backend_;
 
         std::unordered_map<std::string, Instruction*> stringLiterals_;
-        std::unordered_map<Symbol, std::unique_ptr<Function>> functions_;
+        std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
         std::unique_ptr<BasicBlock> globals_;
         std::unique_ptr<Environment> env_;
         Context context_ = Context::Empty();

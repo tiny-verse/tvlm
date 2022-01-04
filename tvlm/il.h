@@ -769,8 +769,9 @@ namespace tvlm {
 
     protected:
 
-        CallInstruction(std::vector<Instruction*> && args, ASTBase const * ast, const std::string & instrName, Opcode opcode ):
-                Instruction{ResultType::Void, ast, instrName, opcode},
+        CallInstruction(std::vector<Instruction*> && args, ASTBase const * ast, const std::string & instrName
+                        , Opcode opcode , const ResultType & resultType):
+                Instruction{resultType, ast, instrName, opcode},
                 args_{args}{
 
         }
@@ -787,12 +788,7 @@ namespace tvlm {
     protected:
         void accept(ILVisitor * v) override;
 
-        DirectCallInstruction(Function * f, std::vector<Instruction*> && args,const ASTBase * ast , const std::string & instrName, Opcode opcode):
-                CallInstruction{std::move(args), ast, instrName, opcode},
-                f_{f}
-                {
-
-        }
+        DirectCallInstruction(Function * f, std::vector<Instruction*> && args,const ASTBase * ast , const std::string & instrName, Opcode opcode);
         Function * f_;
     }; // Instruction::DirectCallInstruction
 
@@ -816,7 +812,7 @@ namespace tvlm {
         void accept(ILVisitor * v) override;
 
         IndirectCallInstruction(Instruction * f, std::vector<Instruction*> && args,const ASTBase * ast, const std::string & instrName, Opcode opcode ):
-                CallInstruction{std::move(args), ast, instrName, opcode},
+                CallInstruction{std::move(args), ast, instrName, opcode, f->resultType()},
                 f_{f}
                 {
 
@@ -922,6 +918,13 @@ namespace tvlm {
             return this;
         }
 
+        void setResultType(const ResultType & r){
+            resultType_ = r;
+        }
+        ResultType getResultType()const{
+            return resultType_;
+        }
+
         bool contains(BasicBlock * b) const {
             for (auto const & i : bbs_)
                 if (i.get() == b)
@@ -963,16 +966,18 @@ namespace tvlm {
 
         std::vector<std::unique_ptr<BasicBlock>> bbs_;
 
+        ResultType resultType_;
+
     };   // tvlm::Function
 
     class Program : public IL{
     public:
         Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
-                 std::unordered_map<Symbol, std::unique_ptr<Function>> && functions,
+                 std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,
                  std::unique_ptr<BasicBlock> && globals
         ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)), globals_(std::move(globals)){}
 
-        const std::unordered_map<Symbol, std::unique_ptr<Function>> & functions() const {
+        const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions() const {
             return functions_;
         }
     protected:
@@ -982,7 +987,7 @@ namespace tvlm {
         void accept(ILVisitor * v) override;
     private:
         std::unordered_map<std::string, Instruction*> stringLiterals_;
-        std::unordered_map<Symbol, std::unique_ptr<Function>> functions_;
+        std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
         std::unique_ptr<BasicBlock> globals_;
     } ; // tvlm::Program
 
@@ -1035,6 +1040,9 @@ namespace tvlm {
     inline void Instruction::ElemInstruction::accept(ILVisitor * v) { v->visit(this); }
     inline void Instruction::IndirectCallInstruction::accept(ILVisitor * v) { v->visit(this); }
     inline void Instruction::DirectCallInstruction::accept(ILVisitor * v) { v->visit(this); }
+
+
+
     inline void Instruction::ImmValue::accept(ILVisitor * v) { v->visit(this); }
     inline void Instruction::ImmSize::accept(ILVisitor * v) { v->visit(this); }
     inline void Instruction::ImmIndex::accept(ILVisitor * v) { v->visit(this); }
