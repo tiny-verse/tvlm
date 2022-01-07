@@ -1,9 +1,14 @@
 #pragma once
-#include "liveness_analysis.h"
 #include "../il.h"
 
+#include "./lattice/map_lattice.h"
+#include "./lattice/powerset_lattice.h"
+#include "cfg.h"
+#include "analysis.h"
+
+
 namespace tvlm{
-    using Declaration = tvlm::Instruction*;
+    using Declaration = tvlm::IL*;
     using Declarations = MAP< tvlm::Instruction *, Declaration>;
 
 
@@ -11,7 +16,7 @@ namespace tvlm{
 
 
     class InstructionAnalysis : public Analysis<Declarations>{
-        using Env = MAP<ILInstruction *, Declaration>;
+        using Env = MAP<VirtualRegisterPlaceholder *, Declaration>;
     public:
         InstructionAnalysis(Program * p): Analysis<Declarations>(), p_(p){
 
@@ -27,24 +32,38 @@ namespace tvlm{
         class InsVisitor : public ::tvlm::ILVisitor{
         public:
             Declarations declarations;
+            InsVisitor():env_(nullptr){
+
+            }
         protected:
-//            Env env_;
-//            Env extendEnv(Env & env, std::vector<Declaration> & decls){
-//                auto acc = env;
-//                for (const auto & d : decls) {
-//                    auto tmp = acc.access(d->name());
-//                    acc.insert(std::make_pair(d->name(), d));
-//                }
-//            }
+            Env env_;
+
+            VirtualRegisterPlaceholder * getVirtualReg(const Declaration pIl);
+            std::map<IL*, std::unique_ptr<VirtualRegisterPlaceholder>> virtualRegs_;
+
+            Env extendEnv(Env & env, const std::vector<Declaration> & decls){
+                auto acc = env;
+                for (const auto & d : decls) {
+                    VirtualRegisterPlaceholder * reg = getVirtualReg(d);
+                    auto tmp = acc.access(reg);
+                    if(!tmp){
+                        acc.insert(std::make_pair( reg, d));
+                    }
+                }
+                return acc;
+            }
 
 
-            void visitChild(::tvlm::IL * il) {
+            void visitChild(::tvlm::IL * il, const Env & env) {
+                Env tmp = env_;
+                env_ = env;
                 ILVisitor::visitChild(il);
+                env_ = tmp;
             }
 
             template<typename T>
-            void visitChild(std::unique_ptr<T> const &ptr) {
-                return visitChild(ptr.get());
+            void visitChild(std::unique_ptr<T> const &ptr, const Env & env) {
+                return visitChild(ptr.get(), env);
             }
 
             void visit(Instruction *ins) override;

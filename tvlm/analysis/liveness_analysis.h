@@ -4,21 +4,17 @@
 #include <set>
 #include "tvlm/il_builder.h"
 #include "tvlm/il_insns.h"
-#include "./lattice/map_lattice.h"
-#include "./lattice/powerset_lattice.h"
-#include "cfg.h"
-#include "analysis.h"
 #include "instruction_analysis.h"
 
 namespace tvlm{
     using Instruction = ::tvlm::Instruction;
 
 
-using LiveVars = MAP<const CfgNode *, std::set<tvlm::Instruction*>>;
+using LiveVars = MAP<const CfgNode *, std::set<Declaration>>;
 class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
-    using Declaration = tvlm::Instruction*;
+//    using Declaration = tvlm::Instruction*;
     using NodeState = std::set<Declaration>;
-    using Declarations = MAP< ILInstruction *, Declaration>;
+//    using Declarations = MAP< ILInstruction *, Declaration>;
 
     NodeState join(const CfgNode * node, LiveVars & state){
         auto states = node->succ_;
