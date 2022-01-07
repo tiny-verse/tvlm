@@ -6,6 +6,7 @@
 #include "t86/program/programbuilder.h"
 
 
+
 namespace tvlm {
 
     using Opcode = tvlm::Instruction::Opcode;
@@ -16,16 +17,21 @@ namespace tvlm {
 
     class Rule {
     public:
-        virtual bool matchesOpcode(Instruction * ins) const =0;
+//        virtual bool matchesOpcode(Instruction * ins) const {
+//            return this->matchesOpcode(ins->opcode_);
+//        };
+        virtual bool matchesOpcode(const Opcode & opcode) const =0;
         int num() const{
             return num_;
         }
-        Rule(int cost, int num = counter++) : cost_(cost), num_(num){ }
+        Rule(int cost) : Rule(cost, counter++){ }
 
         virtual Rule * makeCopy() const = 0;
-        virtual bool operator== (const DAG * other) const = 0;
-        virtual const Rule * operator[] (size_t idx) const = 0;
+        virtual bool operator== (const DAG * other)  = 0;
+        virtual int countCost() = 0;
+//        virtual const Rule * operator[] (size_t idx) const = 0;
     protected:
+        Rule(int cost, int num ) : cost_(cost), num_(num), code_(){ }
         int cost_;
         int num_;
         static int counter;
@@ -35,34 +41,61 @@ namespace tvlm {
 
     class DummyRule : public Rule{
     public:
-        virtual bool matchesOpcode(Instruction * ins) const {
-            return false;
+        DummyRule():Rule(0){}
+        bool matchesOpcode(const Opcode & ins) const override{
+            return true;
         }
         void operator=(const DummyRule &) = delete;
 
-        virtual Rule * makeCopy() const {
+        Rule * makeCopy() const override {
             return new DummyRule(*this);
         }
-        static DummyRule *get();
-        virtual bool operator== (const DAG * other) const override;
+        bool operator== (const DAG * other)  override;
+        int countCost () override;
+    protected:
+        DummyRule(const DummyRule & other) :Rule(other.cost_, other.num_), dag_(other.dag_){
+        };
+        DAG * dag_;
+    };
 
-        virtual const Rule * operator[] (size_t idx) const override{
-            return nullptr;
+    class VirtualRegisterPlaceholder{
+        virtual VirtualRegisterPlaceholder * makeCopy() = 0;
+    };
+
+    class VirtualRegister : public VirtualRegisterPlaceholder{
+    public:
+            VirtualRegister(): reg_(tiny::t86::Register(-1)), set_(false){}
+    private:
+        VirtualRegisterPlaceholder *makeCopy() override {
+            return new VirtualRegister(*this);
         }
 
+    public:
+        void setRegister(const tiny::t86::Register & reg){
+            reg_ = reg;
+            set_ = true;
+        }
+    private:
+        tiny::t86::Register reg_;
+        bool set_;
+    };
 
-    protected:
-        DummyRule(const DummyRule & other) = default;
-        DummyRule():Rule(0){}
-
-        virtual bool matchesOpcode(Instruction::Opcode ins) const {
-            return false;
+    class VirtualFloatRegister : public VirtualRegisterPlaceholder{
+    public:
+        VirtualFloatRegister(): reg_(tiny::t86::FloatRegister(-1)), set_(false){}
+        void setRegister(const tiny::t86::FloatRegister & reg){
+            reg_ = reg;
+            set_ = true;
         }
 
     private:
-        static DummyRule * dummy;
-    };
+        VirtualRegisterPlaceholder *makeCopy() override {
+            return new VirtualFloatRegister(*this);
+        }
 
+        tiny::t86::FloatRegister reg_;
+        bool set_;
+    };
 
 
     class DAG {
@@ -78,53 +111,78 @@ namespace tvlm {
         Rule * selectedRule_;
 
 
-        explicit DAG( Instruction *src, Instruction::Opcode type, const std::vector<DAG*> & children = std::vector<DAG*>())
-        :src_( src), children_(children), type_(type){
+        explicit DAG( Instruction *src, const Instruction::Opcode & type, const std::vector<DAG*> & children = std::vector<DAG*>())
+        :src_( src), children_(children), type_(type), reg(tiny::t86::Register(0)){
+//            assert(src->opcode_ == type);
         }
 
         virtual void tile();
+
+        const Instruction * ins()const{
+            return src_;
+        }
+        tiny::t86::Register reg;
+
+        DAG * operator[](size_t idx)const{
+            return children_[idx];
+        }
+
+        bool operator==(const DAG & other)const{
+            bool tmp = children_.size() == other.children_.size();
+            auto it = children_.begin();
+            auto ito = other.children_.begin();
+            for ( ;it != children_.end();it++, ito++) {
+                if(!tmp || !( tmp = (*it == *ito) ) )return false;
+            }
+            return true;
+        }
+
     private:
         Opcode type_;
         std::vector<DAG*> children_;
+        std::vector<Rule*> ruled_;
 
     protected:
         Instruction * src_;
         std::vector<tiny::t86::Instruction *> code_;
     };
-
-    class SpecializedRule : public Rule{
-    public:
-        // recursive comparison
-        explicit SpecializedRule( Instruction::Opcode opcode, int cost, std::vector<const Rule*>  children = std::vector<const Rule*>(), std::function<bool(const Rule * rule, const DAG * dag)> customMatcher = nullptr)
-                :Rule( cost), children_(std::move(children)), opcode_(opcode), customMatcher_(std::move(customMatcher)){
-        }
-        explicit SpecializedRule(Instruction::Opcode opcode, int cost, int size, std::function<bool(const Rule * rule, const DAG * dag)>  customMatcher = nullptr)
-                :Rule( cost), children_(std::move(std::vector<const Rule*> (size, DummyRule::get())) ), customMatcher_(std::move(customMatcher)),
-                 opcode_(opcode){
-
-        }
-        SpecializedRule(const SpecializedRule & r) :Rule(r.cost_, r.num_),
-        children_(r.children_), opcode_(r.opcode_) {
-
-        }
-        virtual bool matchesOpcode(Instruction * ins) const {
-            return ins->opcode_ == opcode_;
-        }
-
-        virtual Rule * makeCopy() const{
-            return new SpecializedRule(*this);
-        }
-
-        bool matchRuleToDAG(const DAG * dag)const ;
-        bool operator== (const DAG * other) const override;
-        virtual const Rule * operator[] (size_t idx) const override{
-            return children_[idx];
-        }
-        const std::vector<const Rule*> children_;
-    private:
-        Instruction::Opcode opcode_;
-        std::function<bool (const Rule *, const tvlm::DAG* ) > customMatcher_;
-    };
+//
+//    class SpecializedRule : public Rule{
+//    public:
+//        // recursive comparison
+//        explicit SpecializedRule( Instruction::Opcode opcode, int cost, std::vector<std::shared_ptr<Rule>>  children = std::vector<std::shared_ptr<Rule>>(), std::function<bool(const Rule * rule, const DAG * dag)> customMatcher = nullptr)
+//                :Rule( cost), children_(std::move(children)), opcode_(opcode), customMatcher_(std::move(customMatcher)){
+//        }
+//        explicit SpecializedRule(Instruction::Opcode opcode, int cost, int size, std::function<bool(const Rule * rule, const DAG * dag)>  customMatcher = nullptr)
+//                :Rule( cost), children_(std::move(std::vector<std::shared_ptr<Rule>> (size, std::shared_ptr<Rule>(DummyRule::getnew()))) ), customMatcher_(std::move(customMatcher)),
+//                 opcode_(opcode){
+//
+//        }
+//        SpecializedRule(const SpecializedRule & r) :Rule(r.cost_, r.num_),
+//        children_(r.children_), opcode_(r.opcode_) {
+//
+//        }
+//        virtual bool matchesOpcode(Instruction * ins) const {
+//            return ins->opcode_ == opcode_;
+//        }
+//        virtual bool matchesOpcode(const Opcode & inscode) const {
+//            return inscode == opcode_;
+//        }
+//
+//        virtual Rule * makeCopy() const{
+//            return new SpecializedRule(*this);
+//        }
+//
+//        bool matchRuleToDAG(const DAG * dag)const ;
+//        bool operator== (const DAG * other) const override;
+//        virtual const Rule * operator[] (size_t idx) const {
+//            return children_[idx].get();
+//        }
+//        const std::vector<std::shared_ptr<Rule>> children_;
+//    private:
+//        Instruction::Opcode opcode_;
+//        std::function<bool (const Rule *, const tvlm::DAG* ) > customMatcher_;
+//    };
 
 
             //
@@ -241,20 +299,8 @@ namespace tvlm {
         using Label = tiny::t86::Label;
         using DataLabel = tiny::t86::DataLabel;
 
-        static tiny::t86::Program translate(tvlm::Program & prog){
-            //TODO
-            ILTiler v;
-            v.visit( &prog);
-            std::cerr << "huh" << std::endl;
-            v.functionTable_.begin()->second->tile();
-
-            auto & globLabels = v.functionTable_.begin()->second->labels_;
-
-            std::cerr << "huh" << globLabels.size() << std::endl;
-            tiny::t86::ProgramBuilder pb;
-            return std::move(pb.program());
-        }
-        static  std::unordered_map<Opcode, std::set<std::unique_ptr<tvlm::Rule>>> allRules_ ;
+        static tiny::t86::Program translate(tvlm::Program & prog);
+        static std::map<Opcode , std::set<Rule*>> allRules_ ;
 
 
     protected:
@@ -313,17 +359,17 @@ namespace tvlm {
             if(it == compiled_.end()){
                 return nullptr;
             }
-            return it->second;
+            return it->second.get();
         }
 
 
         DAG * lastIns_;
-        std::unordered_map<tiny::Symbol, DAG*> functionTable_;
-        std::unordered_map<Instruction *, DAG*> compiled_;
-        DAG *  globals_;
+        std::unordered_map<tiny::Symbol, std::unique_ptr<DAG>> functionTable_;
+        std::unordered_map<Instruction *, std::unique_ptr<DAG>> compiled_;
+        std::unique_ptr<DAG> globals_;
 
-//        static std::unordered_map<Opcode , std::set<std::unique_ptr<Rule>>> allRules_ ;
-        static std::unordered_map<Opcode, std::set<std::unique_ptr<tvlm::Rule>>> AllRulesInit();
+//        static std::unordered_map<Opcode , std::set<Rule*>> allRules_ ;
+        static std::vector<std::unique_ptr<Rule>> AllRulesInit();
 
         std::unordered_set<Rule*> lastTiled_;
         std::unordered_map<Instruction*, std::unordered_set<Rule*>> tiled_;
@@ -425,6 +471,8 @@ namespace tvlm {
         using IL = tvlm::Program;
         using PB = tiny::t86::Program;
         PB compileToTarget( IL && il){
+            //auto codeGenerator = CodeGenerator (il);
+
             return tvlm::ILTiler::translate(il);
 
         }

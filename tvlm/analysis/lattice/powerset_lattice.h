@@ -1,6 +1,6 @@
 #pragma once
 
-#include <set>
+#include <unordered_set>
 #include "tvlm/tvlm/analysis/lattice/lattice.h"
 
 
@@ -8,26 +8,26 @@ namespace tvlm{
 
 
     template<typename A>
-    class PowersetLattice : public Lattice<std::set<A>>{
+    class PowersetLattice : public Lattice<std::unordered_set<A>>{
     public:
-        explicit PowersetLattice(std::set<A> & elements )
+        explicit PowersetLattice(const std::unordered_set<A> & elements )
         :elements_(elements){}
 
-        virtual std::set<A> top() override{
+        virtual std::unordered_set<A> top() override{
             return elements_;
         }
 
-        virtual std::set<A> bot() override{
-            return std::set<A>();
+        virtual std::unordered_set<A> bot() override{
+            return std::unordered_set<A>();
         }
 
-        virtual std::set<A> lub( std::set<A> & x, std::set<A> & y) override{
-            std::set<A>res(x);
+        virtual std::unordered_set<A> lub( std::unordered_set<A> & x, std::unordered_set<A> & y) override{
+            std::unordered_set<A>res(x);
             res.insert(y.begin(), y.end());
             return res;
         }
 
     private:
-        std::set<A> elements_;
+        std::unordered_set<A> elements_;
     };
 }

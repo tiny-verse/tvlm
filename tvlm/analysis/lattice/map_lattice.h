@@ -1,6 +1,5 @@
 #pragma once
 
-#include <set>
 #include <map>
 #include "tvlm/tvlm/analysis/lattice/lattice.h"
 
@@ -26,7 +25,8 @@ public:
 
     virtual B & access (const A & idx){
         if( !specified || std::map<A, B>::find(idx) != std::map<A, B>::end()) {
-            return std::map<A, B>::operator[](idx);
+            return this->operator[](idx);
+//            return std::map<A, B>::operator[](idx);
         }
         return defaultValue;
 
@@ -43,7 +43,7 @@ namespace tvlm{
     template<typename A, typename B>
     class MapLattice : public Lattice<MAP<A, B>>{
     public:
-        explicit MapLattice(const std::set<A> & set, Lattice<B> * lat ):
+        explicit MapLattice(const std::unordered_set<A> & set, Lattice<B> * lat ):
         set_(set), lat_(lat){}
 
         virtual MAP<A, B> top() override{
@@ -64,7 +64,7 @@ namespace tvlm{
         }
 
     private:
-        std::set<A> set_;
+        std::unordered_set<A> set_;
         Lattice<B>* lat_;
     };
 }

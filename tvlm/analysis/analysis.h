@@ -1,25 +1,26 @@
 #pragma once
-#include "tvlm_backend"
-
-
+#include "cfg.h"
 namespace tvlm {
-    using Instruction = ::tvlm::Instruction;
-
     template<class T>
     class Analysis {
-
+    public:
         virtual T analyze() = 0;
     };
 
     template<typename T>
     class BackwardAnalysis : public Analysis<T> {
-
+    protected:
+        static ProgramCfg getCfg(Program * p){
+            auto builder = new IntraProceduralCfgBuilder;
+            return builder->fromProgram(p);
+        }
+    public:
         virtual T analyze() = 0;
     };
 
     template<typename T>
     class ForwardAnalysis : public Analysis<T> {
-
+    public:
         virtual T analyze() = 0;
     };
 }

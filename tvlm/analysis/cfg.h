@@ -1,9 +1,9 @@
 #pragma once
 
 #include <utility>
+#include <unordered_set>
 
 #include "cfgNode.h"
-#include "tvlm_backend"
 
 using Function = tvlm::Function;
 using Program = tvlm::Program;
@@ -14,7 +14,7 @@ namespace tvlm{
 
 class FragmentCfg {
 public:
-    FragmentCfg( std::set<CfgNode*>  entryNodes, std::set<CfgNode*>  exitNodes):
+    FragmentCfg( std::unordered_set<CfgNode*>  entryNodes, std::unordered_set<CfgNode*>  exitNodes):
     entryNodes_(std::move(entryNodes)),
     exitNodes_(std::move(exitNodes)){
 
@@ -28,12 +28,12 @@ public:
 
     FragmentCfg * operator |(FragmentCfg * that) ;
 
-    std::set<const CfgNode*> nodes();
+    std::unordered_set<const CfgNode*> nodes();
 
 protected:
-    std::set<const CfgNode*> visit(const CfgNode * n);
-    std::set<CfgNode*> entryNodes_;
-    std::set<CfgNode*> exitNodes_;
+    std::unordered_set<const CfgNode*> visit(const CfgNode * n);
+    std::unordered_set<CfgNode*> entryNodes_;
+    std::unordered_set<CfgNode*> exitNodes_;
 
 private:
 };
@@ -42,11 +42,11 @@ class FunctionCfg : public FragmentCfg{
 public:
     FunctionCfg( Function * fnc, CfgFunEntryNode * entry, CfgFunExitNode * exit, FragmentCfg *  cfg) :
             FragmentCfg([&]( CfgFunEntryNode * entry) {
-                std::set<CfgNode*> res;
+                std::unordered_set<CfgNode*> res;
                 res.insert(entry);
                 return res;
             }(entry),[&]( CfgFunEntryNode * exit) {
-                std::set<CfgNode*> res;
+                std::unordered_set<CfgNode*> res;
                 res.insert(exit);
                 return res;
             }(entry)),
@@ -70,8 +70,8 @@ private:
 
 class ProgramCfg : public FragmentCfg{
 protected:
-    ProgramCfg(Program * program, std::set<CfgNode*> && entry,
-               std::set<CfgNode*> && exit,
+    ProgramCfg(Program * program, std::unordered_set<CfgNode*> && entry,
+               std::unordered_set<CfgNode*> && exit,
                std::vector<std::unique_ptr<FunctionCfg>> && functionsCfg):
             FragmentCfg(std::move(entry), std::move(exit)),
             functionsCfg_(std::move(functionsCfg)),
@@ -98,23 +98,7 @@ public:
 
 public:
 
-    static ProgramCfg get(Program * program, std::set<FunctionCfg*> & functionsCfg){
-        std::set<CfgNode*> setEntry;
-        for(auto & e: functionsCfg ){
-            setEntry.insert((CfgNode*)e->entry());
-        }
-        std::set<CfgNode*> setExit;
-        for(auto & e: functionsCfg ){
-            setExit.insert((CfgNode*)e->exit());
-        }
-
-        std::vector<std::unique_ptr<FunctionCfg>> tmp;
-        tmp.reserve(functionsCfg.size());
-        for (const auto e: functionsCfg) {
-            tmp.emplace_back(e);
-        }
-        return ProgramCfg(program, std::move(setEntry) ,std::move(setExit) , std::move(tmp) );
-    }
+    static ProgramCfg get(Program * program, std::unordered_set<FunctionCfg*> & functionsCfg);
 
 
 private:
@@ -133,7 +117,7 @@ public:
 
     ProgramCfg fromProgram(Program * p){
         CfgNode::counter_ = 0;
-        std::set<FunctionCfg*> tmp;
+        std::unordered_set<FunctionCfg*> tmp;
         for (auto & ff : p->functions()) {
             tmp.insert( fromFunction(ff.second.get()) );
         }
@@ -154,28 +138,8 @@ protected:
 class IntraProceduralCfgBuilder : public CfgBuilder{
 public:
     FragmentCfg * fromBB(::tvlm::BasicBlock * bb);
-
-
-    FragmentCfg * fromInstruction(ILInstruction * ins){
-//        if(dynamic_cast<::tvlm::Load *>(ins)) {//assignment // TODO
-//            return single(new CfgStmtNode(ins));
-//        }else if (){
-//
-//        }
-
-        if(dynamic_cast<::tvlm::CondJump *>(ins)) {
-           ::tvlm::CondJump * condJump = dynamic_cast<::tvlm::CondJump*>(ins);
-           auto guardCfg = single(append(new CfgStmtNode(condJump->condition())));
-           auto guardedThenCfg = append(guardCfg->concat(append(fromBB(condJump->getTarget(1)))));
-           if(condJump->numTargets() == 2){
-               auto guardedElseCfg = append(guardCfg->concat(append(fromBB(condJump->getTarget(0)))));
-               return append(*guardedThenCfg | guardedElseCfg);
-           }
-           return append( *guardedThenCfg | guardCfg);
-        }
-
-        return single(append(new CfgStmtNode(ins)));
-    }
+    
+    FragmentCfg * fromInstruction(ILInstruction * ins);
 
     FunctionCfg * fromFunction(Function * fnc);
 
@@ -195,10 +159,10 @@ private:
     std::vector<std::unique_ptr<FragmentCfg>> allFragments;
 
     FragmentCfg * empty(){
-        return append(new FragmentCfg(std::set<CfgNode*> (), std::set<CfgNode*> ()));
+        return append(new FragmentCfg(std::unordered_set<CfgNode*> (), std::unordered_set<CfgNode*> ()));
     }
     FragmentCfg * single(CfgNode * node ){
-        std::set<CfgNode *> a;
+        std::unordered_set<CfgNode *> a;
         a.insert(node);
         return append(new FragmentCfg(a, a));
     }

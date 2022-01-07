@@ -1,19 +1,20 @@
 #pragma once
 
 #include <map>
-#include <set>
+#include <queue>
 #include "tvlm/il_builder.h"
 #include "tvlm/il_insns.h"
 #include "instruction_analysis.h"
+#include "cfg.h"
 
 namespace tvlm{
     using Instruction = ::tvlm::Instruction;
 
 
-using LiveVars = MAP<const CfgNode *, std::set<Declaration>>;
+using LiveVars = MAP<const CfgNode *, std::unordered_set<Declaration>>;
 class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
 //    using Declaration = tvlm::Instruction*;
-    using NodeState = std::set<Declaration>;
+    using NodeState = std::unordered_set<Declaration>;
 //    using Declarations = MAP< ILInstruction *, Declaration>;
 
     NodeState join(const CfgNode * node, LiveVars & state){
@@ -27,52 +28,50 @@ class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
     }
 
     LivenessAnalysis( ProgramCfg  cfg, Declarations & declarations):
-    allVars_(),
+    allVars_([&](){
+        std::unordered_set<Declaration> tmp;
+        for ( auto & n : cfg.nodes()){
+            tmp.emplace(n->il());
+        }
+        return tmp;
+        }())
+        ,
     nodeLattice_(PowersetLattice<Declaration>(allVars_)),
-    lattice_(MapLattice<const CfgNode*, std::set<Declaration>>(cfg.nodes(), &nodeLattice_)),
+    lattice_(MapLattice<const CfgNode*, std::unordered_set<Declaration>>(cfg.nodes(), &nodeLattice_)),
     cfg_(cfg){
 
     }
 
-    static LivenessAnalysis create(Program * p);
-    NodeState transferFun(const CfgNode * node,const  NodeState & state ){
-        if(dynamic_cast<const CfgFunExitNode *>(node)){
-            return nodeLattice_.bot();
-        }else if(dynamic_cast<const CfgFunEntryNode *>(node)){
-            auto * stmtNode = dynamic_cast<const CfgStmtNode *>(node);
-            auto instr = dynamic_cast<ILInstruction *>(stmtNode->il());
-            if(instr){ //TODO rules to add and remove from states
+        std::unordered_set<Declaration> getSubtree(const CfgNode *pNode);
 
+        NodeState transferFun(const CfgNode * node, const  NodeState & state );
 
-//            }else if (dynamic_cast<::tvlm:: *>(stmtNode->il())){
-                return state; // WRONG
-            }else {
-                return state;
-            }
-
-
-        } else{
-            return state;
-        }
-    }
 
     NodeState funOne(const CfgNode * node, LiveVars & state){
         return transferFun(node, join(node, state));
     }
-
+public:
+    static LivenessAnalysis create(Program * p);
     LiveVars analyze() override{
         LiveVars X = lattice_.bot();
-        auto W = cfg_.nodes();
+        std::unordered_set<const CfgNode*> W;
+        for( auto & n : cfg_.nodes()){
+            W.emplace(n);
+        }
 
         while (!W.empty()) {
             const CfgNode* n = *W.begin();
-            W.erase(n);
+            W.erase(W.begin());
             auto x = X.access(n);
             auto y = funOne(n, X);
 
             if (y != x) {
                 X.insert(make_pair(n, y));//X += n -> y
-                W.insert(n->pred_.begin(), n->pred_.end()); //W ++= n.pred;
+                //W ++= n.pred;
+//                for (const auto & p : n->pred_) {
+//                    W.(p);
+//                }
+                W.insert( n->pred_.begin(), n->pred_.end());
             } else if (y.empty()) {
                 X.insert(std::make_pair(n, y));//X += n -> y;
             }
@@ -81,9 +80,9 @@ class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
         return X;
     }
 private:
-    std::set<Declaration> allVars_;
+    std::unordered_set<Declaration> allVars_;
     PowersetLattice<Declaration> nodeLattice_;
-    MapLattice<const CfgNode *, std::set<Declaration>> lattice_;
+    MapLattice<const CfgNode *, std::unordered_set<Declaration>> lattice_;
     ProgramCfg cfg_;
 
 };

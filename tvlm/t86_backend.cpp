@@ -1,5 +1,6 @@
 #include "t86_backend.h"
 #include "t86/instruction.h"
+#include "analysis/liveness_analysis.h"
 
 namespace tvlm{
 
@@ -76,7 +77,7 @@ namespace tvlm{
 
     void ILtoISNaive::visit(BasicBlock * bb) {
         Label ret = Label::empty();
-        for (auto & i : bb->insns_) {
+        for (auto & i : getBBsInstructions(bb)) {
             Label tmp = visitChild(i);
             if(ret == Label::empty()){
                 ret = tmp;
@@ -88,7 +89,7 @@ namespace tvlm{
     void ILtoISNaive::visit(Function * fce) {
         Label ret = Label::empty();
 
-        for (auto & bb :fce->bbs_) {
+        for (auto & bb : getFunctionBBs(fce)) {
             Label tmp = visitChild(bb);
             if(ret == Label::empty()){
                 ret = tmp;
@@ -99,10 +100,10 @@ namespace tvlm{
 
     void ILtoISNaive::visit(Program * p) {
 
-        Label globals = visitChild(p->globals_);
+        Label globals = visitChild(getProgramsGlobals(p));
 
         Label callMain = add(nullptr, tiny::t86::CALL{Label::empty()});
-        for ( auto & f : p->functions_) {
+        for ( auto & f : getProgramsFunctions(p)) {
             Label fncLabel = visitChild(f.second);
             functionTable_.emplace(f.first, fncLabel);
         }
@@ -237,7 +238,11 @@ namespace tvlm{
         }else{
             throw "unknown Opcode";
         }
-        lastIns_ = new DAG(ins, opcode);
+        std::vector<DAG*> children = std::vector<DAG*>();
+        if(ins->multiply()){
+            children.emplace_back(visitChild(ins->multiply()));
+        }
+        lastIns_ = new DAG(ins, opcode, children);
     }
 
     void ILTiler::visit(Instruction::ImmValue * ins) {
@@ -292,7 +297,7 @@ namespace tvlm{
 
     void ILTiler::visit(BasicBlock * bb) {
 //        DAG * ret = nullptr;
-        for (auto & i : bb->insns_) {
+        for (auto & i : getBBsInstructions(bb)) {
             DAG * tmp = visitChild(i);
 //            if(ret == nullptr){
 //                ret = tmp;
@@ -305,7 +310,7 @@ namespace tvlm{
     void ILTiler::visit(Function * fce) {
         DAG*  ret = nullptr;
 
-        for (auto & bb :fce->bbs_) {
+        for (auto & bb : getFunctionBBs(fce)) {
             DAG* tmp = visitChild(bb);
             if(ret == nullptr){
                 ret = tmp;
@@ -317,9 +322,9 @@ namespace tvlm{
 
     void ILTiler::visit(Program * p) {
 
-        DAG* globs = visitChild(p->globals_);
-        globals_ = globs;
-        for ( auto & f : p->functions_) {
+        DAG* globs = visitChild(getProgramsGlobals(p));
+        globals_.reset(globs);
+        for ( auto & f : getProgramsFunctions(p)) {
             visitChild(f.second);
         }
 
@@ -334,127 +339,246 @@ namespace tvlm{
 //        lastIns_ = tmp;
 //
 //    }
-    bool DummyRule::operator==(const DAG *other) const {
+    bool DummyRule::operator==(const DAG *other) {
 //        return *other == this;
         return true;
     }
 
-    DummyRule *DummyRule::get() {
-        if(dummy==nullptr){
-            dummy = new DummyRule();
-        }
-        return dummy;
+    int DummyRule::countCost() {
+        return 1;
     }
 
-    void DAG::tile()  {
-            //        auto & allRules = ILTiler::allRules_;
-            //        //labels empty
-            //        std::set<const Rule *> labels;
-            //        std::vector<std::set<const Rule*>> tiledChildren;
-            //        tiledChildren.resize(children_.size());
-            //        for (int i = 0; i < children_.size(); i++) {
-            //            tiledChildren[i] = children_[i]->tile();
-            //        }
-            //
-            //
-            ////            auto it = allRules.find(src_); // BAD
-            //        auto it = allRules.begin(); //mathces type
-            //        for(; it != allRules.end();it++ ){
-            //            if( it->first == src_->opcode_){
-            //                break;
-            //            }
-            //        }
-            //        if(it == allRules.end()) {
-            //            std::cerr << "no rules matches this instruction! ch:"<< children_.size() << "src: " << src_->name() << std::endl;
-            //            return labels;
-            //        }
-            //        for (auto & r : it->second) { //all that  matches operation
-            //            bool ret = r->matchesOpcode(src_->opcode_);
-            //            for(int i = 0; i < tiledChildren.size();i++){
-            //                auto & chLabels = tiledChildren[i];
-            //                const Rule *  tmp = (*r)[i];
-            //                auto chIt = chLabels.find(tmp); // find rule in
-            //                if(chIt == chLabels.end() && ! dynamic_cast<const DummyRule *>(tmp)){
-            //                    ret = false; break; //does not satisfy childs label
-            //                }
-            //            }
-            //            if(ret){ // all satisfied
-            //                labels.emplace(r.get());
-            //            }
-            //        }
-            //
-            //
-            //        return labels;
+//    DummyRule *DummyRule::get() {
+//        if(dummy==nullptr){
+//            dummy = new DummyRule();
+//        }
+//        return dummy;
+//    }
+//    DummyRule *DummyRule::getnew() {
+//        return new DummyRule();
+//    }
 
+//    void DAG::tile()  {
+////                    auto & allRules = ILTiler::allRules_;
+////                    //labels empty
+////                    std::set<const Rule *> labels;
+////                    std::vector<std::set<const Rule*>> tiledChildren;
+////                    tiledChildren.resize(children_.size());
+////                    for (int i = 0; i < children_.size(); i++) {
+////                        tiledChildren[i] = children_[i]->tile();
+////                    }
+////
+////
+////            //            auto it = allRules.find(src_); // BAD
+////                    auto it = allRules.begin(); //mathces type
+////                    for(; it != allRules.end();it++ ){
+////                        if( it->first == src_->opcode_){
+////                            break;
+////                        }
+////                    }
+////                    if(it == allRules.end()) {
+////                        std::cerr << "no rules matches this instruction! ch:"<< children_.size() << "src: " << src_->name() << std::endl;
+////                        return labels;
+////                    }
+////                    for (auto & r : it->second) { //all that  matches operation
+////                        bool ret = r->matchesOpcode(src_->opcode_);
+////                        for(int i = 0; i < tiledChildren.size();i++){
+////                            auto & chLabels = tiledChildren[i];
+////                            const Rule *  tmp = (*r)[i];
+////                            auto chIt = chLabels.find(tmp); // find rule in
+////                            if(chIt == chLabels.end() && ! dynamic_cast<const DummyRule *>(tmp)){
+////                                ret = false; break; //does not satisfy childs label
+////                            }
+////                        }
+////                        if(ret){ // all satisfied
+////                            labels.emplace(r.get());
+////                        }
+////                    }
+////
+////
+////                    return labels;
+//
+//
+//        auto & allRules = ILTiler::allRules_;
+////
+////        std::vector<std::set<const Rule*>> tiledChildren;
+////        tiledChildren.resize(children_.size());
+////        for (int i = 0; i < children_.size(); i++) {
+////            tiledChildren[i] = children_[i]->labels_;
+////        }
+//
+//        auto it = allRules.begin(); //mathces type
+//        for(; it != allRules.end();it++ ){
+//            if( it->first == src_->opcode_){
+//                break;
+//            }
+//        }
+//
+//
+//        if(it == allRules.end()) {
+//            std::cerr << "no rules matches this instruction! ch:"<< children_.size() << "src: " << src_->name() << std::endl;
+//
+//            return ;
+//        }
+//        for (auto & r : it->second) { //all that  matches operation
+//            bool ret = r->matchesOpcode(src_); // matches instruction
+//            if(ret && *r == this){ // all satisfied (+ rule can cover dag)
+//                labels_.emplace(r->makeCopy());
+//            }
+//        }
+//
+//        return ;
+//    }
+
+
+    void DAG::tile()  {
 
         auto & allRules = ILTiler::allRules_;
-//
-//        std::vector<std::set<const Rule*>> tiledChildren;
-//        tiledChildren.resize(children_.size());
-//        for (int i = 0; i < children_.size(); i++) {
-//            tiledChildren[i] = children_[i]->labels_;
-//        }
 
-        auto it = allRules.begin(); //mathces type
-        for(; it != allRules.end();it++ ){
-            if( it->first == src_->opcode_){
-                break;
-            }
-        }
+        auto it =  allRules.find(src_->opcode_); //matching Type
         if(it == allRules.end()) {
             std::cerr << "no rules matches this instruction! ch:"<< children_.size() << "src: " << src_->name() << std::endl;
 
             return ;
         }
         for (auto & r : it->second) { //all that  matches operation
-            bool ret = r->matchesOpcode(src_); // matches instruction
+            r       ;
+            r->matchesOpcode(src_->opcode_); // matches instruction
+            bool ret =
+                    r->matchesOpcode(src_->opcode_); // matches instruction
             if(ret && *r == this){ // all satisfied (+ rule can cover dag)
-                labels_.emplace(r->makeCopy());
+                auto tmp = r->makeCopy();
+                labels_.emplace(tmp);
             }
         }
 
         return ;
     }
 
-    bool SpecializedRule::operator==(const DAG *other) const {
-        return (customMatcher_ ) ?customMatcher_(this, other) :  matchRuleToDAG(other);
-
-    }
-
-    bool SpecializedRule::matchRuleToDAG(const DAG *dag) const {
-        //has same Opcode
-        bool ret = dag->matchesOpcode(this->opcode_);
-        if(!ret) return false;
-        //has same arity
-        if(children_.size() != dag->children_.size()) return false;
-        //can cover dag;
-        const SpecializedRule * rule = nullptr;
-        for( int i = 0; i < children_.size();i++){
-            auto & chRule = children_[i];
-            if(dynamic_cast<const DummyRule *>(chRule)){continue;}
-            if((rule  = dynamic_cast<const SpecializedRule *>(chRule))){
-                if( !rule->matchRuleToDAG(dag->children_[i])){
-                    return false;
-                }else{
-                    continue;
-                }
-
-            }
-
-            return false;
-        }
-
-
-
-        return true;
-    }
+//    bool SpecializedRule::operator==(const DAG *other) const {
+//        return (customMatcher_ ) ?customMatcher_(this, other) :  matchRuleToDAG(other);
+//
+//    }
+//
+//    bool SpecializedRule::matchRuleToDAG(const DAG *dag) const {
+//        //has same Opcode
+//        bool ret = dag->matchesOpcode(this->opcode_);
+//        if(!ret) return false;
+//        //has same arity
+//        if(children_.size() != dag->children_.size()) return false;
+//        //can cover dag;
+//        const SpecializedRule * rule = nullptr;
+//        for( int i = 0; i < children_.size();i++){
+//            auto & chRule = children_[i];
+//            if(dynamic_cast<const DummyRule *>(chRule.get())){continue;}
+//            if((rule  = dynamic_cast<const SpecializedRule *>(chRule.get()))){
+//                if( !rule->matchRuleToDAG(dag->children_[i])){
+//                    return false;
+//                }else{
+//                    continue;
+//                }
+//
+//            }
+//
+//            return false;
+//        }
+//
+//
+//
+//        return true;
+//    }
 } //namespace tvlm
 
 #include "rewriting_rules.h"
 
 
-std::unordered_map<Opcode, std::set<std::unique_ptr<tvlm::Rule>>> tvlm::ILTiler::allRules_ = AllRulesInit();
+std::map<Opcode, std::set<tvlm::Rule*>> tvlm::ILTiler::allRules_ = [](){
+    std::map<Opcode, std::set<tvlm::Rule*>> tmp;
 
-tvlm::DummyRule* tvlm::DummyRule::dummy = nullptr;
+    auto rules = AllRulesInit();
+    std::vector<tvlm::Opcode> opcodes = {tvlm::Opcode::ADD,
+                                         tvlm::Opcode::SUB,
+                                         tvlm::Opcode::UNSUB,
+                                         tvlm::Opcode::MOD,
+                                         tvlm::Opcode::MUL,
+                                         tvlm::Opcode::DIV,
+                                         tvlm::Opcode::AND,
+                                         tvlm::Opcode::OR,
+                                         tvlm::Opcode::XOR,
+                                         tvlm::Opcode::NOT,
+                                         tvlm::Opcode::LSH,
+                                         tvlm::Opcode::RSH,
+                                         tvlm::Opcode::INC,
+                                         tvlm::Opcode::DEC,
+                                         tvlm::Opcode::NEQ,
+                                         tvlm::Opcode::EQ,
+                                         tvlm::Opcode::LTE,
+                                         tvlm::Opcode::LT,
+                                         tvlm::Opcode::GT,
+                                         tvlm::Opcode::GTE,
+                                         tvlm::Opcode::BinOp,
+                                         tvlm::Opcode::UnOp,
+                                         tvlm::Opcode::LoadImm,
+                                         tvlm::Opcode::AllocG,
+                                         tvlm::Opcode::AllocL,
+                                         tvlm::Opcode::Halt,
+                                         tvlm::Opcode::Return,
+                                         tvlm::Opcode::GetChar,
+                                         tvlm::Opcode::PutChar,
+                                         tvlm::Opcode::CondJump,
+                                         tvlm::Opcode::Jump,
+                                         tvlm::Opcode::Phi,
+                                         tvlm::Opcode::Call,
+                                         tvlm::Opcode::CallStatic,
+                                         tvlm::Opcode::Extend,
+                                         tvlm::Opcode::Truncate,
+                                         tvlm::Opcode::ElemAddr,
+                                         tvlm::Opcode::Copy,
+                                         tvlm::Opcode::Store,
+                                         tvlm::Opcode::Load,
+                                         tvlm::Opcode::ArgAddr
+    };
 
+    for (auto & rule : rules) {
+        for (auto & op: opcodes) {
+            if(rule->matchesOpcode(op)){
+                tmp[op].insert(rule.get());
+            }
+        }
+    }
+    return tmp;
+
+}();
+
+
+tiny::t86::Program tvlm::ILTiler::translate(tvlm::Program & prog){
+    /*STEPS:
+            * Create DAG
+            * Optimize DAG
+            * Tile DAG
+            * Analyse live ranges
+            * Resolve reg Allocation
+            * Complete ASSEMBLY
+    */
+
+
+    //TODO
+    ILTiler v;
+    v.visit( &prog);//create dag
+
+    //analyse
+    LivenessAnalysis la = LivenessAnalysis::create(&prog);
+    auto analysis = la.analyze();
+    std::cerr << "huh" << std::endl;
+    v.functionTable_.begin()->second->tile();
+
+    auto & globLabels = v.functionTable_.begin()->second->labels_;
+
+    std::cerr << "huh" << globLabels.size() << std::endl;
+    tiny::t86::ProgramBuilder pb;
+    return std::move(pb.program());
+}
+
+
+//tvlm::DummyRule* tvlm::DummyRule::dummy = nullptr;
 int tvlm::Rule::counter = 0;

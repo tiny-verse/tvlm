@@ -1,16 +1,16 @@
 #pragma once
-#include "../il.h"
 
+#include "analysis.h"
 #include "./lattice/map_lattice.h"
 #include "./lattice/powerset_lattice.h"
 #include "cfg.h"
-#include "analysis.h"
+#include "../il.h"
+#include "../t86_backend.h"
 
 
 namespace tvlm{
     using Declaration = tvlm::IL*;
     using Declarations = MAP< tvlm::Instruction *, Declaration>;
-
 
 
 
@@ -25,6 +25,7 @@ namespace tvlm{
         Declarations analyze() override{
             auto visitor = new InsVisitor();
             visitor->visit(p_);
+            //for each
             return visitor->declarations;
         }
 
@@ -32,26 +33,13 @@ namespace tvlm{
         class InsVisitor : public ::tvlm::ILVisitor{
         public:
             Declarations declarations;
-            InsVisitor():env_(nullptr){
-
-            }
         protected:
             Env env_;
 
             VirtualRegisterPlaceholder * getVirtualReg(const Declaration pIl);
             std::map<IL*, std::unique_ptr<VirtualRegisterPlaceholder>> virtualRegs_;
 
-            Env extendEnv(Env & env, const std::vector<Declaration> & decls){
-                auto acc = env;
-                for (const auto & d : decls) {
-                    VirtualRegisterPlaceholder * reg = getVirtualReg(d);
-                    auto tmp = acc.access(reg);
-                    if(!tmp){
-                        acc.insert(std::make_pair( reg, d));
-                    }
-                }
-                return acc;
-            }
+            Env extendEnv(Env & env, const std::vector<Declaration> & decls);
 
 
             void visitChild(::tvlm::IL * il, const Env & env) {
@@ -66,7 +54,7 @@ namespace tvlm{
                 return visitChild(ptr.get(), env);
             }
 
-            void visit(Instruction *ins) override;
+            void visit(Instruction *ins) override{};
 
             void visit(Instruction::Terminator0 *ins) override;
 

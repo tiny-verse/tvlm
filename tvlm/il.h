@@ -230,6 +230,7 @@ namespace tvlm {
     protected:
 
         friend class ILVisitor;
+        friend class LivenessAnalysis;
         /** Creates the instruction with given return type and corresponding abstract syntax tree. 
          */
         Instruction(ResultType resultType, ASTBase const * ast, const std::string & instrName, Opcode opcode):
@@ -273,9 +274,13 @@ namespace tvlm {
             Instruction::print(p);
             p << p.keyword << instrName_ << " " << p.numberLiteral << size_;
             if(multiply_){
-//                p << "x" << multiply_;
+                p << p.keyword << " x ";
+                printRegister(p, multiply_);
             }
         };
+        Instruction * multiply()const {
+            return multiply_;
+        }
 
     protected:
         void accept(ILVisitor * v) override;
@@ -284,6 +289,7 @@ namespace tvlm {
             Instruction{ResultType::Integer, ast, instrName, opcode},
             size_{size},
             multiply_(multiply){
+            assert(!multiply || multiply->resultType() == ResultType::Integer );
         }
         Instruction * multiply_;
         size_t size_;
@@ -374,6 +380,10 @@ namespace tvlm {
 
         Opcode op() const {
             return op_;
+        }
+
+        BinOpType opType() const {
+            return operator_;
         }
 
 
@@ -651,7 +661,9 @@ namespace tvlm {
         }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override;
-
+        std::unordered_map<BasicBlock*, Instruction *> contents()const{
+            return contents_;
+        }
     protected:
         void accept(ILVisitor * v) override;
 
@@ -675,6 +687,9 @@ namespace tvlm {
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override;
 
+        std::vector< std::pair<Instruction *, size_t>> contents() const {
+            return contents_;
+        }
     protected:
         void accept(ILVisitor * v) override;
 
@@ -826,8 +841,6 @@ namespace tvlm {
         void accept(ILVisitor * v) override;
 
         friend class ILVisitor;
-        friend class ILTiler;
-        friend class ILtoISNaive;
         friend class tvlm::CfgBuilder;
     private:
         std::string name_;
@@ -889,8 +902,6 @@ namespace tvlm {
     private:
         friend class ILBuilder;
         friend class ILVisitor;
-        friend class ILTiler;
-        friend class ILtoISNaive;
 
         ASTBase const * ast_;
 
@@ -921,8 +932,6 @@ namespace tvlm {
         }
     protected:
         friend class ILVisitor;
-        friend class ILTiler;
-        friend class ILtoISNaive;
         void accept(ILVisitor * v) override;
     private:
         std::unordered_map<std::string, Instruction*> stringLiterals_;
@@ -961,6 +970,31 @@ namespace tvlm {
 
         void visitChild(IL * child) {
             child->accept(this);
+        }
+
+        static std::vector<BasicBlock*> getFunctionBBs(Function * f) {
+            std::vector<BasicBlock*> tmp;
+            for(const auto & bb : f->bbs_){
+                tmp.emplace_back(bb.get());
+            }
+            return tmp;
+        }
+        static std::vector<Instruction*> getBBsInstructions(BasicBlock * bb) {
+            std::vector<Instruction*> tmp;
+            for(const auto & ins : bb->insns_){
+                tmp.emplace_back(ins.get());
+            }
+            return tmp;
+        }
+        static std::vector<std::pair<Symbol ,Function*>> getProgramsFunctions(Program * p) {
+            std::vector<std::pair<Symbol, Function*>> tmp;
+            for(const auto & f : p->functions_){
+                tmp.emplace_back(f.first, f.second.get());
+            }
+            return tmp;
+        }
+        static BasicBlock*  getProgramsGlobals(Program * p) {
+            return p->globals_.get();
         }
 
     }; // tinyc::ASTVisitor
