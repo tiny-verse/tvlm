@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <unordered_set>
+#include <map>
 
 #include "cfgNode.h"
 
@@ -67,6 +68,7 @@ private:
     CfgFunExitNode * exit_;
     FragmentCfg * cfg_;
 };
+
 
 class ProgramCfg : public FragmentCfg{
 protected:
@@ -145,6 +147,15 @@ public:
 
 
 private:
+    CfgNode * makeStmtNode(ILInstruction * il){
+        auto it = allNodesMap_.find(il);
+        if(it != allNodesMap_.end()){
+            return it->second;
+        }
+        return allNodesMap_[il] = append(new CfgStmtNode(il));
+    }
+
+
     CfgNode * append(CfgNode * a){
         allNodes.emplace_back(a);
         return a;
@@ -156,7 +167,10 @@ private:
     }
 
     std::vector<std::unique_ptr<CfgNode>> allNodes;
+    std::map<IL*, CfgNode*> allNodesMap_;
     std::vector<std::unique_ptr<FragmentCfg>> allFragments;
+    std::map<IL*, FragmentCfg*> allFragmentsMap_;
+    FragmentCfg * fncexit_;
 
     FragmentCfg * empty(){
         return append(new FragmentCfg(std::unordered_set<CfgNode*> (), std::unordered_set<CfgNode*> ()));

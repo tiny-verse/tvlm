@@ -567,8 +567,7 @@ tiny::t86::Program tvlm::ILTiler::translate(tvlm::Program & prog){
     v.visit( &prog);//create dag
 
     //analyse
-    LivenessAnalysis la = LivenessAnalysis::create(&prog);
-    auto analysis = la.analyze();
+    LivenessAnalysis la = LivenessAnalysis::create(&prog);auto analysis = la.analyze();
     std::cerr << "huh" << std::endl;
     v.functionTable_.begin()->second->tile();
 

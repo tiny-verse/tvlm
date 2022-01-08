@@ -16,8 +16,8 @@ void tvlm::ILUsageVisitor::visit(tvlm::Instruction::TerminatorN *ins) {
 }
 
 void tvlm::ILUsageVisitor::visit(tvlm::Instruction::Returnator *ins) {
-    visitChild(ins->getTarget(0));
-    result_.insert(ins);
+    visitChild(ins->returnValue());
+//    result_.insert(ins);
 }
 
 void tvlm::ILUsageVisitor::visit(tvlm::Instruction::DirectCallInstruction *ins) {
@@ -77,7 +77,7 @@ void tvlm::ILUsageVisitor::visit(tvlm::Instruction::LoadAddress *ins) {
 void tvlm::ILUsageVisitor::visit(tvlm::Instruction::StoreAddress *ins) {
     visitChild(ins->address());
     visitChild(ins->value());
-    result_.insert(ins);
+//    result_.insert(ins);
 }
 
 void tvlm::ILUsageVisitor::visit(tvlm::Instruction::PhiInstruction *ins) {

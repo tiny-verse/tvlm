@@ -54,6 +54,18 @@ tvlm::LivenessAnalysis::transferFun(const tvlm::CfgNode *node, const tvlm::Liven
                 newState.emplace(ret->returnValue());
                 newState.erase(node->il());
                 return newState;
+            }else if (dynamic_cast<::tvlm::CondJump *>(stmtNode->il())){
+                auto newState = state;
+                std::unordered_set<Declaration> children = getSubtree(node);
+                newState.insert(children.begin(), children.end());
+                newState.erase(node->il());
+                return newState;
+            }else if (dynamic_cast<::tvlm::Jump *>(stmtNode->il())){
+                auto newState = state;
+                std::unordered_set<Declaration> children = getSubtree(node);
+                newState.insert(children.begin(), children.end());
+                newState.erase(node->il());
+                return newState;
             }else {
                 return state;
             }
