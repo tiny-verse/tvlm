@@ -21,13 +21,13 @@ class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
         auto states = node->succ_;
         auto acc = nodeLattice_.bot();
         for (const CfgNode * s : node->succ_) {
-            auto pred = state.access(s);
+            auto & pred = state.access(s);
             acc = nodeLattice_.lub(acc, pred);
         }
         return acc;
     }
 
-    LivenessAnalysis( ProgramCfg  cfg, Declarations & declarations):
+    LivenessAnalysis( ProgramCfg && cfg, const Declarations & declarations):
     allVars_([&](){
         std::unordered_set<Declaration> tmp;
         for ( auto & n : cfg.nodes()){
@@ -38,7 +38,7 @@ class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
         ,
     nodeLattice_(PowersetLattice<Declaration>(allVars_)),
     lattice_(MapLattice<const CfgNode*, std::unordered_set<Declaration>>(cfg.nodes(), &nodeLattice_)),
-    cfg_(cfg){
+    cfg_(std::move(cfg)){
 
     }
 
@@ -51,7 +51,7 @@ class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
         return transferFun(node, join(node, state));
     }
 public:
-    static LivenessAnalysis create(Program * p);
+    static LivenessAnalysis * create(Program * p);
     LiveVars analyze() override{
         LiveVars X = lattice_.bot();
         std::unordered_set<const CfgNode*> W;
@@ -66,11 +66,8 @@ public:
             auto y = funOne(n, X);
 
             if (y != x) {
-                X.insert(make_pair(n, y));//X += n -> y
+                X.insert(std::make_pair(n, y));//X += n -> y
                 //W ++= n.pred;
-//                for (const auto & p : n->pred_) {
-//                    W.(p);
-//                }
                 W.insert( n->pred_.begin(), n->pred_.end());
             } else if (y.empty()) {
                 X.insert(std::make_pair(n, y));//X += n -> y;
@@ -80,9 +77,9 @@ public:
         return X;
     }
 private:
-    std::unordered_set<Declaration> allVars_;
+    NodeState allVars_;
     PowersetLattice<Declaration> nodeLattice_;
-    MapLattice<const CfgNode *, std::unordered_set<Declaration>> lattice_;
+    MapLattice<const CfgNode *, NodeState> lattice_;
     ProgramCfg cfg_;
 
 };

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "analysis.h"
+
+#include <memory>
 #include "./lattice/map_lattice.h"
 #include "./lattice/powerset_lattice.h"
 #include "cfg.h"
@@ -23,7 +25,7 @@ namespace tvlm{
         }
 
         Declarations analyze() override{
-            auto visitor = new InsVisitor();
+            auto visitor = std::make_unique<InsVisitor>();
             visitor->visit(p_);
             //for each
             return visitor->declarations;

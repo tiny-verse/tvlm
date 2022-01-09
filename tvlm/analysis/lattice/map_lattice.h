@@ -16,9 +16,20 @@ public:
     specified(true){
 
     }
+    MAP( B && defaultVal )
+    : std::map<A, B>(),
+    defaultValue(std::move(defaultVal)),
+    specified(true){
+
+    }
 
     MAP<A, B> & withDefault(const B & defaultVal){
         defaultValue = defaultVal;
+        specified = true;
+        return *this;
+    }
+    MAP<A, B> & withDefault(B && defaultVal){
+        defaultValue = std::move(defaultVal);
         specified = true;
         return *this;
     }
@@ -26,6 +37,14 @@ public:
     virtual B & access (const A & idx){
         if( !specified || std::map<A, B>::find(idx) != std::map<A, B>::end()) {
             return this->operator[](idx);
+//            return std::map<A, B>::operator[](idx);
+        }
+        return defaultValue;
+
+    };
+    virtual B const & access (const A & idx)const{
+        if( !specified || std::map<A, B>::find(idx) != std::map<A, B>::end()) {
+            return this->at(idx);
 //            return std::map<A, B>::operator[](idx);
         }
         return defaultValue;
@@ -54,11 +73,11 @@ namespace tvlm{
             return MAP<A, B>().withDefault(lat_->bot());
         }
 
-        virtual MAP<A, B> lub( MAP<A, B> & x, MAP<A, B> & y) override{
+        virtual MAP<A, B> lub( const MAP<A, B> & x, const MAP<A, B> & y) override{
             MAP<A, B> res = y;
             for (auto & xx: x) {
                 auto & e = xx.first;
-                res.insert(std::make_pair(e, lat_->lub(x[e], y[e])));
+                res.insert(std::make_pair(e, lat_->lub(x.access(e), y.access(e))));
             }
             return res;
         }

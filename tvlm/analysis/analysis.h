@@ -11,7 +11,7 @@ namespace tvlm {
     class BackwardAnalysis : public Analysis<T> {
     protected:
         static ProgramCfg getCfg(Program * p){
-            auto builder = new IntraProceduralCfgBuilder;
+            auto builder = std::make_unique<IntraProceduralCfgBuilder>();
             return builder->fromProgram(p);
         }
     public:

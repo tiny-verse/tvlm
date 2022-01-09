@@ -15,11 +15,14 @@ namespace tvlm{
 
 class FragmentCfg {
 public:
-    FragmentCfg( std::unordered_set<CfgNode*>  entryNodes, std::unordered_set<CfgNode*>  exitNodes):
-    entryNodes_(std::move(entryNodes)),
-    exitNodes_(std::move(exitNodes)){
+    virtual ~FragmentCfg() {};
+    FragmentCfg(const  std::unordered_set<CfgNode*>  & entryNodes,const  std::unordered_set<CfgNode*> &  exitNodes):
+    entryNodes_(entryNodes),
+    exitNodes_(exitNodes){
 
     }
+    FragmentCfg(const FragmentCfg & other) : entryNodes_(other.entryNodes_),
+    exitNodes_(other.exitNodes_){}
 
     bool isEmpty()const {
         return entryNodes_.empty() && exitNodes_.empty();
@@ -41,7 +44,7 @@ private:
 
 class FunctionCfg : public FragmentCfg{
 public:
-    FunctionCfg( Function * fnc, CfgFunEntryNode * entry, CfgFunExitNode * exit, FragmentCfg *  cfg) :
+    FunctionCfg( Function * fnc, CfgFunEntryNode * entry, CfgFunExitNode * exit, FragmentCfg *  cfg = nullptr) :
             FragmentCfg([&]( CfgFunEntryNode * entry) {
                 std::unordered_set<CfgNode*> res;
                 res.insert(entry);
@@ -51,11 +54,20 @@ public:
                 res.insert(exit);
                 return res;
             }(entry)),
-
+//            nodes_(std::vector<std::unique_ptr<CfgNode>>()),
             entry_(entry),
             exit_(exit),
             cfg_(cfg){
 
+    }
+    FunctionCfg(FunctionCfg && fnc);
+    virtual ~FunctionCfg(){
+        for (auto *n : nodes_) {
+            delete n;
+        }
+        for (auto* n : frags_) {
+            delete n;
+        }
     }
     const CfgFunEntryNode * entry()const {
         return entry_;
@@ -63,7 +75,20 @@ public:
     const CfgFunExitNode * exit()const {
         return exit_;
     }
+    CfgNode * addNode(CfgNode * node){
+        nodes_.push_back((node));
+        return node;
+    }
+    FragmentCfg * addFragment(FragmentCfg * f){
+        frags_.push_back(f);
+        return f;
+    }
+    void setCfg(FragmentCfg * cfg){
+        cfg_ = cfg;
+    }
 private:
+    std::vector<CfgNode *> nodes_;
+    std::vector<FragmentCfg *> frags_;
     CfgFunEntryNode *entry_;
     CfgFunExitNode * exit_;
     FragmentCfg * cfg_;
@@ -83,20 +108,21 @@ protected:
     }
 
 public:
-    ProgramCfg(ProgramCfg && other): FragmentCfg(std::move(other.entryNodes_), std::move(other.exitNodes_)),functionsCfg_(std::move(other.functionsCfg_) ), p_(other.p_){
+    ProgramCfg(ProgramCfg && other): FragmentCfg(std::move(other.entryNodes_), std::move(other.exitNodes_)),
+    functionsCfg_(std::move(other.functionsCfg_) ), p_(other.p_){
 
     }
 
-    ProgramCfg(const ProgramCfg & other)
-    :FragmentCfg(other.entryNodes_, other.exitNodes_),
-    p_(other.p_){
-        functionsCfg_.reserve(other.functionsCfg_.size());
-        auto e  = other.functionsCfg_.begin();
-        auto f = functionsCfg_.begin();
-        for (; e != other.functionsCfg_.end();e++, f++) {
-            functionsCfg_.emplace_back(new FunctionCfg(**(e)));
-        }
-    }
+    ProgramCfg(const ProgramCfg & other) = delete;
+//    :FragmentCfg(other.entryNodes_, other.exitNodes_),
+//    p_(other.p_){
+//        functionsCfg_.reserve(other.functionsCfg_.size());
+//        auto e  = other.functionsCfg_.begin();
+//        auto f = functionsCfg_.begin();
+//        for (; e != other.functionsCfg_.end();e++, f++) {
+//            functionsCfg_.emplace_back(new FunctionCfg(**(e)));
+//        }
+//    }
 
 public:
 
@@ -157,23 +183,26 @@ private:
 
 
     CfgNode * append(CfgNode * a){
-        allNodes.emplace_back(a);
+//        allNodes.emplace_back(a);
+        current_fnc->addNode(a);
         return a;
     }
 
     FragmentCfg * append(FragmentCfg * a){
-        allFragments.emplace_back(a);
-        return a;
+//        allFragments.emplace_back(a);
+        current_fnc->addFragment(a);
+    return a;
     }
 
     std::vector<std::unique_ptr<CfgNode>> allNodes;
-    std::map<IL*, CfgNode*> allNodesMap_;
     std::vector<std::unique_ptr<FragmentCfg>> allFragments;
+    std::map<IL*, CfgNode*> allNodesMap_;
     std::map<IL*, FragmentCfg*> allFragmentsMap_;
     FragmentCfg * fncexit_;
+    FunctionCfg * current_fnc;
 
     FragmentCfg * empty(){
-        return append(new FragmentCfg(std::unordered_set<CfgNode*> (), std::unordered_set<CfgNode*> ()));
+        return new FragmentCfg(std::unordered_set<CfgNode*> (), std::unordered_set<CfgNode*> ());
     }
     FragmentCfg * single(CfgNode * node ){
         std::unordered_set<CfgNode *> a;

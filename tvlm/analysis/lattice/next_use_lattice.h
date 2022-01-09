@@ -1,0 +1,42 @@
+#pragma once
+
+#include <unordered_set>
+#include "tvlm/tvlm/analysis/lattice/lattice.h"
+#include "tvlm/tvlm/analysis/lattice/map_lattice.h"
+#include "tvlm/tvlm/analysis/lattice/flat_lattice.h"
+#include "tvlm/analysis/instruction_analysis.h"
+
+
+namespace tvlm{
+
+
+    class NextUseLattice : public FlatLattice<const Declaration>{
+    public:
+        explicit NextUseLattice():
+                FlatLattice<const Declaration>(){}
+
+        FlatElem<const Declaration> *lub(FlatElem<const Declaration> *const &x, FlatElem<const Declaration> * const &y) override {
+            if(dynamic_cast<FlatBot<const Declaration>*>(x) ){
+                return y->copy();
+            }else if ( dynamic_cast<FlatBot<const Declaration>*>(y) ){
+                return x->copy();
+            }else if (dynamic_cast<FlatTop<Declaration>*>(x)|| (dynamic_cast<FlatTop<const Declaration>*>(y)) ){
+                return new FlatTop<const Declaration>;
+            }else if (  *x == y){
+                return x->copy();
+            }else{
+                return new FlatTop<const Declaration>;
+            }
+        }
+
+    public:
+        FlatElem<const Declaration> * makeVal(const Declaration val){
+            auto tmp = new FlatVal<const Declaration >(val);
+            stored_.emplace_back(tmp);
+            return tmp;
+         }
+    private:
+        std::vector<std::unique_ptr<FlatVal<const Declaration >>> stored_;
+    };
+
+}

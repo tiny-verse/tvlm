@@ -72,28 +72,39 @@ FragmentCfg *tvlm::IntraProceduralCfgBuilder::fromBB(::tvlm::BasicBlock *bb) {
     if( it != allFragmentsMap_.end()){
         return it->second;
     }
-    auto acc = std::unique_ptr<FragmentCfg>(empty());
-    allFragmentsMap_[bb] = acc.get();
+    auto acc =append(empty());
+    allFragmentsMap_[bb] = acc;
     for ( auto & ins : getInstructions(bb)) {
-        acc.reset( acc->concat(fromInstruction(ins.get())));
-        allFragmentsMap_[bb] = acc.get();
-
+        auto tmp = acc->concat(fromInstruction(ins.get()));
+        append(tmp);
+        allFragmentsMap_[bb] = tmp;
+        acc = tmp;
     }
 
-    return allFragmentsMap_[bb] = acc.release();
+    return allFragmentsMap_[bb] = acc;
 }
 
 tvlm::FunctionCfg *tvlm::IntraProceduralCfgBuilder::fromFunction(Function *fnc) {
     auto entry  = new CfgFunEntryNode(fnc);
-    append(entry);
-    auto ptr = single(entry);
-    FragmentCfg * cfg;
     auto exit = new CfgFunExitNode(fnc);
-    fncexit_ = single(append(exit));
+    auto fncCfg = new FunctionCfg(fnc, entry, exit);
+    current_fnc = fncCfg;
+    auto ptr = single(entry);
+    fncexit_ = single(exit);
     auto blockCfg = fromBB(getBBs(fnc)[0].get());
-    cfg = append(ptr->concat(blockCfg));
-
-    return new FunctionCfg(fnc, entry, exit, cfg);
+    FragmentCfg * cfg;
+    cfg = ptr->concat(blockCfg);
+    append(entry);
+    append(exit);
+    append(cfg);
+    for (auto & e: allNodes) {
+        fncCfg->addNode(e.release());
+    }allNodes.clear();
+    for (auto & e: allFragments) {
+        fncCfg->addFragment(e.release());
+    }allFragments.clear();
+    current_fnc = nullptr;
+    return fncCfg;
 }
 
 FragmentCfg *tvlm::IntraProceduralCfgBuilder::fromInstruction(tvlm::ILInstruction *ins) {
@@ -134,9 +145,20 @@ tvlm::ProgramCfg tvlm::ProgramCfg::get(Program *program, std::unordered_set<Func
     }
 
     std::vector<std::unique_ptr<FunctionCfg>> tmp;
+    std::vector<std::unique_ptr<CfgNode>> allNodes;
     tmp.reserve(functionsCfg.size());
     for (const auto e: functionsCfg) {
         tmp.emplace_back(e);
     }
     return ProgramCfg(program, std::move(setEntry) ,std::move(setExit) , std::move(tmp) );
+}
+
+tvlm::FunctionCfg::FunctionCfg(tvlm::FunctionCfg &&fnc) : FragmentCfg(std::move(fnc.entryNodes_), std::move(fnc.exitNodes_) ),
+                                                          entry_(fnc.entry_), exit_(fnc.exit_), cfg_(fnc.cfg_),
+                                                          nodes_(std::move(fnc.nodes_)),frags_(std::move(fnc.frags_)) {
+    fnc.entry_ = nullptr;
+    fnc.exit_ = nullptr;
+    fnc.cfg_ = nullptr;
+    fnc.nodes_.clear();
+    fnc.frags_.clear();
 }

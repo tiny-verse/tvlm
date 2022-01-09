@@ -1,11 +1,11 @@
 #include "liveness_analysis.h"
 #include "ILUsageVisitor.h"
 
-tvlm::LivenessAnalysis tvlm::LivenessAnalysis::create(Program *p){
+tvlm::LivenessAnalysis * tvlm::LivenessAnalysis::create(Program *p){
     auto analysis = InstructionAnalysis(p);
     Declarations decls = analysis.analyze();
 
-    return LivenessAnalysis(getCfg(p), decls);
+    return new LivenessAnalysis(getCfg(p), decls);
 }
 
 std::unordered_set<tvlm::Declaration> tvlm::LivenessAnalysis::getSubtree(const tvlm::CfgNode *node) {

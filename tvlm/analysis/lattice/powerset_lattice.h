@@ -21,7 +21,7 @@ namespace tvlm{
             return std::unordered_set<A>();
         }
 
-        virtual std::unordered_set<A> lub( std::unordered_set<A> & x, std::unordered_set<A> & y) override{
+        std::unordered_set<A> lub(const std::unordered_set<A> &x, const std::unordered_set<A> &y) override {
             std::unordered_set<A>res(x);
             res.insert(y.begin(), y.end());
             return res;

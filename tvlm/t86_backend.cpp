@@ -490,6 +490,7 @@ namespace tvlm{
 } //namespace tvlm
 
 #include "rewriting_rules.h"
+#include "tvlm/analysis/next_use_analysis.h"
 
 
 std::map<Opcode, std::set<tvlm::Rule*>> tvlm::ILTiler::allRules_ = [](){
@@ -563,17 +564,20 @@ tiny::t86::Program tvlm::ILTiler::translate(tvlm::Program & prog){
 
 
     //TODO
-    ILTiler v;
-    v.visit( &prog);//create dag
+//    ILTiler v;
+//    v.visit( &prog);//create dag
 
     //analyse
-    LivenessAnalysis la = LivenessAnalysis::create(&prog);auto analysis = la.analyze();
+    auto la = std::unique_ptr<LivenessAnalysis>(LivenessAnalysis::create(&prog));
+    auto analysis = la->analyze();
+    auto nla = std::unique_ptr<NextUseAnalysis>(NextUseAnalysis::create(&prog));
+    auto nanalysis = nla->analyze();
     std::cerr << "huh" << std::endl;
-    v.functionTable_.begin()->second->tile();
+//    v.functionTable_.begin()->second->tile();
 
-    auto & globLabels = v.functionTable_.begin()->second->labels_;
+//    auto & globLabels = v.functionTable_.begin()->second->labels_;
 
-    std::cerr << "huh" << globLabels.size() << std::endl;
+//    std::cerr << "huh" << globLabels.size() << std::endl;
     tiny::t86::ProgramBuilder pb;
     return std::move(pb.program());
 }

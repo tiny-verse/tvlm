@@ -1,6 +1,8 @@
 #pragma once
 
 #include <any>
+#include <memory>
+#include <vector>
 #include "lattice.h"
 
 
@@ -8,23 +10,38 @@ namespace tvlm{
     template<typename A>
     class FlatElem {
     public:
-        virtual FlatElem<A>* copy() = 0;
+        FlatElem() = default;
+        FlatElem(const FlatElem<A> & other) = delete;
+        virtual FlatElem<A>* copy() const = 0;
+        virtual bool operator == (const FlatElem<A> * other ) const = 0;
     };
 
 
-
-    class FlatTop : public FlatElem<std::any> {
+    template<typename A>
+    class FlatTop : public FlatElem<A> {
     public:
-        FlatElem<std::any> * copy()override{
-            return new FlatTop;
+        FlatTop(): FlatElem<A>(){}
+        FlatElem<A> * copy()const override{
+            return new FlatTop<A>();
+        }
+
+        bool operator==(const FlatElem<A> *other) const override{
+            auto val = dynamic_cast<const FlatTop<A>*>(other);
+            return val;
         }
     };
 
-
-    class FlatBot : public FlatElem<std::any> {
+    template<typename A>
+    class FlatBot : public FlatElem<A> {
     public:
-        FlatElem<std::any> * copy()override{
-            return new FlatBot;
+        FlatBot(): FlatElem<A>(){}
+        FlatElem<A> * copy()const override{
+            return new FlatBot<A>();
+        }
+
+        bool operator==(const FlatElem<A> *other) const override {
+            auto val = dynamic_cast<const FlatBot<A>*>(other);
+            return val;
         }
     };
 
@@ -33,39 +50,57 @@ namespace tvlm{
     public:
            FlatVal(A & elem) : elem_(elem){
            }
-        FlatElem<std::any> * copy()override{
+        FlatElem<A> * copy()const override{
             return new FlatVal<A>(elem_);
         }
+
+        bool operator==(const FlatElem<A> * other)  const  override{
+            auto val = dynamic_cast<const FlatVal<A>*>(other);
+            return val && val->elem_ == elem_;
+        }
+
     private:
         A elem_;
     };
 
     template<typename A>
     class FlatLattice : public Lattice<FlatElem<A>*>{
+    public:
+        FlatLattice():bot_(new FlatBot<A>()), top_(new FlatTop<A>()){}
         FlatElem<A> * bot() override{
-            return new FlatBot();
+            return bot_.get();
         }
         FlatElem<A> * top() override{
-            return new FlatTop();
+            return top_.get();
         }
 
-        FlatElem<A> * lub(FlatElem<A> * x, FlatElem<A> * y) override{
-            if(dynamic_cast<FlatBot*>(x) ){
-                return y->copy();
-            }else if ( dynamic_cast<FlatBot*>(y) || *x == *y){
-                return x->copy();
-            }else if (dynamic_cast<FlatTop*>(x)|| (dynamic_cast<FlatTop*>(y)) ){
-                return new FlatTop;
-            }else if (  *x == *y){
-                return x->copy();
+        FlatElem<A> * lub( FlatElem<A> * const&x, FlatElem<A> * const&y) override{
+            if(dynamic_cast<FlatBot<A>*>(x) ){
+                return add(y->copy());
+            }else if ( dynamic_cast<FlatBot<A>*>(y) ){
+                return add(x->copy());
+            }else if (dynamic_cast<FlatTop<A>*>(x)|| (dynamic_cast<FlatTop<A>*>(y)) ){
+                return add(new FlatTop<A>);
+            }else if (  *(x) == y){
+                return add(x->copy());
             }else{
-                return new FlatTop;
+                return add(new FlatTop<A>);
             }
         }
 
-        FlatElem<A> * wrap(A & v){
-            return new FlatVal<A>(v);
+
+    protected:
+        FlatElem<A> * wrap(A && v){
+            return new FlatVal<A>(std::forward<A>(v));
         }
+
+        FlatElem<A> * add(FlatElem<A> * val){
+            lubs_.emplace_back(val);
+            return val;
+        }
+        std::unique_ptr<FlatBot<A>> bot_;
+        std::unique_ptr<FlatTop<A>> top_;
+        std::vector<std::unique_ptr<FlatElem<A>>> lubs_;
 
     };
 
