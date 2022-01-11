@@ -8,7 +8,7 @@ tvlm::LivenessAnalysis * tvlm::LivenessAnalysis::create(Program *p){
     return new LivenessAnalysis(getCfg(p), decls);
 }
 
-std::unordered_set<tvlm::Declaration> tvlm::LivenessAnalysis::getSubtree(const tvlm::CfgNode *node) {
+std::unordered_set<tvlm::Declaration*> tvlm::LivenessAnalysis::getSubtree(const tvlm::CfgNode *node) {
     ILUsageVisitor v;
     v.begin(node->il());
     return v.result();
@@ -26,25 +26,25 @@ tvlm::LivenessAnalysis::transferFun(const tvlm::CfgNode *node, const tvlm::Liven
 
             if (dynamic_cast<::tvlm::AllocL *>(stmtNode->il())){
                 auto newState = state;
-                std::unordered_set<Declaration> children = getSubtree(node);
+                std::unordered_set<Declaration*> children = getSubtree(node);
                 newState.insert(children.begin(), children.end());
                 newState.erase(node->il());
                 return newState;
             }else if (dynamic_cast<::tvlm::Store *>(stmtNode->il())){
                 auto newState = state;
-                std::unordered_set<Declaration> children = getSubtree(node);
+                std::unordered_set<Declaration*> children = getSubtree(node);
                 newState.insert(children.begin(), children.end());
                 newState.erase(node->il());
                 return newState;
             }else if (dynamic_cast<::tvlm::Load *>(stmtNode->il())){
                 auto newState = state;
-                std::unordered_set<Declaration> children = getSubtree(node);
+                std::unordered_set<Declaration*> children = getSubtree(node);
                 newState.insert(children.begin(), children.end());
                 newState.erase(node->il());
                 return newState;
             }else if (dynamic_cast<::tvlm::LoadImm *>(stmtNode->il())){
                 auto newState = state;
-                std::unordered_set<Declaration> children = getSubtree(node);
+                std::unordered_set<Declaration*> children = getSubtree(node);
                 newState.insert(children.begin(), children.end());
                 newState.erase(node->il());
                 return newState;
@@ -56,13 +56,13 @@ tvlm::LivenessAnalysis::transferFun(const tvlm::CfgNode *node, const tvlm::Liven
                 return newState;
             }else if (dynamic_cast<::tvlm::CondJump *>(stmtNode->il())){
                 auto newState = state;
-                std::unordered_set<Declaration> children = getSubtree(node);
+                std::unordered_set<Declaration*> children = getSubtree(node);
                 newState.insert(children.begin(), children.end());
                 newState.erase(node->il());
                 return newState;
             }else if (dynamic_cast<::tvlm::Jump *>(stmtNode->il())){
                 auto newState = state;
-                std::unordered_set<Declaration> children = getSubtree(node);
+                std::unordered_set<Declaration*> children = getSubtree(node);
                 newState.insert(children.begin(), children.end());
                 newState.erase(node->il());
                 return newState;

@@ -9,7 +9,7 @@ namespace tvlm{
     class ILUsageVisitor : public ILVisitor {
     public:
 //        ILUsageVisitor(): ILVisitor(), result_(){}
-        std::unordered_set<Declaration>result(){
+        std::unordered_set<Declaration*>result(){
             return result_;
         }
 
@@ -57,6 +57,6 @@ namespace tvlm{
         void visit(Program *p) override;
 
     protected:
-        std::unordered_set<Declaration> result_;
+        std::unordered_set<Declaration*> result_;
     };
 }

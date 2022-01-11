@@ -88,10 +88,10 @@ void tvlm::ILUsageVisitor::visit(tvlm::Instruction::PhiInstruction *ins) {
 }
 
 void tvlm::ILUsageVisitor::visit(tvlm::Instruction::ElemInstruction *ins) {
-    for (auto & e : ins->contents() ) {
-        if(e.first) visitChild(e.first);
-    }
-    result_.insert(ins);
+//    for (auto & e : ins->contents() ) {
+//        if(e.first) visitChild(e.first);
+//    }
+//    result_.insert(ins); TODO
 }
 
 void tvlm::ILUsageVisitor::visit(tvlm::BasicBlock *bb) {

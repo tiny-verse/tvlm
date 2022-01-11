@@ -34,18 +34,7 @@ namespace tvlm {
         }
     };
 
-    void Instruction::ElemInstruction::print(tiny::ASTPrettyPrinter &p) const {
-        Instruction::print(p);
-        p << p.keyword << instrName_ << " " ;
-        printRegister(p, base_);
-        for(auto & c: contents_){
-            p << p.keyword<<  "+ ";
-            if(c.first) printRegister(p, c.first);
-            else p << p.numberLiteral <<  "1 ";
-            p << p.keyword<<  "x " << p.numberLiteral << c.second;
-        }
 
-    }
 
     Instruction::DirectCallInstruction::DirectCallInstruction(Function *f, std::vector<Instruction *> &&args,
                                                               const ASTBase *ast, const std::string &instrName,
@@ -109,6 +98,34 @@ namespace tvlm {
         }
     }
 
+
+    void Instruction::ElemIndexInstruction::print(tiny::ASTPrettyPrinter &p) const {
+            Instruction::print(p);
+            p << p.keyword << instrName_ << " " ;
+            printRegister(p, base_);
+            p << p.keyword<<  "+ ";
+            printRegister(p, index_);
+//            p << p.keyword<<  "x " << p.numberLiteral << offset_.size();
+            p << p.keyword<<  "x " << p.numberLiteral;
+            printRegister(p, offset_);
+    }
+
+    void Instruction::ElemOffsetInstruction::print(tiny::ASTPrettyPrinter &p) const {
+        Instruction::print(p);
+        p << p.keyword << instrName_ << " " ;
+        printRegister(p, base_);
+//        p << p.keyword<<  "+ " << p.numberLiteral << offset_.size();
+        p << p.keyword<<  "+ "; printRegister(p, offset_);
+    }
+
+    void Instruction::StructAssignInstruction::print(tiny::ASTPrettyPrinter &p) const {
+        Instruction::print(p);
+        p << p.keyword << instrName_ << " " ;
+        printRegister(p, dstAddr_);
+        p << p.keyword << "= " ;
+        printRegister(p, srcVal_);
+        p << p.keyword << "( of size: " << p.numberLiteral << type_->size() << p.keyword << ")" ;
+    }
 
 }
 

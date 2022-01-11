@@ -15,7 +15,7 @@ namespace tvlm {
 
     using ASTBase = tiny::ASTBase;
     using Symbol = tiny::Symbol;
-    using Type = tinyc::Type;
+//    using Type = tinyc::Type;
 
     class BasicBlock;
     class Function;
@@ -36,95 +36,108 @@ namespace tvlm {
         Void,
     }; // tinyc::il::ResultType
 
-    /*
-//
-//    class Type{
-//    public:
-//        class Struct;
-//        class Integer;
-//        class Float;
-//        class Pointer;
-//        virtual ~Type() = default;
-//
-//        virtual int size() const  = 0;
-//        std::string toString() const {
-//            std::stringstream ss;
-//            toStream(ss);
-//            return ss.str();
-//        }
-//    private:
-//        virtual void toStream(std::ostream & s) const = 0;
-//    };
-//
-//    class Type::Integer : public Type{
-//    public:
-//        explicit Integer(){}
-//        int size() const {
-//            return 4;
-//        }
-//    private:
-//        void toStream(std::ostream & s) const override {
-//            s << "int";
-//        }
-//    };
-//    class Type::Float : public Type{
-//    public:
-//        Float(){}
-//        int size() const {
-//            return 8;
-//        }
-//    private:
-//
-//        void toStream(std::ostream & s) const override {
-//            s << "float";
-//        }
-//    };
-//    class Type::Pointer : public Type{
-//    public:
-//        Pointer(Type * base) : base_{base}{}
-//        int size()const{
-//            return 4;
-//        }
-//    private:
-//        void toStream(std::ostream & s) const override {
-//            base_->toStream(s);
-//            s << "*";
-//        }
-//        Type * base_;
-//    };
-//    class Type::Struct : public Type{
-//    public:
-//        Struct() {}
-//        int size()const{
-//            int size = 0;
-//            for(auto & i : fields_){
-//                size += i.second->size();
-//            }
-//            return size ? size : 4; //every struct has to have a memory footprint
-//        }
-//        void addField(Symbol name, Type * type) {
-//            //hope duplicity is already checked
-//            //            for (auto & i : fields_)
-//            //                if (i.first == name)
-//            //                    throw ParserError{STR("Field " << name.name() << " already defined "), ast->location()};
-//            fields_.push_back(std::make_pair(name, type));
-//        }
-//
-//        Type * getFieldType(Symbol name) const {
-//            for (auto & i : fields_)
-//                if (i.first == name)
-//                    return i.second;
-//            return nullptr;
-//        }
-//    private:
-//
-//        void toStream(std::ostream & s) const override {
-//            s << "struct " << il_->name.name();
-//        }
-//
-//        std::vector<std::pair<Symbol, Type *>> fields_;
-//
-//    };*/
+
+
+    class Type{
+    public:
+        class Struct;
+        class Integer;
+        class Float;
+        class Pointer;
+        class Char;
+        virtual ~Type() = default;
+
+        virtual int size() const  = 0;
+        std::string toString() const {
+            std::stringstream ss;
+            toStream(ss);
+            return ss.str();
+        }
+    private:
+        virtual void toStream(std::ostream & s) const = 0;
+    };
+
+    class Type::Integer : public Type{
+    public:
+        explicit Integer(){}
+        int size() const {
+            return 4;
+        }
+    private:
+        void toStream(std::ostream & s) const override {
+            s << "int";
+        }
+    };
+    class Type::Char : public Type{
+    public:
+        explicit Char(){}
+        int size() const {
+            return 1;
+        }
+    private:
+        void toStream(std::ostream & s) const override {
+            s << "char";
+        }
+    };
+    class Type::Float : public Type{
+    public:
+        Float(){}
+        int size() const {
+            return 8;
+        }
+    private:
+
+        void toStream(std::ostream & s) const override {
+            s << "float";
+        }
+    };
+    class Type::Pointer : public Type{
+    public:
+        Pointer(Type * base) : base_{base}{}
+        int size()const{
+            return 4;
+        }
+    private:
+        void toStream(std::ostream & s) const override {
+            base_->toStream(s);
+            s << "*";
+        }
+        Type * base_;
+    };
+    class Type::Struct : public Type{
+    public:
+        Struct(const  Symbol &name):name_(name) {}
+        int size()const{
+            int size = 0;
+            for(auto & i : fields_){
+                size += i.second->size();
+            }
+            return size ? size : 4; //every struct has to have a memory footprint
+        }
+        void addField(Symbol name, Type * type) {
+            //hope duplicity is already checked
+            //            for (auto & i : fields_)
+            //                if (i.first == name)
+            //                    throw ParserError{STR("Field " << name.name() << " already defined "), ast->location()};
+            fields_.emplace_back(name, type);
+        }
+
+        Type * getFieldType(Symbol name) const {
+            for (auto & i : fields_)
+                if (i.first == name)
+                    return i.second;
+            return nullptr;
+        }
+    private:
+
+        void toStream(std::ostream & s) const override {
+            s << "struct " << name_.name();
+        }
+
+        Symbol name_;
+        std::vector<std::pair<Symbol, Type *>> fields_;
+
+    };
 
     /** Base class for intermediate language instructions. 
      */ 
@@ -145,10 +158,13 @@ namespace tvlm {
         class SrcInstruction;
         class PhiInstruction;
         class ElemInstruction;
+        class ElemOffsetInstruction;
+        class ElemIndexInstruction;
         class VoidInstruction;
         class CallInstruction;
         class DirectCallInstruction;
         class IndirectCallInstruction;
+        class StructAssignInstruction;
 
         virtual ~Instruction() = default;
 
@@ -219,11 +235,14 @@ namespace tvlm {
             CallStatic,
             Extend,
             Truncate,
-            ElemAddr,
+            ElemAddrIndex,
+            ElemAddrOffset,
             Copy,
             Store,
             Load,
             ArgAddr,
+            StructAssign,
+
         };
 
         Opcode opcode_;
@@ -675,33 +694,77 @@ namespace tvlm {
         std::unordered_map<BasicBlock*, Instruction *> contents_;
     }; // Instruction::PhiInstruction
 
-    class Instruction::ElemInstruction : public Instruction{
+  class Instruction::StructAssignInstruction : public Instruction{
     public:
-//        enum class Type
-        void addIndex( Instruction * src, size_t size){
-            contents_.emplace_back( src, size);
-        }
-        void addOffset(  size_t size){
-            contents_.emplace_back( nullptr, size);
-        }
+        void print(tiny::ASTPrettyPrinter & p) const override;
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override;
-
-        std::vector< std::pair<Instruction *, size_t>> contents() const {
-            return contents_;
-        }
     protected:
         void accept(ILVisitor * v) override;
+
+        StructAssignInstruction( Instruction * dstAddr, Instruction * srcVal, Type::Struct * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+                Instruction{ResultType::Void, ast, instrName, opcode},
+                srcVal_(srcVal),
+                dstAddr_(dstAddr),
+                type_(type)
+                {
+
+        }
+    private:
+        Instruction * srcVal_;
+        Instruction * dstAddr_;
+        Type::Struct * type_;
+    }; // Instruction::StructAssignInstruction
+
+    class Instruction::ElemInstruction : public Instruction{
+    public:
+
+    protected:
 
         ElemInstruction( Instruction * base, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{ResultType::Integer, ast, instrName, opcode},
                 base_(base){
 
         }
-    private:
+
+    protected:
         Instruction * base_;
-        std::vector< std::pair<Instruction *, size_t>> contents_;
     }; // Instruction::ElemInstruction
+
+    class Instruction::ElemOffsetInstruction : public Instruction::ElemInstruction{
+    public:
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+
+    protected:
+        void accept(ILVisitor * v) override;
+
+        ElemOffsetInstruction( Instruction * base, Instruction * offset,  ASTBase const * ast, const std::string & instrName, Opcode opcode):
+                ElemInstruction{base, ast, instrName, opcode },
+                offset_(offset){
+
+        }
+    private:
+        Instruction * offset_;
+    }; // Instruction::ElemOffsetInstruction
+
+class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
+    public:
+
+        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+
+    protected:
+        void accept(ILVisitor * v) override;
+
+        ElemIndexInstruction( Instruction * base,Instruction * offset, Instruction * index, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+                ElemInstruction{base, ast, instrName, opcode },
+                index_(index),
+                offset_(offset){
+
+        }
+    private:
+        Instruction * index_;
+        Instruction * offset_;
+    }; // Instruction::ElemIndexInstruction
 
     class Instruction::CallInstruction : public Instruction{
     public:
@@ -786,8 +849,9 @@ namespace tvlm {
 #define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
 #define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
 #define PhiInstruction(NAME, ENCODING) NAME ( ResultType type, ASTBase const * ast): Instruction::ENCODING{type, ast, #NAME, Instruction::Opcode::NAME} {}
-#define ElemInstruction(NAME, ENCODING) NAME (  Instruction * base, ASTBase const * ast): Instruction::ENCODING{base, ast, #NAME, Instruction::Opcode::NAME} {}
-
+#define ElemIndexInstruction(NAME, ENCODING) NAME (  Instruction * base, Instruction * offset, Instruction * index, ASTBase const * ast): Instruction::ENCODING{base,offset, index, ast, #NAME, Instruction::Opcode::NAME} {}
+#define ElemOffsetInstruction(NAME, ENCODING) NAME (  Instruction * base, Instruction * offset, ASTBase const * ast): Instruction::ENCODING{base, offset, ast, #NAME, Instruction::Opcode::NAME} {}
+#define StructAssignInstruction(NAME, ENCODING) NAME ( Instruction * srcVal, Instruction * dstAddr, Type::Struct * type, ASTBase const * ast): Instruction::ENCODING{srcVal, dstAddr, type, ast, #NAME, Instruction::Opcode::NAME} {}
 
 #define INSTYPE(NAME, ENCODING, TYPE) class NAME : public Instruction::ENCODING { \
     public: \
@@ -1010,7 +1074,9 @@ namespace tvlm {
     inline void Instruction::SrcInstruction::accept(ILVisitor * v) { v->visit(this); }
     inline void Instruction::VoidInstruction::accept(ILVisitor * v) { v->visit(this); }
     inline void Instruction::PhiInstruction::accept(ILVisitor * v) { v->visit(this); }
-    inline void Instruction::ElemInstruction::accept(ILVisitor * v) { v->visit(this); }
+    inline void Instruction::ElemIndexInstruction::accept(ILVisitor * v) { v->visit(this); }
+    inline void Instruction::ElemOffsetInstruction::accept(ILVisitor * v) { v->visit(this); }
+    inline void Instruction::StructAssignInstruction::accept(ILVisitor *v) {v->visit(this); }
     inline void Instruction::IndirectCallInstruction::accept(ILVisitor * v) { v->visit(this); }
     inline void Instruction::DirectCallInstruction::accept(ILVisitor * v) { v->visit(this); }
 

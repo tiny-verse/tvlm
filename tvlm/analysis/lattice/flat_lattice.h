@@ -48,7 +48,7 @@ namespace tvlm{
         template<typename A>
     class FlatVal : public FlatElem<A> {
     public:
-           FlatVal(A & elem) : elem_(elem){
+           FlatVal(const A & elem) : elem_(elem){
            }
         FlatElem<A> * copy()const override{
             return new FlatVal<A>(elem_);

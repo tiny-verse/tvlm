@@ -1,6 +1,6 @@
 #include "instruction_analysis.h"
 
-tvlm::VirtualRegisterPlaceholder * tvlm::InstructionAnalysis::InsVisitor::getVirtualReg(const tvlm::Declaration pIl) {
+tvlm::VirtualRegisterPlaceholder * tvlm::InstructionAnalysis::InsVisitor::getVirtualReg(const tvlm::Declaration *pIl) {
             auto it = virtualRegs_.find(pIl);
 
     if(it != virtualRegs_.end()){
@@ -102,13 +102,13 @@ void tvlm::InstructionAnalysis::InsVisitor::visit(Program *p) {
 }
 
 tvlm::InstructionAnalysis::Env tvlm::InstructionAnalysis::InsVisitor::extendEnv(tvlm::InstructionAnalysis::Env &env,
-                                                                                const std::vector<Declaration> &decls) {
+                                                                                const std::vector<Declaration*> &decls) {
     auto acc = env;
-    for (const auto & d : decls) {
+    for (IL * d : decls) {
         VirtualRegisterPlaceholder * reg = getVirtualReg(d);
         auto tmp = acc.access(reg);
         if(!tmp){
-            acc.insert(std::make_pair( reg, d));
+            acc.emplace( reg, d);
         }
     }
     return acc;

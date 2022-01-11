@@ -50,9 +50,15 @@ public:
         return defaultValue;
 
     };
+//    virtual B makeVal(B val) {
+//        storage_.push_back(val);
+//        return val;
+//    }
+
 private:
     B defaultValue;
     bool specified;
+//    std::vector<std::unique_ptr<B>> storage_;
 };
 
 

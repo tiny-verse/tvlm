@@ -25,18 +25,6 @@ INS(AllocL, ImmSize)
  * represents: address of argument
  */
 INS(ArgAddr, ImmIndex)
-//INS(Add, BinaryOperator)
-//INS(Sub, BinaryOperator)
-//INS(Mul, BinaryOperator)
-//INS(Div, BinaryOperator)
-//INS(Mod, BinaryOperator)
-//INS(Shr, BinaryOperator)
-//INS(Shl, BinaryOperator)
-//INS(And, BinaryOperator)
-//INS(Or, BinaryOperator)
-//INS(Xor, BinaryOperator)
-//INS(Not, UnaryOperator)
-
 /**
  * Performs binary operation @op between @lhs and @rhs
  * represents: result of binary operation
@@ -125,11 +113,20 @@ INSTYPE(Extend, SrcInstruction, ResultType::Double)
  */
 INSTYPE(Truncate, SrcInstruction, ResultType::Integer)
 
-/** Performs computation of address of a subElement of an aggregate data structure. Such as struct or array
- * represents: Address of member in a structure
- * indexes of a member are added by function `addIndex` // TODO
+/**
+ * 
  */
-INS(ElemAddr,ElemInstruction )
+INS(ElemAddrIndex, ElemIndexInstruction )
+
+/**
+ *
+ */
+INS(ElemAddrOffset, ElemOffsetInstruction )
+
+/**
+ *
+ */
+INS(StructAssign, StructAssignInstruction )
 
 
 
@@ -185,3 +182,24 @@ INS(ElemAddr,ElemInstruction )
 #ifdef Returnator
 #undef Returnator
 #endif
+#ifdef ElemAddrIndexInstruction
+#undef ElemAddrIndexInstruction
+#endif
+#ifdef ElemAddrOffsetInstruction
+#undef ElemAddrOffsetInstruction
+#endif
+#ifdef StructAssignInstruction
+#undef StructAssignInstruction
+#endif
+
+//INS(Add, BinaryOperator)
+//INS(Sub, BinaryOperator)
+//INS(Mul, BinaryOperator)
+//INS(Div, BinaryOperator)
+//INS(Mod, BinaryOperator)
+//INS(Shr, BinaryOperator)
+//INS(Shl, BinaryOperator)
+//INS(And, BinaryOperator)
+//INS(Or, BinaryOperator)
+//INS(Xor, BinaryOperator)
+//INS(Not, UnaryOperator)

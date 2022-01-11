@@ -11,17 +11,17 @@ namespace tvlm{
     using Instruction = ::tvlm::Instruction;
 
 
-using LiveVars = MAP<const CfgNode *, std::unordered_set<Declaration>>;
+using LiveVars = MAP<const CfgNode *, std::unordered_set<Declaration*>>;
 class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
-//    using Declaration = tvlm::Instruction*;
-    using NodeState = std::unordered_set<Declaration>;
-//    using Declarations = MAP< ILInstruction *, Declaration>;
+//    using Declaration = tvlm::Instruction;
+    using NodeState = std::unordered_set<Declaration*>;
+//    using Declarations = MAP< ILInstruction *, Declaration*>;
 
     NodeState join(const CfgNode * node, LiveVars & state){
         auto states = node->succ_;
         auto acc = nodeLattice_.bot();
         for (const CfgNode * s : node->succ_) {
-            auto & pred = state.access(s);
+            auto pred = state.access(s);
             acc = nodeLattice_.lub(acc, pred);
         }
         return acc;
@@ -29,20 +29,20 @@ class LivenessAnalysis : public BackwardAnalysis<LiveVars>{
 
     LivenessAnalysis( ProgramCfg && cfg, const Declarations & declarations):
     allVars_([&](){
-        std::unordered_set<Declaration> tmp;
+        std::unordered_set<Declaration*> tmp;
         for ( auto & n : cfg.nodes()){
             tmp.emplace(n->il());
         }
         return tmp;
         }())
         ,
-    nodeLattice_(PowersetLattice<Declaration>(allVars_)),
-    lattice_(MapLattice<const CfgNode*, std::unordered_set<Declaration>>(cfg.nodes(), &nodeLattice_)),
+    nodeLattice_(PowersetLattice<Declaration*>(allVars_)),
+    lattice_(MapLattice<const CfgNode*, std::unordered_set<Declaration*>>(cfg.nodes(), &nodeLattice_)),
     cfg_(std::move(cfg)){
 
     }
 
-        std::unordered_set<Declaration> getSubtree(const CfgNode *pNode);
+        std::unordered_set<Declaration*> getSubtree(const CfgNode *pNode);
 
         NodeState transferFun(const CfgNode * node, const  NodeState & state );
 
@@ -78,7 +78,7 @@ public:
     }
 private:
     NodeState allVars_;
-    PowersetLattice<Declaration> nodeLattice_;
+    PowersetLattice<Declaration*> nodeLattice_;
     MapLattice<const CfgNode *, NodeState> lattice_;
     ProgramCfg cfg_;
 

@@ -11,14 +11,14 @@
 
 
 namespace tvlm{
-    using Declaration = tvlm::IL*;
-    using Declarations = MAP< tvlm::Instruction *, Declaration>;
+    using Declaration = tvlm::IL;
+    using Declarations = MAP< tvlm::Instruction *, Declaration*>;
 
 
 
 
     class InstructionAnalysis : public Analysis<Declarations>{
-        using Env = MAP<VirtualRegisterPlaceholder *, Declaration>;
+        using Env = MAP<VirtualRegisterPlaceholder *, Declaration*>;
     public:
         InstructionAnalysis(Program * p): Analysis<Declarations>(), p_(p){
 
@@ -38,10 +38,10 @@ namespace tvlm{
         protected:
             Env env_;
 
-            VirtualRegisterPlaceholder * getVirtualReg(const Declaration pIl);
-            std::map<IL*, std::unique_ptr<VirtualRegisterPlaceholder>> virtualRegs_;
+            VirtualRegisterPlaceholder * getVirtualReg(const Declaration *pIl);
+            std::map<const IL*, std::unique_ptr<VirtualRegisterPlaceholder>> virtualRegs_;
 
-            Env extendEnv(Env & env, const std::vector<Declaration> & decls);
+            Env extendEnv(Env & env, const std::vector<Declaration*> & decls);
 
 
             void visitChild(::tvlm::IL * il, const Env & env) {

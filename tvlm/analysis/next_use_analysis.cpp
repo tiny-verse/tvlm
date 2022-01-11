@@ -8,7 +8,7 @@ tvlm::NextUseAnalysis * tvlm::NextUseAnalysis::create(Program *p){
     return new NextUseAnalysis(getCfg(p), decls);
 }
 
-std::unordered_set<tvlm::Declaration> tvlm::NextUseAnalysis::getSubtree(const tvlm::CfgNode *node) {
+std::unordered_set<tvlm::Declaration*> tvlm::NextUseAnalysis::getSubtree(const tvlm::CfgNode *node) {
     ILUsageVisitor v;
     v.begin(node->il());
     return v.result();
@@ -21,14 +21,14 @@ tvlm::NextUseAnalysis::transferFun(const tvlm::CfgNode *node, const tvlm::NextUs
     }else if(dynamic_cast<const CfgStmtNode *>(node)){
         auto * stmtNode = dynamic_cast<const CfgStmtNode *>(node);
         auto instr = dynamic_cast<ILInstruction *>(stmtNode->il());
-        if(instr){ //TODO rules to add and remove from states
+        if(instr){ //TODO all instructions
 
 
             if (dynamic_cast<::tvlm::AllocL *>(stmtNode->il())){
 //                auto alloc  = dynamic_cast<::tvlm::AllocL *>(stmtNode->il());
 //                auto newState = state;
 //                if(alloc)
-//                std::unordered_set<Declaration> children = getSubtree(node);
+//                std::unordered_set<Declaration*> children = getSubtree(node);
 //                newState.insert(children.begin(), children.end());
 //                newState.erase(node->il());
 //                return newState;
