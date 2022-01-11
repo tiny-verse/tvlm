@@ -3,6 +3,9 @@
 #include "il.h"
 
 namespace tvlm {
+    using ILType = tvlm::Type;
+    using CType = tinyc::Type;
+
 
     class ILBuilder {
     public:
@@ -136,7 +139,8 @@ namespace tvlm {
         Instruction * getStringLiteral(std::string const & lit, const tiny::ASTBase * ast){
             auto i = stringLiterals_.find(lit);
             if (i == stringLiterals_.end()) {
-                Instruction * addr = globalAdd(new tvlm::AllocG{lit.size() + 1,nullptr , ast});
+                auto strType = registerType(new Type::String(lit.size() + 1));
+                Instruction * addr = globalAdd(new tvlm::AllocG{strType,nullptr , ast});
                 stringLiterals_.insert(std::make_pair(lit, addr));
                 return addr;
             } else {
@@ -156,7 +160,7 @@ namespace tvlm {
         tvlm::Program finish(){
             return {std::move(stringLiterals_),
                            std::move(functions_),
-                           std::move(globals_)};
+                           std::move(globals_), std::move(allocated_types_)};
         }
 
         const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions()const {
@@ -182,6 +186,11 @@ namespace tvlm {
             return env_->parent == nullptr;
         }
 
+
+        Type * registerType(Type * type){
+            allocated_types_.emplace_back(type);
+            return type;
+        }
     private:
         // wrappers to backend who manages the types for us
         /*
@@ -231,6 +240,7 @@ namespace tvlm {
 
         std::unordered_map<std::string, Instruction*> stringLiterals_;
         std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
+        std::vector<std::unique_ptr<Type>> allocated_types_;
         std::unique_ptr<BasicBlock> globals_;
         std::unique_ptr<Environment> env_;
         Context context_ = Context::Empty();

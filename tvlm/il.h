@@ -42,9 +42,10 @@ namespace tvlm {
     public:
         class Struct;
         class Integer;
-        class Float;
+        class Double;
         class Pointer;
         class Char;
+        class String;
         virtual ~Type() = default;
 
         virtual int size() const  = 0;
@@ -53,6 +54,9 @@ namespace tvlm {
             toStream(ss);
             return ss.str();
         }
+        virtual ResultType registerType()const  =0;
+
+
     private:
         virtual void toStream(std::ostream & s) const = 0;
     };
@@ -63,6 +67,11 @@ namespace tvlm {
         int size() const {
             return 4;
         }
+
+        ResultType registerType() const override {
+            return ResultType::Integer;
+        }
+
     private:
         void toStream(std::ostream & s) const override {
             s << "int";
@@ -74,21 +83,48 @@ namespace tvlm {
         int size() const {
             return 1;
         }
+
+        ResultType registerType() const override {
+            return ResultType::Integer;
+        }
+
     private:
         void toStream(std::ostream & s) const override {
             s << "char";
         }
     };
-    class Type::Float : public Type{
+    class Type::String : public Type{
     public:
-        Float(){}
+        explicit String(size_t size_){}
+        int size() const {
+            return (int)size_;
+        }
+
+        ResultType registerType() const override {
+            return ResultType::Integer; // Address of that string
+        }
+
+    private:
+        void toStream(std::ostream & s) const override {
+            s << "string (of size: " << size_ << ")";
+        }
+        size_t size_;
+    };
+    class Type::Double : public Type{
+    public:
+        Double(){}
         int size() const {
             return 8;
         }
+
+        ResultType registerType() const override {
+            return ResultType::Double;
+        }
+
     private:
 
         void toStream(std::ostream & s) const override {
-            s << "float";
+            s << "double";
         }
     };
     class Type::Pointer : public Type{
@@ -97,6 +133,11 @@ namespace tvlm {
         int size()const{
             return 4;
         }
+
+        ResultType registerType() const override {
+            return ResultType::Integer;
+        }
+
     private:
         void toStream(std::ostream & s) const override {
             base_->toStream(s);
@@ -106,20 +147,13 @@ namespace tvlm {
     };
     class Type::Struct : public Type{
     public:
-        Struct(const  Symbol &name):name_(name) {}
+        Struct(const  Symbol &name, const std::vector<std::pair<Symbol, Type *>> & fields):name_(name) , fields_(fields){}
         int size()const{
             int size = 0;
             for(auto & i : fields_){
                 size += i.second->size();
             }
-            return size ? size : 4; //every struct has to have a memory footprint
-        }
-        void addField(Symbol name, Type * type) {
-            //hope duplicity is already checked
-            //            for (auto & i : fields_)
-            //                if (i.first == name)
-            //                    throw ParserError{STR("Field " << name.name() << " already defined "), ast->location()};
-            fields_.emplace_back(name, type);
+            return size ? size : 1; //every struct has to have a memory footprint
         }
 
         Type * getFieldType(Symbol name) const {
@@ -128,6 +162,23 @@ namespace tvlm {
                     return i.second;
             return nullptr;
         }
+
+        int getFieldOffset(Symbol name)const{
+            int acc = 0;
+            for (auto & i : fields_){
+                if (i.first == name){
+                    return acc;
+                }else{
+                    acc += i.second->size();
+                }
+            }
+            return -1;
+        }
+
+        ResultType registerType() const override {
+            return ResultType::Integer; // Address of that Struct
+        }
+
     private:
 
         void toStream(std::ostream & s) const override {
@@ -138,6 +189,7 @@ namespace tvlm {
         std::vector<std::pair<Symbol, Type *>> fields_;
 
     };
+
 
     /** Base class for intermediate language instructions. 
      */ 
@@ -284,34 +336,36 @@ namespace tvlm {
     class Instruction::ImmSize : public Instruction {
     public:
 
-        size_t size() {
-            return size_;   
+        int size() const {
+            return type_->size();
         }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
 
             Instruction::print(p);
-            p << p.keyword << instrName_ << " " << p.numberLiteral << size_;
-            if(multiply_){
+            p << p.keyword << instrName_ << " " << p.numberLiteral << size();
+            if(amount_){
                 p << p.keyword << " x ";
-                printRegister(p, multiply_);
+                printRegister(p, amount_);
             }
         };
-        Instruction * multiply()const {
-            return multiply_;
+        Instruction * amount()const {
+            return amount_;
         }
 
     protected:
         void accept(ILVisitor * v) override;
 
-        ImmSize(size_t size,Instruction * multiply, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+        ImmSize(Type * type,Instruction * amount, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Integer, ast, instrName, opcode},
-            size_{size},
-            multiply_(multiply){
-            assert(!multiply || multiply->resultType() == ResultType::Integer );
+            type_{type},
+            amount_(amount){
+            assert(!amount || amount->resultType() == ResultType::Integer );
         }
-        Instruction * multiply_;
-        size_t size_;
+        ImmSize(Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode ):
+                ImmSize(type, nullptr, ast, instrName, opcode){}
+        Instruction * amount_;
+        Type * type_;
     };
 
     class Instruction::ImmIndex : public Instruction {
@@ -834,7 +888,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public: \
         ENCODING(NAME, ENCODING)                                        \
 };
-#define ImmSize(NAME, ENCODING) NAME (size_t size,Instruction * multiply, ASTBase const * ast) : Instruction::ENCODING{size, multiply, ast, #NAME, Instruction::Opcode::NAME} {}
+#define ImmSize(NAME, ENCODING) NAME (Type * type,Instruction * amount, ASTBase const * ast) : Instruction::ENCODING{type, amount, ast, #NAME, Instruction::Opcode::NAME} {}
+//#define ImmSize(NAME, ENCODING) NAME (Type * type, ASTBase const * ast) : Instruction::ENCODING{type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ImmIndex(NAME, ENCODING) NAME (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {} \
                                  NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {}
@@ -981,13 +1036,16 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public:
         Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
                  std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,
-                 std::unique_ptr<BasicBlock> && globals
-        ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)), globals_(std::move(globals)){}
+                 std::unique_ptr<BasicBlock> && globals,
+                 std::vector<std::unique_ptr<tvlm::Type>> && allocated_types
+        ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)),
+        globals_(std::move(globals)), allocated_types_(std::move(allocated_types)){}
 
         Program(Program && p):
         stringLiterals_(std::move(p.stringLiterals_)),
         functions_(std::move(p.functions_)),
-        globals_(std::move(p.globals_)){
+        globals_(std::move(p.globals_)),
+        allocated_types_(std::move(p.allocated_types_)){
         }
         Program(const Program & p) = delete;
 
@@ -1001,6 +1059,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         std::unordered_map<std::string, Instruction*> stringLiterals_;
         std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
         std::unique_ptr<BasicBlock> globals_;
+        std::vector<std::unique_ptr<tvlm::Type>> allocated_types_;
     } ; // tvlm::Program
 
 

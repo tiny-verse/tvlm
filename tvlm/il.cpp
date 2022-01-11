@@ -10,8 +10,9 @@ namespace tvlm {
     void Instruction::TerminatorN::print(tiny::ASTPrettyPrinter &p) const {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier;
+        printRegister(p, cond_);
         for(auto & t : targets_){
-            p << t->name() << " ";
+            p << p.identifier << t->name() << " ";
         }
     }
 

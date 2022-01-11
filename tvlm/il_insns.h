@@ -114,7 +114,7 @@ INSTYPE(Extend, SrcInstruction, ResultType::Double)
 INSTYPE(Truncate, SrcInstruction, ResultType::Integer)
 
 /**
- * 
+ *
  */
 INS(ElemAddrIndex, ElemIndexInstruction )
 

@@ -57,7 +57,7 @@ void tvlm::ILUsageVisitor::visit(tvlm::Instruction::ImmIndex *ins) {
 }
 
 void tvlm::ILUsageVisitor::visit(tvlm::Instruction::ImmSize *ins) {
-    if(ins->multiply()) visitChild(ins->multiply());
+    if(ins->amount()) visitChild(ins->amount());
     result_.insert(ins);
 }
 
