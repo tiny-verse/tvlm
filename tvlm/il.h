@@ -343,7 +343,7 @@ namespace tvlm {
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
 
             Instruction::print(p);
-            p << p.keyword << instrName_ << " " << p.numberLiteral << size();
+            p << p.keyword << instrName_ << " "<< p.numberLiteral << size() << p.keyword << " (" << type_->toString() <<   ")";
             if(amount_){
                 p << p.keyword << " x ";
                 printRegister(p, amount_);
