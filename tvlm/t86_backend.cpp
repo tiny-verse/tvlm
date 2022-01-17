@@ -570,10 +570,10 @@ tiny::t86::Program tvlm::ILTiler::translate(tvlm::Program & prog){
 //    v.visit( &prog);//create dag
 
     //analyse
-//    auto la = std::unique_ptr<LivenessAnalysis>(LivenessAnalysis::create(&prog));
-//    auto analysis = la->analyze();
-//    auto nla = std::unique_ptr<NextUseAnalysis>(NextUseAnalysis::create(&prog));
-//    auto nanalysis = nla->analyze();
+    auto la = std::unique_ptr<LivenessAnalysis>(LivenessAnalysis::create(&prog));
+    auto analysis = la->analyze();
+    auto nla = std::unique_ptr<NextUseAnalysis>(NextUseAnalysis::create(&prog));
+    auto nanalysis = nla->analyze();
     std::cerr << "huh" << std::endl;
 //    v.functionTable_.begin()->second->tile();
 

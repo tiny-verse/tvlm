@@ -45,6 +45,7 @@ namespace tvlm {
         class Double;
         class Pointer;
         class Char;
+        class Void;
         class String;
         virtual ~Type() = default;
 
@@ -93,6 +94,23 @@ namespace tvlm {
             s << "char";
         }
     };
+    class Type::Void : public Type{
+    public:
+        explicit Void(){}
+        int size() const {
+            return 0;
+        }
+
+        ResultType registerType() const override {
+            return ResultType::Integer;
+        }
+
+    private:
+        void toStream(std::ostream & s) const override {
+            s << "void";
+        }
+    };
+
     class Type::String : public Type{
     public:
         explicit String(size_t size_){}
@@ -360,6 +378,9 @@ namespace tvlm {
             Instruction{ResultType::Integer, ast, instrName, opcode},
             type_{type},
             amount_(amount){
+            if(amount && amount->resultType() != ResultType::Integer ){
+                throw tiny::ParserError(STR("vector size has to be of type Int"), ast->location());
+            }
             assert(!amount || amount->resultType() == ResultType::Integer );
         }
         ImmSize(Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode ):
