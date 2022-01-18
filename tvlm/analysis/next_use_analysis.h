@@ -43,8 +43,7 @@ class NextUseAnalysis : public BackwardAnalysis<NextUse>{
         ,
     sublattice(FlatLattice<const Declaration *>()),
     nodeLattice_(NextUseLattice(allVars_, &sublattice )),
-    lattice_(MapLattice<const CfgNode*, NodeState>(cfg.nodes(),
-                                                   reinterpret_cast<Lattice<NodeState> *>(&nodeLattice_))),
+    lattice_(MapLattice<const CfgNode*, NodeState>(cfg.nodes(), &nodeLattice_)),
     cfg_(std::move(cfg)){
 
     }
@@ -97,9 +96,11 @@ private:
 //    ProgramCfg cfg_;
 //    std::vector<std::unique_ptr<FlatVal<const Declaration >>> createdFlatVals_;
 
-    FlatVal<const Declaration*> * makeFlatVal(const Declaration * val) {
+    FlatVal<const Declaration*> * makeFlatVal(const Declaration * val , NodeState & nodeState) {
         auto tmp = new FlatVal<const Declaration*> (val);
-//        createdFlatVals_.emplace_back(tmp);
+        nodeState.reg(tmp);
+
+        //        createdFlatVals_.emplace_back(tmp);
         return tmp;
     }
 };

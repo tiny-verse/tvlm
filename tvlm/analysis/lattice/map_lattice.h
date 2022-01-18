@@ -2,6 +2,7 @@
 
 #include <map>
 #include "tvlm/tvlm/analysis/lattice/lattice.h"
+#include "flat_lattice.h"
 
 template<typename A, typename B>
 class MAP : public std::map<A, B>{
@@ -21,6 +22,41 @@ public:
     defaultValue(std::move(defaultVal)),
     specified(true){
 
+    }
+    MAP( MAP && other) :registered_(std::move(other.registered_)),
+        specified(other.specified), defaultValue(std::move(other.defaultValue)){
+
+    }
+    MAP( const MAP & other) :registered_(other.registered_),
+        specified(other.specified), defaultValue(other.defaultValue){
+
+    }
+
+    virtual ~MAP(){
+        for (auto & b: registered_) {
+            if constexpr(std::is_pointer<B>::value){
+                delete b;
+            }
+        }
+        registered_.clear();
+    }
+    MAP operator= (const MAP & other){
+        this->~MAP();
+//        MAP tmp {other};
+//        std::swap(tmp, *this);
+        specified = other.specified;
+        defaultValue = other.defaultValue;
+        registered_ = other.registered_;
+        return *this;
+    }
+    MAP operator= (MAP && other){
+        this->~MAP();
+//        MAP tmp {other};
+//        std::swap(tmp, *this);
+        specified = other.specified;
+        defaultValue = std::move(other.defaultValue);
+        registered_ = std::move(other.registered_);
+        return *this;
     }
 
     MAP<A, B> & withDefault(const B & defaultVal){
@@ -55,11 +91,19 @@ public:
 //        return val;
 //    }
 
+    void reg( B pVal);
+
 private:
     B defaultValue;
     bool specified;
+    std::vector<B> registered_;
 //    std::vector<std::unique_ptr<B>> storage_;
 };
+
+template<typename A, typename B>
+void MAP<A, B>::reg( B pVal) {
+    registered_.push_back(pVal);
+}
 
 
 namespace tvlm{

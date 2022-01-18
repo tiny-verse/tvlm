@@ -12,6 +12,7 @@ namespace tvlm{
     public:
         FlatElem() = default;
         FlatElem(const FlatElem<A> & other) = delete;
+        ~FlatElem(){}
         virtual FlatElem<A>* copy() const = 0;
         virtual bool operator == (const FlatElem<A> * other ) const = 0;
     };

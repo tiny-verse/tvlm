@@ -36,13 +36,13 @@ tvlm::NextUseAnalysis::transferFun(const tvlm::CfgNode *node, const tvlm::NextUs
                 auto store  = dynamic_cast<::tvlm::Store *>(stmtNode->il());
                 auto newState = state;
 
-                newState[store->value()] = makeFlatVal(stmtNode->il());
-                newState[store->address()] = makeFlatVal(stmtNode->il());
+                newState[store->value()] = makeFlatVal(stmtNode->il(), newState);
+                newState[store->address()] = makeFlatVal(stmtNode->il(), newState);
                 return newState;
             }else if (dynamic_cast<::tvlm::Load *>(stmtNode->il())){
                 auto load  = dynamic_cast<::tvlm::Load *>(stmtNode->il());
                 auto newState = state;
-                newState[load->address()] = makeFlatVal(stmtNode->il());
+                newState[load->address()] = makeFlatVal(stmtNode->il(), newState);
                 return newState;
 
 
@@ -52,7 +52,7 @@ tvlm::NextUseAnalysis::transferFun(const tvlm::CfgNode *node, const tvlm::NextUs
                 auto ret  = dynamic_cast<::tvlm::Return *>(stmtNode->il());
                 auto newState = state;
 
-                newState[ret->returnValue()] = makeFlatVal(stmtNode->il());
+                newState[ret->returnValue()] = makeFlatVal(stmtNode->il(), newState);
                 return newState;
             }else if (dynamic_cast<::tvlm::CondJump *>(stmtNode->il())){
             }else if (dynamic_cast<::tvlm::Jump *>(stmtNode->il())){
