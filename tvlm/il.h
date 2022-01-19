@@ -27,6 +27,7 @@ namespace tvlm {
     protected:
         friend class ILVisitor;
     };
+    class Instruction;
 
     /** Result type of an instruction. 
      */ 
@@ -36,14 +37,13 @@ namespace tvlm {
         Void,
     }; // tinyc::il::ResultType
 
-
-
     class Type{
     public:
         class Struct;
         class Integer;
         class Double;
         class Pointer;
+        class Array;
         class Char;
         class Void;
         class String;
@@ -162,6 +162,27 @@ namespace tvlm {
             s << "*";
         }
         Type * base_;
+    };
+
+    class Type::Array : public Type{
+    public:
+        Array(Type * base, Instruction * size) : base_{base}, size_(size){}
+        int size()const{
+            throw "unknown size";
+            return 4;
+        }
+
+        ResultType registerType() const override {
+            return ResultType::Integer;
+        }
+
+    private:
+        void toStream(std::ostream & s) const override {
+            base_->toStream(s);
+            s << "[" <<"]";
+        }
+        Type * base_;
+        Instruction * size_;
     };
     class Type::Struct : public Type{
     public:
