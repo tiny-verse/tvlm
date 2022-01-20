@@ -128,5 +128,33 @@ namespace tvlm {
         p << p.keyword << "( of size: " << p.numberLiteral << type_->size() << p.keyword << ")" ;
     }
 
+    std::vector<BasicBlock *> ILVisitor::getFunctionBBs(Function *f)  {
+        std::vector<BasicBlock*> tmp;
+        for(const auto & bb : f->bbs_){
+            tmp.emplace_back(bb.get());
+        }
+        return tmp;
+    }
+
+    std::vector<Instruction *> ILVisitor::getBBsInstructions(BasicBlock *bb)  {
+        std::vector<Instruction*> tmp;
+        for(const auto & ins : bb->insns_){
+            tmp.emplace_back(ins.get());
+        }
+        return tmp;
+    }
+
+    std::vector<std::pair<Symbol, Function *>> ILVisitor::getProgramsFunctions(Program *p) {
+        std::vector<std::pair<Symbol, Function*>> tmp;
+        for(const auto & f : p->functions_){
+            tmp.emplace_back(f.first, f.second.get());
+        }
+        return tmp;
+    }
+
+    BasicBlock *ILVisitor::getProgramsGlobals(Program *p) {
+        return p->globals_.get();
+    }
+
 }
 

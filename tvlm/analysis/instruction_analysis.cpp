@@ -11,74 +11,74 @@ tvlm::VirtualRegisterPlaceholder * tvlm::InstructionAnalysis::InsVisitor::getVir
         return tmp;
     }
 }
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::Terminator0 *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::Terminator1 *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::TerminatorN *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::Returnator *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::DirectCallInstruction *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::IndirectCallInstruction *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::SrcInstruction *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::BinaryOperator *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::UnaryOperator *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ImmIndex *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ImmSize *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ImmValue *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::VoidInstruction *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::LoadAddress *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::StoreAddress *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::PhiInstruction *ins) {
-
-}
-
-void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ElemInstruction *ins) {
-
-}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::Terminator0 *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::Terminator1 *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::TerminatorN *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::Returnator *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::DirectCallInstruction *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::IndirectCallInstruction *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::SrcInstruction *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::BinaryOperator *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::UnaryOperator *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ImmIndex *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ImmSize *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ImmValue *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::VoidInstruction *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::LoadAddress *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::StoreAddress *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::PhiInstruction *ins) {
+//
+//}
+//
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::ElemInstruction *ins) {
+//
+//}
 
 void tvlm::InstructionAnalysis::InsVisitor::visit(::tvlm::BasicBlock *bb) {
 
@@ -112,4 +112,92 @@ tvlm::InstructionAnalysis::Env tvlm::InstructionAnalysis::InsVisitor::extendEnv(
         }
     }
     return acc;
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Jump *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::CondJump *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Return *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::CallStatic *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Call *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Copy *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Extend *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Truncate *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::BinOp *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::UnOp *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::LoadImm *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::AllocL *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::AllocG *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::ArgAddr *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::PutChar *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::GetChar *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Load *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Store *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Phi *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::ElemAddrOffset *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::ElemAddrIndex *ins) {
+
+}
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Halt *ins) {
+
 }

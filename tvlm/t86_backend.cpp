@@ -4,296 +4,274 @@
 
 namespace tvlm{
 
-    void ILtoISNaive::visit(Instruction::Terminator0 * ins) {
+    void tvlm::ILTiler::visit(tvlm::Jump *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::Terminator1 * ins) {
+    void tvlm::ILTiler::visit(tvlm::CondJump *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::TerminatorN * ins) {
+    void tvlm::ILTiler::visit(tvlm::Return *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::Returnator * ins) {
-        Label retVal = find(ins->returnValue());
-
-        //TODO calling conventions
-        add(ins, tiny::t86::RET());
-    }
-
-    void ILtoISNaive::visit(Instruction::DirectCallInstruction * ins) {
+    void tvlm::ILTiler::visit(tvlm::CallStatic *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::IndirectCallInstruction * ins) {
+    void tvlm::ILTiler::visit(tvlm::Call *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::SrcInstruction * ins) {
+    void tvlm::ILTiler::visit(tvlm::Copy *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::BinaryOperator * ins) {
+    void tvlm::ILTiler::visit(tvlm::Extend *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::UnaryOperator * ins) {
+    void tvlm::ILTiler::visit(tvlm::Truncate *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::ImmIndex * ins) {
+    void tvlm::ILTiler::visit(tvlm::BinOp *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::ImmSize * ins) {
+    void tvlm::ILTiler::visit(tvlm::UnOp *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::ImmValue * ins) {
+    void tvlm::ILTiler::visit(tvlm::LoadImm *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::VoidInstruction * ins) {
+    void tvlm::ILTiler::visit(tvlm::AllocL *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::LoadAddress * ins) {
+    void tvlm::ILTiler::visit(tvlm::AllocG *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::StoreAddress * ins) {
+    void tvlm::ILTiler::visit(tvlm::ArgAddr *ins) {
 
     }
 
-    void ILtoISNaive::visit(Instruction::PhiInstruction * ins) {
-
-    }
-    void ILtoISNaive::visit(Instruction::ElemInstruction * ins) {
+    void tvlm::ILTiler::visit(tvlm::PutChar *ins) {
 
     }
 
-
-    void ILtoISNaive::visit(BasicBlock * bb) {
-        Label ret = Label::empty();
-        for (auto & i : getBBsInstructions(bb)) {
-            Label tmp = visitChild(i);
-            if(ret == Label::empty()){
-                ret = tmp;
-            }
-        }
-        lastIns_ = ret;
-    }
-
-    void ILtoISNaive::visit(Function * fce) {
-        Label ret = Label::empty();
-
-        for (auto & bb : getFunctionBBs(fce)) {
-            Label tmp = visitChild(bb);
-            if(ret == Label::empty()){
-                ret = tmp;
-            }
-        }
-        lastIns_ = ret;
-    }
-
-    void ILtoISNaive::visit(Program * p) {
-
-        Label globals = visitChild(getProgramsGlobals(p));
-
-        Label callMain = add(nullptr, tiny::t86::CALL{Label::empty()});
-        for ( auto & f : getProgramsFunctions(p)) {
-            Label fncLabel = visitChild(f.second);
-            functionTable_.emplace(f.first, fncLabel);
-        }
-
-        Label main = functionTable_.find(Symbol("main"))->second;
-        pb_.patch(callMain, main);
-        add(nullptr, tiny::t86::HALT{});
+    void tvlm::ILTiler::visit(tvlm::GetChar *ins) {
 
     }
 
-
-
-    void ILTiler::visit(Instruction::Terminator0 * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        lastIns_ = new DAG(ins, ins->opcode_, children );
+    void tvlm::ILTiler::visit(tvlm::Load *ins) {
 
     }
 
-    void ILTiler::visit(Instruction::Terminator1 * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        lastIns_ = new DAG(ins, ins->opcode_, children );
+    void tvlm::ILTiler::visit(tvlm::Store *ins) {
 
     }
 
-    void ILTiler::visit(Instruction::TerminatorN * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        //TODO where all BBs?
-        children.push_back(visitChild(ins->condition()));
-
-        tvlm::Instruction::Opcode opcode;
-        if(dynamic_cast<CondJump *>(ins)){
-            opcode = tvlm::Instruction::Opcode::CondJump;
-        }else{
-            throw "unknown Opcode";
-        }
-
-        lastIns_ = new DAG(ins,opcode, children );
+    void tvlm::ILTiler::visit(tvlm::Phi *ins) {
 
     }
 
-    void ILTiler::visit(Instruction::Returnator * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        children.push_back(visitChild(ins->returnValue()));
-
-                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Return;
-        lastIns_ = new DAG(ins,opcode, children );
+    void tvlm::ILTiler::visit(tvlm::ElemAddrOffset *ins) {
 
     }
 
-    void ILTiler::visit(Instruction::DirectCallInstruction * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        for (auto & arg : ins->args()) {
-            children.push_back(visitChild(arg));
-        }
-
-                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::CallStatic;
-        lastIns_ = new DAG(ins,opcode, children );
-    }
-
-    void ILTiler::visit(Instruction::IndirectCallInstruction * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        children.push_back(visitChild(ins->f()));
-        for (auto & arg : ins->args()) {
-            children.push_back(visitChild(arg));
-        }
-
-                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Call;
-        lastIns_ = new DAG(ins,opcode, children );
-    }
-
-    void ILTiler::visit(Instruction::SrcInstruction * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        children.push_back(visitChild(ins->src()));
-
-        tvlm::Instruction::Opcode opcode;
-        if(dynamic_cast<PutChar *>(ins)){
-            opcode = tvlm::Instruction::Opcode::PutChar;
-        }else if(dynamic_cast<Truncate *>(ins)){
-            opcode = tvlm::Instruction::Opcode::Truncate;
-        }else if(dynamic_cast<Extend *>(ins)){
-            opcode = tvlm::Instruction::Opcode::Extend;
-        }else if(dynamic_cast<Copy *>(ins)){
-            opcode = tvlm::Instruction::Opcode::Copy;
-        }else{
-            throw "unknown Opcode";
-        }
-
-        lastIns_ = new DAG(ins,opcode, children );
+    void tvlm::ILTiler::visit(tvlm::ElemAddrIndex *ins) {
 
     }
 
-    void ILTiler::visit(Instruction::BinaryOperator * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        children.push_back(visitChild(ins->lhs()));
-        children.push_back(visitChild(ins->rhs()));
-
-                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::BinOp;
-        lastIns_ = new DAG(ins,opcode, children );
-
-
+    void tvlm::ILTiler::visit(tvlm::Halt *ins) {
 
     }
 
-    void ILTiler::visit(Instruction::UnaryOperator * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        children.push_back(visitChild(ins->operand()));
-
-                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::UnOp;
-        lastIns_ = new DAG(ins,opcode, children );
-        return;
-    }
-
-    void ILTiler::visit(Instruction::ImmIndex * ins) {
-
-        tvlm::Instruction::Opcode opcode;
-        if(dynamic_cast<ArgAddr *>(ins)){
-            opcode = tvlm::Instruction::Opcode::ArgAddr;
-        }else{
-            throw "unknown Opcode";
-        }
-
-        lastIns_ = new DAG(ins, opcode);
-    }
-
-    void ILTiler::visit(Instruction::ImmSize * ins) {
-
-        tvlm::Instruction::Opcode opcode;
-        if(dynamic_cast<AllocL *>(ins)){
-            opcode = tvlm::Instruction::Opcode::AllocL;
-        }else if(dynamic_cast<AllocG *>(ins)){
-            opcode = tvlm::Instruction::Opcode::AllocG;
-        }else{
-            throw "unknown Opcode";
-        }
-        std::vector<DAG*> children = std::vector<DAG*>();
-        if(ins->amount()){
-            children.emplace_back(visitChild(ins->amount()));
-        }
-        lastIns_ = new DAG(ins, opcode, children);
-    }
-
-    void ILTiler::visit(Instruction::ImmValue * ins) {
-
-        tvlm::Instruction::Opcode opcode;
-        if(dynamic_cast<LoadImm *>(ins)){
-            opcode = tvlm::Instruction::Opcode::LoadImm;
-        }else{
-            throw "unknown Opcode";
-        }
-
-        lastIns_ = new DAG(ins, opcode);
-    }
-
-    void ILTiler::visit(Instruction::VoidInstruction * ins) {
-
-        tvlm::Instruction::Opcode opcode;
-        if(dynamic_cast<GetChar *>(ins)){
-            opcode = tvlm::Instruction::Opcode::GetChar;
-        }else{
-            throw "unknown Opcode";
-        }
-
-        lastIns_ = new DAG(ins, opcode);
-    }
-
-    void ILTiler::visit(Instruction::LoadAddress * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        children.push_back(visitChild(ins->address()));
-
-                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Load;
-        lastIns_ = new DAG(ins,opcode, children );
-
-    }
-
-    void ILTiler::visit(Instruction::StoreAddress * ins) {
-        std::vector<DAG*> children = std::vector<DAG*>();
-        children.push_back(visitChild(ins->address()));
-        children.push_back(visitChild(ins->value()));
-
-                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Store;
-        lastIns_ = new DAG(ins,opcode, children );
-    }
-
-    void ILTiler::visit(Instruction::PhiInstruction * ins) {
-
-    }
-
-    void ILTiler::visit(Instruction::ElemInstruction *ins) {
-
-    }
+//
+//
+//    void ILTiler::visit(Instruction::Terminator0 * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        lastIns_ = new DAG(ins, ins->opcode_, children );
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::Terminator1 * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        lastIns_ = new DAG(ins, ins->opcode_, children );
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::TerminatorN * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        //TODO where all BBs?
+//        children.push_back(visitChild(ins->condition()));
+//
+//        tvlm::Instruction::Opcode opcode;
+//        if(dynamic_cast<CondJump *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::CondJump;
+//        }else{
+//            throw "unknown Opcode";
+//        }
+//
+//        lastIns_ = new DAG(ins,opcode, children );
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::Returnator * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        children.push_back(visitChild(ins->returnValue()));
+//
+//                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Return;
+//        lastIns_ = new DAG(ins,opcode, children );
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::DirectCallInstruction * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        for (auto & arg : ins->args()) {
+//            children.push_back(visitChild(arg));
+//        }
+//
+//                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::CallStatic;
+//        lastIns_ = new DAG(ins,opcode, children );
+//    }
+//
+//    void ILTiler::visit(Instruction::IndirectCallInstruction * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        children.push_back(visitChild(ins->f()));
+//        for (auto & arg : ins->args()) {
+//            children.push_back(visitChild(arg));
+//        }
+//
+//                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Call;
+//        lastIns_ = new DAG(ins,opcode, children );
+//    }
+//
+//    void ILTiler::visit(Instruction::SrcInstruction * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        children.push_back(visitChild(ins->src()));
+//
+//        tvlm::Instruction::Opcode opcode;
+//        if(dynamic_cast<PutChar *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::PutChar;
+//        }else if(dynamic_cast<Truncate *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::Truncate;
+//        }else if(dynamic_cast<Extend *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::Extend;
+//        }else if(dynamic_cast<Copy *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::Copy;
+//        }else{
+//            throw "unknown Opcode";
+//        }
+//
+//        lastIns_ = new DAG(ins,opcode, children );
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::BinaryOperator * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        children.push_back(visitChild(ins->lhs()));
+//        children.push_back(visitChild(ins->rhs()));
+//
+//                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::BinOp;
+//        lastIns_ = new DAG(ins,opcode, children );
+//
+//
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::UnaryOperator * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        children.push_back(visitChild(ins->operand()));
+//
+//                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::UnOp;
+//        lastIns_ = new DAG(ins,opcode, children );
+//        return;
+//    }
+//
+//    void ILTiler::visit(Instruction::ImmIndex * ins) {
+//
+//        tvlm::Instruction::Opcode opcode;
+//        if(dynamic_cast<ArgAddr *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::ArgAddr;
+//        }else{
+//            throw "unknown Opcode";
+//        }
+//
+//        lastIns_ = new DAG(ins, opcode);
+//    }
+//
+//    void ILTiler::visit(Instruction::ImmSize * ins) {
+//
+//        tvlm::Instruction::Opcode opcode;
+//        if(dynamic_cast<AllocL *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::AllocL;
+//        }else if(dynamic_cast<AllocG *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::AllocG;
+//        }else{
+//            throw "unknown Opcode";
+//        }
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        if(ins->amount()){
+//            children.emplace_back(visitChild(ins->amount()));
+//        }
+//        lastIns_ = new DAG(ins, opcode, children);
+//    }
+//
+//    void ILTiler::visit(Instruction::ImmValue * ins) {
+//
+//        tvlm::Instruction::Opcode opcode;
+//        if(dynamic_cast<LoadImm *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::LoadImm;
+//        }else{
+//            throw "unknown Opcode";
+//        }
+//
+//        lastIns_ = new DAG(ins, opcode);
+//    }
+//
+//    void ILTiler::visit(Instruction::VoidInstruction * ins) {
+//
+//        tvlm::Instruction::Opcode opcode;
+//        if(dynamic_cast<GetChar *>(ins)){
+//            opcode = tvlm::Instruction::Opcode::GetChar;
+//        }else{
+//            throw "unknown Opcode";
+//        }
+//
+//        lastIns_ = new DAG(ins, opcode);
+//    }
+//
+//    void ILTiler::visit(Instruction::LoadAddress * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        children.push_back(visitChild(ins->address()));
+//
+//                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Load;
+//        lastIns_ = new DAG(ins,opcode, children );
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::StoreAddress * ins) {
+//        std::vector<DAG*> children = std::vector<DAG*>();
+//        children.push_back(visitChild(ins->address()));
+//        children.push_back(visitChild(ins->value()));
+//
+//                tvlm::Instruction::Opcode opcode = tvlm::Instruction::Opcode::Store;
+//        lastIns_ = new DAG(ins,opcode, children );
+//    }
+//
+//    void ILTiler::visit(Instruction::PhiInstruction * ins) {
+//
+//    }
+//
+//    void ILTiler::visit(Instruction::ElemInstruction *ins) {
+//
+//    }
 
     void ILTiler::visit(BasicBlock * bb) {
 //        DAG * ret = nullptr;
@@ -583,6 +561,7 @@ tiny::t86::Program tvlm::ILTiler::translate(tvlm::Program & prog){
     tiny::t86::ProgramBuilder pb;
     return std::move(pb.program());
 }
+
 
 
 //tvlm::DummyRule* tvlm::DummyRule::dummy = nullptr;

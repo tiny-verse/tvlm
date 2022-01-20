@@ -58,39 +58,50 @@ namespace tvlm{
 
             void visit(Instruction *ins) override{};
 
-            void visit(Instruction::Terminator0 *ins) override;
+        protected:
+            void visit(Jump *ins) override;
 
-            void visit(Instruction::Terminator1 *ins) override;
+            void visit(CondJump *ins) override;
 
-            void visit(Instruction::TerminatorN *ins) override;
+            void visit(Return *ins) override;
 
-            void visit(Instruction::Returnator *ins) override;
+            void visit(CallStatic *ins) override;
 
-            void visit(Instruction::DirectCallInstruction *ins) override;
+            void visit(Call *ins) override;
 
-            void visit(Instruction::IndirectCallInstruction *ins) override;
+            void visit(Copy *ins) override;
 
-            void visit(Instruction::SrcInstruction *ins) override;
+            void visit(Extend *ins) override;
 
-            void visit(Instruction::BinaryOperator *ins) override;
+            void visit(Truncate *ins) override;
 
-            void visit(Instruction::UnaryOperator *ins) override;
+            void visit(BinOp *ins) override;
 
-            void visit(Instruction::ImmIndex *ins) override;
+            void visit(UnOp *ins) override;
 
-            void visit(Instruction::ImmSize *ins) override;
+            void visit(LoadImm *ins) override;
 
-            void visit(Instruction::ImmValue *ins) override;
+            void visit(AllocL *ins) override;
 
-            void visit(Instruction::VoidInstruction *ins) override;
+            void visit(AllocG *ins) override;
 
-            void visit(Instruction::LoadAddress *ins) override;
+            void visit(ArgAddr *ins) override;
 
-            void visit(Instruction::StoreAddress *ins) override;
+            void visit(PutChar *ins) override;
 
-            void visit(Instruction::PhiInstruction *ins) override;
+            void visit(GetChar *ins) override;
 
-            void visit(Instruction::ElemInstruction *ins) override;
+            void visit(Load *ins) override;
+
+            void visit(Store *ins) override;
+
+            void visit(Phi *ins) override;
+
+            void visit(ElemAddrOffset *ins) override;
+
+            void visit(ElemAddrIndex *ins) override;
+
+            void visit(Halt *ins) override;
 
             void visit(::tvlm::BasicBlock *bb) override;
 

@@ -309,23 +309,31 @@ namespace tvlm {
         }
 
         void visit(Instruction * ins) override {};
-        void visit(Instruction::Terminator0 * ins) override;
-        void visit(Instruction::Terminator1 * ins) override;
-        void visit(Instruction::TerminatorN * ins) override;
-        void visit(Instruction::Returnator * ins) override;
-        void visit(Instruction::DirectCallInstruction * ins) override;
-        void visit(Instruction::IndirectCallInstruction * ins) override;
-        void visit(Instruction::SrcInstruction * ins) override;
-        void visit(Instruction::BinaryOperator * ins) override;
-        void visit(Instruction::UnaryOperator * ins) override;
-        void visit(Instruction::ImmIndex * ins) override;
-        void visit(Instruction::ImmSize * ins) override;
-        void visit(Instruction::ImmValue * ins) override;
-        void visit(Instruction::VoidInstruction * ins) override;
-        void visit(Instruction::LoadAddress * ins) override;
-        void visit(Instruction::StoreAddress * ins) override;
-        void visit(Instruction::PhiInstruction * ins) override;
-        void visit(Instruction::ElemInstruction * ins) override;
+    public:
+        void visit(Jump *ins) override;
+        void visit(CondJump *ins) override;
+        void visit(Return *ins) override;
+        void visit(CallStatic *ins) override;
+        void visit(Call *ins) override;
+        void visit(Copy *ins) override;
+        void visit(Extend *ins) override;
+        void visit(Truncate *ins) override;
+        void visit(BinOp *ins) override;
+        void visit(UnOp *ins) override;
+        void visit(LoadImm *ins) override;
+        void visit(AllocL *ins) override;
+        void visit(AllocG *ins) override;
+        void visit(ArgAddr *ins) override;
+        void visit(PutChar *ins) override;
+        void visit(GetChar *ins) override;
+        void visit(Load *ins) override;
+        void visit(Store *ins) override;
+        void visit(Phi *ins) override;
+        void visit(ElemAddrOffset *ins) override;
+        void visit(ElemAddrIndex *ins) override;
+        void visit(Halt *ins) override;
+
+    protected:
 
         void visit(BasicBlock * bb) override;
         void visit(Function * fce) override;
@@ -379,90 +387,6 @@ namespace tvlm {
 
     };
 
-    class ILtoISNaive : public ILVisitor{
-    public:
-        using Label = tiny::t86::Label;
-        using DataLabel = tiny::t86::DataLabel;
-
-        static tiny::t86::Program translate(tvlm::Program & prog){
-            //TODO
-            ILtoISNaive v;
-            v.visit( &prog);
-            tiny::t86::Program rawProg = v.pb_.program();
-            std::vector<tiny::t86::Instruction*> instrs = rawProg.moveInstructions();
-            int line = 0;
-            for(const tiny::t86::Instruction * i : instrs){
-                std::cerr << tiny::color::blue << line++ << ": " << tiny::color::green << i->toString() << std::endl;
-            }
-
-
-            return {instrs, rawProg.data()};
-//            return v.pb_.program();
-        }
-
-    protected:
-        ILtoISNaive(): pb_(tiny::t86::ProgramBuilder()), lastIns_(Label::empty()){
-
-        }
-        void visit(Instruction * ins) override {};
-        void visit(Instruction::Terminator0 * ins) override;
-        void visit(Instruction::Terminator1 * ins) override;
-        void visit(Instruction::TerminatorN * ins) override;
-        void visit(Instruction::Returnator * ins) override;
-        void visit(Instruction::DirectCallInstruction * ins) override;
-        void visit(Instruction::IndirectCallInstruction * ins) override;
-        void visit(Instruction::SrcInstruction * ins) override;
-        void visit(Instruction::BinaryOperator * ins) override;
-        void visit(Instruction::UnaryOperator * ins) override;
-        void visit(Instruction::ImmIndex * ins) override;
-        void visit(Instruction::ImmSize * ins) override;
-        void visit(Instruction::ImmValue * ins) override;
-        void visit(Instruction::VoidInstruction * ins) override;
-        void visit(Instruction::LoadAddress * ins) override;
-        void visit(Instruction::StoreAddress * ins) override;
-        void visit(Instruction::PhiInstruction * ins) override;
-        void visit(Instruction::ElemInstruction * ins) override;
-
-        void visit(BasicBlock * bb) override;
-        void visit(Function * fce) override;
-        void visit(Program * p) override;
-
-    private:
-        Label visitChild(IL * il) {
-            ILVisitor::visitChild(il);
-            return lastIns_;
-        }
-
-        template<typename T>
-        Label visitChild(std::unique_ptr<T> const &ptr) {
-            return visitChild(ptr.get());
-        }
-
-        template<typename T>
-        Label add(Instruction * ins, const T& instruction) {
-            lastIns_ = pb_.add( instruction);
-            if(ins != nullptr ) compiled_.emplace(ins, lastIns_);
-            return lastIns_;
-        }
-
-        Label find(Instruction * ins){
-            auto it = compiled_.find(ins);
-            if(it == compiled_.end()){
-                return Label::empty();
-            }
-            return it->second;
-        }
-
-        tiny::t86::ProgramBuilder pb_;
-        Label lastIns_;
-        std::unordered_map<tiny::Symbol, Label> functionTable_;
-        std::unordered_map<Instruction *, Label> compiled_;
-
-
-    };
-
-
-
 
 
 
@@ -473,8 +397,10 @@ namespace tvlm {
         PB compileToTarget( IL && il){
             //auto codeGenerator = CodeGenerator (il);
 
-            return tvlm::ILTiler::translate(il);
-
+//            return tvlm::ILTiler::translate(il);
+//            return tvlm::NaiveIS::translate(il);
+            tiny::t86::ProgramBuilder pb;
+            return std::move(pb.program());
         }
     };
 
