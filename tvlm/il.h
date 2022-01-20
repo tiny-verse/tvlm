@@ -443,7 +443,7 @@ namespace tvlm {
         int64_t valueInt() {
             return value_.i;
         }
-        int64_t valueFloat() {
+        double valueFloat() {
             return value_.f;
         }
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
@@ -840,6 +840,9 @@ namespace tvlm {
     public:
 
         virtual ~ElemInstruction(){}
+        Instruction * base()const {
+            return base_;
+        }
     protected:
 
         ElemInstruction( Instruction * base, ASTBase const * ast, const std::string & instrName, Opcode opcode):
@@ -858,6 +861,10 @@ namespace tvlm {
         virtual void print(tiny::ASTPrettyPrinter & p) const override;
 
         virtual ~ElemOffsetInstruction(){}
+
+        Instruction * offset()const {
+            return offset_;
+        }
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
@@ -876,6 +883,12 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         virtual void print(tiny::ASTPrettyPrinter & p) const override;
 
     virtual ~ElemIndexInstruction(){}
+        Instruction * offset()const {
+            return offset_;
+        }
+        Instruction * index()const {
+            return index_;
+        }
     protected:
 //    virtual void accept(ILVisitor * v) override;
 

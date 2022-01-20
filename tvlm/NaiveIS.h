@@ -126,10 +126,15 @@ namespace tvlm{
         tiny::t86::ProgramBuilder pb_;
         Label lastIns_;
         std::unordered_map<tiny::Symbol, Label> functionTable_;
+        std::unordered_map<Instruction*, uint64_t> globalTable_;
         std::unordered_map<Instruction *, Label> compiled_;
         std::vector<std::pair<Label, BasicBlock*>> future_patch_;
         std::vector<std::pair<Label, Symbol>> unpatchedCalls_;
+        size_t functionLocalAllocSize = 0;
+        size_t globalPointer_ = 0;
 
+
+        std::unordered_map<const Instruction* ,Instruction * > instructionToEmplace;
         RegisterAllocator * regAllocator;
 
 

@@ -22,8 +22,8 @@ namespace tvlm{
                 return clearAllFloatReg();
             }
             virtual void spillAllReg()  = 0;
-            std::map<Register, Instruction *> alloc_regs_;
-            std::map<Register, Instruction *> alloc_fregs_;
+            std::vector< Instruction *> alloc_regs_;
+            std::vector< Instruction *> alloc_fregs_;
 
     };
 }
