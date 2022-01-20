@@ -563,6 +563,9 @@ namespace tvlm {
         Instruction * operand() const {
             return operand_;
         }
+        UnOpType opType() const{
+            return operator_;
+        }
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << resolve_operator() << " ";

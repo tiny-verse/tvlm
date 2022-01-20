@@ -45,11 +45,51 @@ namespace tvlm{
     }
     
     void NaiveIS::visit(CallStatic *ins) {
-    
+
+        auto ret = Label(lastIns_+1);
+
+        //spill everything
+        spillAllReg();
+        //args
+        for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
+            add(tiny::t86::PUSH(fillIntRegister(*it)));
+            clearInt(*it);
+
+        }
+        clearAllIntReg();
+        //call
+        tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()});
+        add(tiny::t86::MOV(fillIntRegister(ins),tiny::t86::Reg(0)));
+        add(tiny::t86::ADD(tiny::t86::Sp(), ins->args().size()));//clear arguments; need?
+
+        unpatchedCalls_.emplace_back(callLabel, ins->f()->name());
+//        return ret;
+        lastIns_ = ret;
     }
-    
+
     void NaiveIS::visit(Call *ins) {
-    
+        auto ret = Label(lastIns_+1);
+
+        //spilll everything
+        spillAllReg();
+
+        //parameters
+        for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
+            add(tiny::t86::PUSH(fillIntRegister(*it)));
+            clearInt(*it);
+
+        }
+
+        clearAllReg();
+        //call itself
+        add(tiny::t86::CALL(fillIntRegister(ins->f())));
+        clearInt(ins->f());
+
+        add(tiny::t86::MOV(fillIntRegister(ins),tiny::t86::Reg(0)));
+        add(tiny::t86::ADD(tiny::t86::Sp(), ins->args().size()));//clear arguments; need?
+
+//        return ret;
+        lastIns_ = ret;
     }
 
     void NaiveIS::visit(BinOp *ins) {
@@ -64,7 +104,26 @@ namespace tvlm{
     }
     
     void NaiveIS::visit(UnOp *ins) {
-    
+        auto ret = Label(lastIns_+1);
+        auto reg =
+        fillIntRegister(ins->operand());
+        switch (ins->opType()) {
+            case UnOpType::NOT:
+                add(tiny::t86::NOT(reg));
+                break;
+            case UnOpType::UNSUB:
+                add(tiny::t86::SUB(0 , reg));
+                break;
+            case UnOpType::INC:
+                add(tiny::t86::INC( reg));
+                break;
+            case UnOpType::DEC:
+                add(tiny::t86::DEC( reg));
+                break;
+        }
+        regAllocator->alloc_regs_[getIntRegister(ins->operand()).index()] = ins;
+//        return ret;
+        lastIns_ = ret;
     }
     
     void NaiveIS::visit(LoadImm *ins) {

@@ -15,7 +15,15 @@ namespace tvlm{
             virtual FRegister getFloatRegister(Instruction * ins) = 0;
 
             virtual void clearInt(Instruction * ins) = 0;
+            virtual void clearAllIntReg() = 0;
+            virtual void clearAllFloatReg() = 0;
+            virtual void clearAllReg() {
+                clearAllIntReg();
+                return clearAllFloatReg();
+            }
+            virtual void spillAllReg()  = 0;
             std::map<Register, Instruction *> alloc_regs_;
             std::map<Register, Instruction *> alloc_fregs_;
+
     };
 }

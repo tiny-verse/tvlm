@@ -4,6 +4,7 @@
 #include <utility>
 #include "il.h"
 #include "t86/program/programbuilder.h"
+#include "NaiveIS.h"
 
 
 

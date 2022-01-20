@@ -87,29 +87,48 @@ namespace tvlm{
 
         /**Call getIntRegister and occupy register
          * */
-        Register fillIntRegister(Instruction * ins){
+        auto fillIntRegister(Instruction * ins){
             return regAllocator->fillIntRegister(ins);
         }
         /**FindA free register
          * */
-        Register getIntRegister(Instruction * ins){
+        auto getIntRegister(Instruction * ins){
             return regAllocator->getIntRegister(ins);
         }
-        FRegister fillFloatRegister(Instruction * ins){
+        auto fillFloatRegister(Instruction * ins){
             return regAllocator->fillFloatRegister(ins);
         }
-        FRegister getFloatRegister(Instruction * ins){
+        auto getFloatRegister(Instruction * ins){
             return regAllocator->getFloatRegister(ins);
         }
-        void clearInt(Instruction * ins){
+        auto clearInt(Instruction * ins){
             return regAllocator->clearInt(ins);
         }
+
+        auto clearAllIntReg(){
+            return regAllocator->clearAllIntReg();
+        }
+
+        void clearAllFloatReg(){
+            return regAllocator->clearAllFloatReg();
+        }
+
+        auto clearAllReg(){
+            return regAllocator->clearAllReg();
+        }
+
+        auto spillAllReg(){
+            return regAllocator->spillAllReg();
+        }
+
+
 
         tiny::t86::ProgramBuilder pb_;
         Label lastIns_;
         std::unordered_map<tiny::Symbol, Label> functionTable_;
         std::unordered_map<Instruction *, Label> compiled_;
         std::vector<std::pair<Label, BasicBlock*>> future_patch_;
+        std::vector<std::pair<Label, Symbol>> unpatchedCalls_;
 
         RegisterAllocator * regAllocator;
 
