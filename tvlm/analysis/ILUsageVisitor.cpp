@@ -193,3 +193,7 @@ void tvlm::ILUsageVisitor::visit(tvlm::ElemAddrIndex *ins) {
 void tvlm::ILUsageVisitor::visit(tvlm::Halt *ins) {
 
 }
+
+void tvlm::ILUsageVisitor::visit(tvlm::StructAssign *ins) {
+
+}

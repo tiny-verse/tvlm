@@ -2,8 +2,8 @@
 
 #include <map>
 #include <queue>
-#include "tvlm/il_builder.h"
-#include "tvlm/il_insns.h"
+#include "tvlm/tvlm/il/il_builder.h"
+#include "tvlm/tvlm/il/il_insns.h"
 #include "instruction_analysis.h"
 #include "lattice/lattice.h"
 #include "lattice/flat_lattice.h"

@@ -3,7 +3,8 @@
 #include <unordered_map>
 //
 //#include "t86_backend.h"
-#include "il.h"
+#include "tvlm/tvlm/il/il.h"
+#include "tvlm/t86_backend.h"
 //#include "tvlm_backend"
 
 using Opcode = tvlm::Instruction::Opcode;

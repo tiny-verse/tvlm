@@ -6,7 +6,7 @@
 #include "./lattice/map_lattice.h"
 #include "./lattice/powerset_lattice.h"
 #include "cfg.h"
-#include "../il.h"
+#include "tvlm/tvlm/il/il.h"
 #include "../t86_backend.h"
 
 
@@ -102,8 +102,9 @@ namespace tvlm{
             void visit(ElemAddrIndex *ins) override;
 
             void visit(Halt *ins) override;
+            void visit(StructAssign *ins) override;
 
-            void visit(::tvlm::BasicBlock *bb) override;
+            void visit(BasicBlock *bb) override;
 
             void visit(Function *fce) override;
 

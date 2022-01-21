@@ -467,7 +467,7 @@ namespace tvlm{
 //    }
 } //namespace tvlm
 
-#include "rewriting_rules.h"
+#include "tvlm/tvlm/InstructionSelection/rewriting_rules.h"
 #include "tvlm/analysis/next_use_analysis.h"
 
 
@@ -562,6 +562,9 @@ tiny::t86::Program tvlm::ILTiler::translate(tvlm::Program & prog){
     return std::move(pb.program());
 }
 
+void tvlm::ILTiler::visit(tvlm::StructAssign *ins) {
+
+}
 
 
 //tvlm::DummyRule* tvlm::DummyRule::dummy = nullptr;

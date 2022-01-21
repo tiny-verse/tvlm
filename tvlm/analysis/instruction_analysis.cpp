@@ -201,3 +201,7 @@ void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::ElemAddrIndex *ins) {
 void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::Halt *ins) {
 
 }
+
+void tvlm::InstructionAnalysis::InsVisitor::visit(tvlm::StructAssign *ins) {
+
+}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../il.h"
+#include "tvlm/tvlm/il/il.h"
 #include "instruction_analysis.h"
 
 
@@ -62,6 +62,7 @@ namespace tvlm{
         void visit(ElemAddrIndex *ins) override;
 
         void visit(Halt *ins) override;
+        void visit(StructAssign *ins) override;
 
     protected:
         void visit(BasicBlock *bb) override;

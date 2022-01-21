@@ -1,5 +1,5 @@
 #pragma once
-#include "il.h"
+#include "tvlm/tvlm/il/il.h"
 #include "t86/program/label.h"
 #include "t86/program/programbuilder.h"
 #include "RegisterAllocator.h"
@@ -48,6 +48,7 @@ namespace tvlm{
         void visit(ElemAddrOffset *ins) override;
         void visit(ElemAddrIndex *ins) override;
         void visit(Halt *ins) override;
+        void visit(StructAssign *ins) override;
 
     protected:
         void visit(BasicBlock *bb) override;
@@ -85,33 +86,28 @@ namespace tvlm{
             return it->second;
         }
 
-        /**Call getIntRegister and occupy register
+        /** Prepare register for use with its value (sill if necessary)
          * */
         auto fillIntRegister(Instruction * ins){
             return regAllocator->fillIntRegister(ins);
         }
-        /**FindA free register
-         * */
-        auto getIntRegister(Instruction * ins){
-            return regAllocator->getIntRegister(ins);
-        }
         auto fillFloatRegister(Instruction * ins){
             return regAllocator->fillFloatRegister(ins);
         }
-        auto getFloatRegister(Instruction * ins){
-            return regAllocator->getFloatRegister(ins);
-        }
-        auto clearInt(Instruction * ins){
+        auto clearIntReg(Instruction * ins){
             return regAllocator->clearInt(ins);
         }
-
-        auto clearAllIntReg(){
-            return regAllocator->clearAllIntReg();
+        auto clearFloatReg(Instruction * ins){
+            return regAllocator->clearFloat(ins);
         }
-
-        void clearAllFloatReg(){
-            return regAllocator->clearAllFloatReg();
-        }
+//
+//        auto clearAllIntReg(){
+//            return regAllocator->clearAllIntReg();
+//        }
+//
+//        void clearAllFloatReg(){
+//            return regAllocator->clearAllFloatReg();
+//        }
 
         auto clearAllReg(){
             return regAllocator->clearAllReg();
@@ -121,6 +117,18 @@ namespace tvlm{
             return regAllocator->spillAllReg();
         }
 
+        auto clearReg(Instruction * ins){
+            switch (ins->resultType()) {
+                case ResultType::Integer:
+                    return clearIntReg(ins);
+                    break;
+                case ResultType::Double:
+                    return clearFloatReg(ins);
+                    break;
+                case ResultType::Void:
+                    break;
+            }
+        }
 
 
         tiny::t86::ProgramBuilder pb_;
@@ -138,6 +146,7 @@ namespace tvlm{
         RegisterAllocator * regAllocator;
 
 
-
+        void makeGlobalTable(BasicBlock *pBlock);
+        Label compileGlobalTable(BasicBlock *pBlock);
     };
 }

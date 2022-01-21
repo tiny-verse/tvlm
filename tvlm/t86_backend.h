@@ -2,9 +2,9 @@
 
 #include <unordered_set>
 #include <utility>
-#include "il.h"
+#include "tvlm/tvlm/il/il.h"
 #include "t86/program/programbuilder.h"
-#include "NaiveIS.h"
+#include "tvlm/tvlm/InstructionSelection/NaiveIS.h"
 
 
 
@@ -333,6 +333,7 @@ namespace tvlm {
         void visit(ElemAddrOffset *ins) override;
         void visit(ElemAddrIndex *ins) override;
         void visit(Halt *ins) override;
+        void visit(StructAssign *ins) override;
 
     protected:
 
