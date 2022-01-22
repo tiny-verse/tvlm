@@ -465,6 +465,15 @@ namespace tvlm{
 //
 //        return true;
 //    }
+    t86_Backend::PB t86_Backend::compileToTarget(t86_Backend::IL &&il) {
+        //auto codeGenerator = CodeGenerator (il);
+
+//            return tvlm::ILTiler::translate(il);
+        return NaiveIS::translate(il);
+        tiny::t86::ProgramBuilder pb;
+        return std::move(pb.program());
+    }
+
 } //namespace tvlm
 
 #include "tvlm/tvlm/InstructionSelection/rewriting_rules.h"

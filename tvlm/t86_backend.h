@@ -396,15 +396,7 @@ namespace tvlm {
     public:
         using IL = tvlm::Program;
         using PB = tiny::t86::Program;
-        PB compileToTarget( IL && il){
-            //auto codeGenerator = CodeGenerator (il);
-
-//            return tvlm::ILTiler::translate(il);
-//            return tvlm::NaiveIS::translate(il);
-            tiny::t86::ProgramBuilder pb;
-            return std::move(pb.program());
-        }
+        PB compileToTarget( IL && il);
     };
-
 } // namespace tvlm
 

@@ -11,6 +11,9 @@ namespace tvlm{
     void NaiveIS::visit(Halt *ins) {
         lastIns_ = add(tiny::t86::HALT());
     }
+    void NaiveIS::visit(StructAssign *ins) {
+        //TODO
+    }
     
     void NaiveIS::visit(Jump *ins) {
         tiny::t86::Label jmp = add(tiny::t86::JMP( tiny::t86::Label::empty()));
@@ -383,26 +386,38 @@ namespace tvlm{
     }
     
     void NaiveIS::visit(BasicBlock * bb) {
-        Label ret = Label::empty();
-        for (auto & i : getBBsInstructions(bb)) {
-            Label tmp = visitChild(i);
-            if(ret == Label::empty()){
-                ret = tmp;
-            }
+        tiny::t86::Label ret = pb_.currentLabel(); //next from last Instruction Label
+        compiledBB_.emplace(bb, ret);
+        auto insns = getBBsInstructions(bb);
+        int64_t len = (int64_t) insns.size()-1;
+        if(len == -1){
+            lastIns_ = ret; // return ret; // empty BB;
+            return;
         }
-        lastIns_ = ret;
+        for(int64_t i = 0; i < len ;i++){
+            visit(insns[i]);
+            tiny::t86::Label tmp = lastIns_;
+            compiled_.emplace(insns[i], tmp);
+        }
+        auto & last = insns[len];
+        spillAllReg();
+        visit(last);
+        clearAllReg();
+        lastIns_ = ret; // return ret;
     }
     
-    void NaiveIS::visit(Function * fce) {
-        Label ret = Label::empty();
-    
-        for (auto & bb : getFunctionBBs(fce)) {
-            Label tmp = visitChild(bb);
-            if(ret == Label::empty()){
-                ret = tmp;
-            }
+    void NaiveIS::visit(Function * fnc) {
+        functionLocalAllocSize = 0;
+        tiny::t86::Label ret =
+                add(tiny::t86::PUSH(tiny::t86::Bp()));
+        add(tiny::t86::MOV(tiny::t86::Bp(), tiny::t86::Sp()));
+        Label toPatchStack = add(tiny::t86::SUB(tiny::t86::Sp(), 0));
+        for (const auto & bb : getFunctionBBs(fnc)) {
+            visit(bb);
         }
-        lastIns_ = ret;
+        // TODO replace(toPatchStack, tiny::t86::SUB(tiny::t86::Sp(), (int64_t)functionLocalAllocSize ));
+
+        lastIns_ = ret; //return ret;
     }
     
     void NaiveIS::visit(Program * p) {
@@ -414,11 +429,70 @@ namespace tvlm{
             Label fncLabel = visitChild(f.second);
             functionTable_.emplace(f.first, fncLabel);
         }
-    
+
         Label main = functionTable_.find(Symbol("main"))->second;
         pb_.patch(callMain, main);
         add(nullptr, tiny::t86::HALT{});
-    
+
+
+
+//        regAllocator ->alloc_regs_.resize(t86::Cpu::Config::instance().registerCnt());
+
+        //===================================GLOBALS=====================================
+        BasicBlock functionGlobals;
+//        makeGlobalTable(irb->globals_.get());
+        auto globs = getProgramsGlobals(p);
+        makeGlobalTable(globs);
+        for (const auto & str : p->stringLiterals() ) {
+            tiny::t86::DataLabel data = pb_.addData(str.first);
+            add(tiny::t86::MOV(fillIntRegister(str.second), data ));
+        }
+
+        tiny::t86::Label start = add(tiny::t86::JMP(tiny::t86::Label::empty()));
+
+        //===================================FUNCTIONS=====================================
+        for (auto & i : p->functions()){
+            visit(i.second.get());
+            Label fncLabel = lastIns_;
+            addFunction(i.first, fncLabel);
+        }
+
+        //===================================MEM INTERCEPT=====================================
+        for(auto & f : functionTable_){
+            //TODO Instruction * fnc_addr = irb->env_->getVariableAddress(f.first);
+            // instructionToEmplace.emplace(fnc_addr, new LoadImm((int64_t)f.second.address(), nullptr));
+        }
+
+        clearAllReg();
+        tiny::t86::Label prolog = //t86::Label(lastInstruction_index +1);
+                compileGlobalTable(globs);
+
+        add(tiny::t86::CALL(functionAddr("main"))) ;
+
+        //===================================END of MEM INTERCEPT=====================================
+        add(tiny::t86::HALT());
+        pb_.patch(start, prolog);
+        //===================================PATCHING JUMPS=====================================
+
+        for (const auto & toPatch: future_patch_) {
+            auto it = compiledBB_.find(toPatch.second);
+            if(it == compiledBB_.end()){
+                throw "wat now? - I can jump on invalid BB....";
+            }
+            pb_.patch(toPatch.first, it->second );
+
+        }
+        //===================================PATCHING Calls=====================================
+        for( auto & toPatch : unpatchedCalls_){
+            auto it = functionTable_.find(toPatch.second);
+            if(it == functionTable_.end()){
+                throw "WTF failed patching calls";
+            }
+            pb_.patch(toPatch.first,it->second);
+            std::cerr << "patching call at " << toPatch.first << " with " << it->second << std::endl;
+        }
+
+
     }
 
     tiny::t86::Program NaiveIS::translate(Program &prog) {
@@ -433,7 +507,7 @@ namespace tvlm{
         }
 
 
-        return {instrs, rawProg.data()};
+        return {std::move(instrs), rawProg.data()};
 //            return v.pb_.program();
     }
 
@@ -480,6 +554,20 @@ namespace tvlm{
         return ret;
     }
 
+    NaiveIS::NaiveIS(): pb_(tiny::t86::ProgramBuilder()), lastIns_(Label::empty()),
+                        regAllocator(new NaiveRegisterAllocator()){
+
+    }
+
+  uint64_t NaiveIS::functionAddr(const std::string & name) const{
+
+        return functionTable_.find(Symbol(name))->second.address();
+    }
+
+    void NaiveIS::addFunction(Symbol name, NaiveIS::Label instr) {
+
+        functionTable_.emplace(name, instr.address());
+    }
 
 
 }

@@ -3,6 +3,7 @@
 #include "t86/program/label.h"
 #include "t86/program/programbuilder.h"
 #include "RegisterAllocator.h"
+#include "NaiveRegisterAllocator.h"
 
 namespace tvlm{
 
@@ -20,9 +21,8 @@ namespace tvlm{
 
         void visit(Program *p) override;
     protected:
-        NaiveIS(): pb_(tiny::t86::ProgramBuilder()), lastIns_(Label::empty()){
+        NaiveIS();
 
-        }
         void visit(Instruction *ins) override;
 
     public:
@@ -136,6 +136,7 @@ namespace tvlm{
         std::unordered_map<tiny::Symbol, Label> functionTable_;
         std::unordered_map<Instruction*, uint64_t> globalTable_;
         std::unordered_map<Instruction *, Label> compiled_;
+        std::unordered_map<BasicBlock *, Label> compiledBB_;
         std::vector<std::pair<Label, BasicBlock*>> future_patch_;
         std::vector<std::pair<Label, Symbol>> unpatchedCalls_;
         size_t functionLocalAllocSize = 0;
@@ -143,10 +144,14 @@ namespace tvlm{
 
 
         std::unordered_map<const Instruction* ,Instruction * > instructionToEmplace;
-        RegisterAllocator * regAllocator;
+        std::unique_ptr<RegisterAllocator> regAllocator;
 
 
         void makeGlobalTable(BasicBlock *pBlock);
         Label compileGlobalTable(BasicBlock *pBlock);
+
+        uint64_t functionAddr(const std::string &)const;
+
+        void addFunction(Symbol symbol, Label label);
     };
 }

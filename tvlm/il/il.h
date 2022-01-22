@@ -1200,6 +1200,9 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions() const {
             return functions_;
         }
+        const std::unordered_map<std::string, Instruction*> & stringLiterals() const{
+            return stringLiterals_;
+        }
     protected:
         friend class ILVisitor;
          void accept(ILVisitor * v) override;
