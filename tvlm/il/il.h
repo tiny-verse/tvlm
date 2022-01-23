@@ -174,8 +174,8 @@ namespace tvlm {
     public:
         Array(Type * base, Instruction * size) : base_{base}, size_(size){}
         int size()const{
-            throw "unknown size";
-            return 4;
+            //throw "unknown size"; TODO
+            return base_->size();
         }
 
         ResultType registerType() const override {
@@ -440,6 +440,10 @@ namespace tvlm {
         size_t index() {
             return index_;   
         }
+        std::vector<Instruction *> args()const{
+            return args_;
+        }
+
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " " << p.numberLiteral << index_;

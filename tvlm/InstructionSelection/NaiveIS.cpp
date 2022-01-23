@@ -117,6 +117,7 @@ namespace tvlm{
         auto ret = pb_.currentLabel();
 
         switch (ins->resultType()) {
+            case ResultType::StructAddress:
             case ResultType::Integer:{
 
             auto lhsreg = fillIntRegister(ins->lhs());
@@ -198,11 +199,124 @@ namespace tvlm{
             }
             case ResultType::Double:{
 
-                throw "not implmented";
+                auto lhsreg = fillFloatRegister(ins->lhs());
+                auto rhsreg = fillFloatRegister(ins->rhs());
+
+
+                switch (ins->opType()) {
+                    case BinOpType::ADD:
+                        add(tiny::t86::FADD(lhsreg, rhsreg));
+                        //        add(MOV(fillIntRegister(instr), fillIntRegister(instr->lhs())));
+                        break;
+                    case BinOpType::SUB:
+                        add(tiny::t86::FSUB(lhsreg, rhsreg));
+                        break;
+//                    case BinOpType::MOD:
+//                        add(tiny::t86::MOD(lhsreg, rhsreg));
+//                        break;
+                    case BinOpType::MUL:
+                        add(tiny::t86::FMUL(lhsreg, rhsreg));
+                        break;
+                    case BinOpType::DIV:
+                        add(tiny::t86::FDIV(lhsreg, rhsreg));
+                        break;
+
+//                    case BinOpType::AND:
+//                        add(tiny::t86::AND(lhsreg, rhsreg));
+//                        break;
+//                    case BinOpType::OR:
+//                        add(tiny::t86::OR(lhsreg, rhsreg));
+//                        break;
+//                    case BinOpType::XOR:
+//                        add(tiny::t86::XOR(lhsreg, rhsreg));
+//                        break;
+
+//                    case BinOpType::LSH:
+//                        add(tiny::t86::LSH(lhsreg, rhsreg));
+//                        break;
+//                    case BinOpType::RSH:
+//                        add(tiny::t86::RSH(lhsreg, rhsreg));
+//                        break;
+
+                    case BinOpType::NEQ:{
+                        add(tiny::t86::FSUB(lhsreg,rhsreg));
+//                        regAllocator->replaceFloat(ins->lhs(), ins);
+                        clearFloatReg(ins->lhs());
+                        clearFloatReg(ins->rhs());
+                        lastIns_ = ret;//        return ret;
+                        return;
+                    }
+                    case BinOpType::EQ:{
+                        Register tmpreg = fillIntRegister(ins);
+                        add(tiny::t86::FSUB(lhsreg,rhsreg));
+                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()));
+                        add(tiny::t86::AND(tmpreg, ZeroFlag));//ZeroFlag
+//                        regAllocator->replaceFloat(ins->lhs(), ins);
+                        clearFloatReg(ins->rhs());
+                        clearFloatReg(ins->lhs());
+                        lastIns_ = ret;//        return ret;
+                        return;
+                    }
+                    case BinOpType::LTE:{
+                        Register tmpreg = fillIntRegister(ins);
+
+                        add(tiny::t86::FSUB(rhsreg, lhsreg));
+                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()));
+                        add(tiny::t86::AND(tmpreg, SignFlag));//SignFlag
+                        add(tiny::t86::NOT(tmpreg));
+                        //                        regAllocator->replaceFloat(ins->lhs(), ins);
+                        clearFloatReg(ins->rhs());
+                        clearFloatReg(ins->lhs());
+                        lastIns_ = ret;//        return ret;
+                        return;
+                    }
+                    case BinOpType::LT:{
+                        Register tmpreg = fillIntRegister(ins);
+                        add(tiny::t86::FSUB(lhsreg, rhsreg));
+                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()));
+                        add(tiny::t86::AND(tmpreg, SignFlag));//SignFlag
+                        //                        regAllocator->replaceFloat(ins->lhs(), ins);
+                        clearFloatReg(ins->rhs());
+                        clearFloatReg(ins->lhs());
+                        lastIns_ = ret;//        return ret;
+                        return;
+                    }
+                case BinOpType::GT:{
+                        Register tmpreg = fillIntRegister(ins);
+                        add(tiny::t86::FSUB(rhsreg, lhsreg));
+                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()));
+                        add(tiny::t86::AND(tmpreg, SignFlag));//SignFlag
+                        //                        regAllocator->replaceFloat(ins->lhs(), ins);
+                        clearFloatReg(ins->rhs());
+                        clearFloatReg(ins->lhs());
+                        lastIns_ = ret;//        return ret;
+                        return;
+                    }
+                case BinOpType::GTE:{
+                        Register tmpreg = fillIntRegister(ins);
+                    add(tiny::t86::FSUB(lhsreg, rhsreg));
+                    add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()));
+                    add(tiny::t86::AND(tmpreg, SignFlag));//SignFlag
+                    add(tiny::t86::NOT(tmpreg));
+                    //                        regAllocator->replaceFloat(ins->lhs(), ins);
+                    clearFloatReg(ins->rhs());
+                    clearFloatReg(ins->lhs());
+                    lastIns_ = ret;//        return ret;
+                    return;
+                }
+                default:
+                    throw "not implemented or not supported";
+                };
+//                regAllocator->alloc_regs_[getIntRegister(ins->lhs()).index()] = ins;
+                regAllocator->replaceFloat(ins->lhs(), ins);
+                clearFloatReg(ins->rhs());
+                lastIns_ = ret;//        return ret;
+                return;
+
                 break;
             }
             case ResultType::Void:
-                throw "not implmented";
+                throw "not implemented";
                 break;
         }
 
@@ -218,33 +332,69 @@ namespace tvlm{
     
     void NaiveIS::visit(UnOp *ins) {
         auto ret = pb_.currentLabel();
-        auto reg =
-        fillIntRegister(ins->operand());
-        switch (ins->opType()) {
-            case UnOpType::NOT:
-                add(tiny::t86::NOT(reg));
+        switch (ins->resultType()) {
+
+            case ResultType::Integer:
+            case ResultType::StructAddress:{
+
+                auto reg =
+                fillIntRegister(ins->operand());
+                switch (ins->opType()) {
+                    case UnOpType::NOT:
+                        add(tiny::t86::NOT(reg));
+                        break;
+                    case UnOpType::UNSUB:
+                        add(tiny::t86::SUB(0 , reg));
+                        break;
+                    case UnOpType::INC:
+                        add(tiny::t86::INC( reg));
+                        break;
+                    case UnOpType::DEC:
+                        add(tiny::t86::DEC( reg));
+                        break;
+                }
+        //        regAllocator->alloc_regs_[getIntRegister(ins->operand()).index()] = ins;
+                regAllocator->replaceInt(ins->operand(), ins);
+
+        //        return ret;
+                lastIns_ = ret;
+                return;
                 break;
-            case UnOpType::UNSUB:
-                add(tiny::t86::SUB(0 , reg));
+            }
+            case ResultType::Double:{
+                auto reg = fillFloatRegister(ins->operand());
+                switch (ins->opType()) {
+                    case UnOpType::UNSUB:
+                        add(tiny::t86::FSUB(0 , reg));
+                        break;
+                    case UnOpType::INC:
+                        add(tiny::t86::FADD( reg, 1));
+                        break;
+                    case UnOpType::DEC:
+                        add(tiny::t86::FSUB( reg, 1));
+                        break;
+                    default:
+                        throw "not implemented";
+                }
+                //        regAllocator->alloc_regs_[getIntRegister(ins->operand()).index()] = ins;
+                regAllocator->replaceInt(ins->operand(), ins);
+
+                //        return ret;
+                lastIns_ = ret;
+                return;
                 break;
-            case UnOpType::INC:
-                add(tiny::t86::INC( reg));
-                break;
-            case UnOpType::DEC:
-                add(tiny::t86::DEC( reg));
+            }
+            case ResultType::Void:
+                        throw "not implemented";
                 break;
         }
-//        regAllocator->alloc_regs_[getIntRegister(ins->operand()).index()] = ins;
-        regAllocator->replaceInt(ins->operand(), ins);
-
-//        return ret;
-        lastIns_ = ret;
     }
     
     void NaiveIS::visit(LoadImm *ins) {
         auto ret = pb_.currentLabel();
 
         switch (ins->resultType()) {
+            case ResultType::StructAddress:
             case ResultType::Integer:{
 
                 int64_t value = ins->valueInt();
@@ -273,8 +423,9 @@ namespace tvlm{
         //TODO double args ? struct args?
         auto ret = pb_.currentLabel();
         auto reg = fillIntRegister(ins);
+        size_t offset = countArgOffset(ins->args(), ins->index());
         add(tiny::t86::MOV(reg, tiny::t86::Bp() ));
-        add(tiny::t86::ADD(reg, (int64_t)ins->index()+2 ));
+        add(tiny::t86::ADD(reg, offset ));
 
 //        return ret;
         lastIns_ = ret;
@@ -344,23 +495,36 @@ namespace tvlm{
 
     void NaiveIS::visit(Load *ins) {
         auto ret = pb_.currentLabel();
+        if(ins->resultType() == ResultType::Double){
+            add(tiny::t86::MOV(fillFloatRegister(ins), tiny::t86::Mem(fillIntRegister(ins->address()))));
+            lastIns_ = ret; //return ret;
+            return;
+        }else{
 
-        auto it = globalTable_.find(ins->address());
-        if(it != globalTable_.end()){
-            add(tiny::t86::MOV(fillIntRegister(ins), (int64_t)it->second));
+
+            auto it = globalTable_.find(ins->address());
+            if(it != globalTable_.end()){
+                add(tiny::t86::MOV(fillIntRegister(ins), (int64_t)it->second));
+                lastIns_ = ret; //return ret;
+                return;
+            }
+
+            add(tiny::t86::MOV(fillIntRegister(ins), tiny::t86::Mem(fillIntRegister(ins->address()))));
             lastIns_ = ret; //return ret;
             return;
         }
-
-        add(tiny::t86::MOV(fillIntRegister(ins), tiny::t86::Mem(fillIntRegister(ins->address()))));
-        lastIns_ = ret; //return ret;
-        return;
     }
 
     void NaiveIS::visit(Store *ins) {
         auto ret = pb_.currentLabel();
-        add(tiny::t86::MOV(Mem(fillIntRegister(ins->address())), fillIntRegister(ins->value())));
-        clearIntReg(ins->value());
+        if(ins->value()->resultType() == ResultType::Double){
+            add(tiny::t86::MOV(Mem(fillIntRegister(ins->address())), fillFloatRegister(ins->value())));
+            clearFloatReg(ins->value());
+
+        }else{
+            add(tiny::t86::MOV(Mem(fillIntRegister(ins->address())), fillIntRegister(ins->value())));
+            clearIntReg(ins->value());
+        }
 //        return ret;
         lastIns_ = ret;
     }
@@ -571,6 +735,18 @@ namespace tvlm{
 
     void NaiveIS::visit(Program *p) {
 
+    }
+
+    size_t NaiveIS::countArgOffset(std::vector<Instruction *> args, size_t index) {
+        size_t acc=  0;
+        size_t tmp= 0;
+
+        for (auto & a: args) {
+            tmp++;
+            acc += (a->resultType() == ResultType::Double) ? 2 : 1;
+        }
+        assert(tmp == index);
+        return acc;
     }
 
 

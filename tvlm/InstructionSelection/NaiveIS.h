@@ -155,5 +155,7 @@ namespace tvlm{
         uint64_t functionAddr(const std::string &)const;
 
         void addFunction(Symbol symbol, Label label);
+
+        size_t countArgOffset(std::vector<Instruction *> args, size_t index);
     };
 }
