@@ -20,6 +20,7 @@ namespace tvlm {
     class BasicBlock;
     class Function;
     class ILVisitor;
+    class ILBuilder;
 
     class Program;
 
@@ -39,6 +40,7 @@ namespace tvlm {
         Integer,
         Double,
         Void,
+        StructAddress,
     }; // tinyc::il::ResultType
 
     class Type{
@@ -219,7 +221,7 @@ namespace tvlm {
         }
 
         ResultType registerType() const override {
-            return ResultType::Integer; // Address of that Struct
+            return ResultType::StructAddress; // Address of that Struct
         }
 
     private:
@@ -354,10 +356,27 @@ namespace tvlm {
             opcode_(opcode){
         }
 
+        void printResultType(tiny::ASTPrettyPrinter & p,const ResultType & res) const {
+            switch (res) {
+                case ResultType::Integer:
+                    p << "int ";
+                    break;
+                case ResultType::Double:
+                    p << "double ";
+                    break;
+                case ResultType::Void:
+                    p << "void ";
+                    break;
+                case ResultType::StructAddress:
+                    p << "addr ";
+                    break;
+            }
 
+        }
 
         void printRegister(tiny::ASTPrettyPrinter & p, Instruction const * reg) const {
-            p << p.identifier << reg->name() << p.symbol << ": " << p.keyword << (reg->resultType_ == ResultType::Integer ? "int " : "double ");
+            p << p.identifier << reg->name() << p.symbol << ": " << p.keyword;
+            printResultType(p, reg->resultType_);
         }
 
         void printRegisterAddress(tiny::ASTPrettyPrinter & p, Instruction const * reg) const {
@@ -429,11 +448,11 @@ namespace tvlm {
     protected:
 
         // void accept(ILVisitor * v) override;
-        ImmIndex(size_t index, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-            Instruction{ResultType::Integer, ast, instrName, opcode},
-            index_{index} {
+        ImmIndex(size_t index, const std::vector<Instruction*> & args, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+            Instruction{type->registerType(), ast, instrName, opcode},
+            index_{index}, args_(args) {
         }
-
+        std::vector<Instruction*> args_;
         size_t index_;
     };
 
@@ -604,13 +623,14 @@ namespace tvlm {
     protected:
         // void accept(ILVisitor * v) override;
 
-        LoadAddress(Instruction * address,ResultType type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-            Instruction{type, ast, instrName, opcode},
-            address_{address} {
+        LoadAddress(Instruction * address,Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+            Instruction{type->registerType(), ast, instrName, opcode},
+            address_{address}, type_(type) {
         }
     private:
 
         Instruction * address_;
+        Type * type_;
 
     }; // Instruction::LoadAddress
 
@@ -1017,6 +1037,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         static std::vector<Instruction*> getBBsInstructions(BasicBlock * bb);
         static std::vector<std::pair<Symbol ,Function*>> getProgramsFunctions(Program * p) ;
         static BasicBlock*  getProgramsGlobals(Program * p) ;
+        static BasicBlock*  getProgramsGlobals(ILBuilder & p) ;
+        static Instruction*  getVariableAddress(ILBuilder &p, const Symbol & name);
 
     }; // tinyc::ASTVisitor
 
@@ -1035,7 +1057,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
 #define ImmSize(NAME, ENCODING) NAME (Type * type,Instruction * amount, ASTBase const * ast) : Instruction::ENCODING{type, amount, ast, #NAME, Instruction::Opcode::NAME} {}
 //#define ImmSize(NAME, ENCODING) NAME (Type * type, ASTBase const * ast) : Instruction::ENCODING{type, ast, #NAME, Instruction::Opcode::NAME} {}
-#define ImmIndex(NAME, ENCODING) NAME (size_t index, ASTBase const * ast) : Instruction::ENCODING{index, ast, #NAME, Instruction::Opcode::NAME} {}
+#define ImmIndex(NAME, ENCODING) NAME (size_t index, const std::vector<Instruction*> & args, Type * type,  ASTBase const * ast) : Instruction::ENCODING{index,args, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {} \
                                  NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {}
 #define BinaryOperator(NAME, ENCODING) NAME (BinOpType oper, Opcode op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, oper, lhs, rhs, ast, #NAME} {}
@@ -1044,7 +1066,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 #define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, ASTBase const * ast): Instruction::ENCODING{returnValue, ast, #NAME, Instruction::Opcode::NAME} {}
 #define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast, #NAME, Instruction::Opcode::NAME} {}
 #define TerminatorN(NAME, ENCODING) NAME (Instruction * condition, ASTBase const * ast): Instruction::ENCODING{condition, ast, #NAME, Instruction::Opcode::NAME} {}
-#define LoadAddress(NAME, ENCODING) NAME (Instruction * address, ResultType type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME, Instruction::Opcode::NAME} {}
+#define LoadAddress(NAME, ENCODING) NAME (Instruction * address, Type * type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define StoreAddress(NAME, ENCODING) NAME (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast, #NAME, Instruction::Opcode::NAME} {}
 #define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
 #define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
@@ -1182,6 +1204,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Program : public IL{
     public:
+        Program(){}
         Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
                  std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,
                  std::unique_ptr<BasicBlock> && globals,
@@ -1205,6 +1228,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         }
     protected:
         friend class ILVisitor;
+        friend class ILBuilder;
          void accept(ILVisitor * v) override;
     private:
         std::unordered_map<std::string, Instruction*> stringLiterals_;

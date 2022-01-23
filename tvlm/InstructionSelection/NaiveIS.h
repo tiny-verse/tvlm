@@ -17,15 +17,17 @@ namespace tvlm{
         using FRegister = tiny::t86::FloatRegister;
 
 
-        static tiny::t86::Program translate(tvlm::Program & prog);
+        static tiny::t86::Program translate(ILBuilder &ilb);
 
         void visit(Program *p) override;
     protected:
         NaiveIS();
 
-        void visit(Instruction *ins) override;
+        void visit(Instruction *ins) override{};
 
     public:
+
+        void visit(ILBuilder & ilb);
         void visit(Jump *ins) override;
         void visit(CondJump *ins) override;
         void visit(Return *ins) override;
@@ -65,12 +67,12 @@ namespace tvlm{
             return visitChild(ptr.get());
         }
 
-        template<typename T>
-        Label add(Instruction * ins, const T& instruction) {
-            lastIns_ = pb_.add( instruction);
-            if(ins != nullptr ) compiled_.emplace(ins, lastIns_);
-            return lastIns_;
-        }
+//        template<typename T>
+//        Label add(Instruction * ins, const T& instruction) {
+//            lastIns_ = pb_.add( instruction);
+//            if(ins != nullptr ) compiled_.emplace(ins, lastIns_);
+//            return lastIns_;
+//        }
 
         template<typename T>
         Label add( const T& instruction) {

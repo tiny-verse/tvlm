@@ -8,7 +8,7 @@ namespace tvlm {
     class Tvlm {
     public:
 
-        using IL = tvlm::Program;
+        using IL = tvlm::ILBuilder;
 
         void optimize(IL & il) {
             // TODO

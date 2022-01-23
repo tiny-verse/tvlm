@@ -191,7 +191,12 @@ namespace tvlm {
             allocated_types_.emplace_back(type);
             return type;
         }
+
+        const std::unordered_map<std::string, Instruction*> & stringLiterals() const{
+            return stringLiterals_;
+        }
     private:
+        friend class ILVisitor;
         // wrappers to backend who manages the types for us
         /*
         Type * getType(Symbol symbol);

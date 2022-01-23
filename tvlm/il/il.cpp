@@ -1,4 +1,5 @@
 #include "il.h"
+#include "il_builder.h"
 
 namespace tvlm {
     void Instruction::Terminator1::print(tiny::ASTPrettyPrinter &p) const {
@@ -154,6 +155,13 @@ namespace tvlm {
 
     BasicBlock *ILVisitor::getProgramsGlobals(Program *p) {
         return p->globals_.get();
+    }
+
+    BasicBlock *ILVisitor::getProgramsGlobals(ILBuilder &p) {
+        return p.globals_.get();
+    }
+    Instruction*  ILVisitor::getVariableAddress(ILBuilder &p, const Symbol & name) {
+        return p.getVariableAddress(name);
     }
 
 }

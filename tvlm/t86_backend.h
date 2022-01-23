@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include <utility>
 #include "tvlm/tvlm/il/il.h"
+#include "tvlm/tvlm/il/il_builder.h"
 #include "t86/program/programbuilder.h"
 #include "tvlm/tvlm/InstructionSelection/NaiveIS.h"
 
@@ -394,7 +395,7 @@ namespace tvlm {
 
     class t86_Backend{
     public:
-        using IL = tvlm::Program;
+        using IL = tvlm::ILBuilder;
         using PB = tiny::t86::Program;
         PB compileToTarget( IL && il);
     };
