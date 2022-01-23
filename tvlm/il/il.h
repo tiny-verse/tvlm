@@ -365,7 +365,8 @@ namespace tvlm {
                     p << "double ";
                     break;
                 case ResultType::Void:
-                    p << "void ";
+//                    p << "void ";
+//                    p << "";
                     break;
                 case ResultType::StructAddress:
                     p << "addr ";
@@ -653,7 +654,7 @@ namespace tvlm {
         // void accept(ILVisitor * v) override;
 
         StoreAddress(Instruction * value, Instruction * address, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-            Instruction{ResultType::Integer, ast, instrName, opcode},
+            Instruction{ResultType::Void, ast, instrName, opcode},
             value_{value},
             address_{address} {
         }
