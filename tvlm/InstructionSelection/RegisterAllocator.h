@@ -9,6 +9,8 @@ namespace tvlm{
 
     /*abstract*/ class RegisterAllocator {
     public:
+            RegisterAllocator();
+
             virtual Register fillIntRegister(Instruction * ins) = 0;
             virtual FRegister fillFloatRegister(Instruction * ins) = 0;
 
@@ -55,6 +57,15 @@ namespace tvlm{
                 }
             }
 
+
+            virtual void prepareReturnValue(size_t size = 0) = 0;
+            virtual void makeLocalAllocation(size_t size, const Register & reg) = 0;
+
+            virtual void allocateStructArg(Type * type, Instruction * ins) = 0;
+
+            virtual void resetAllocSize() = 0;
+
+            virtual void correctStackAlloc(size_t patch ) = 0;
 
     protected:
             virtual Register getIntRegister(Instruction * ins) = 0;

@@ -165,13 +165,10 @@ namespace tvlm {
     class Type::Array : public Type{
     public:
         Array(Type * base, Instruction * size) : base_{base}, size_(size){}
-        int size()const{
-            //throw "unknown size"; TODO
-            return base_->size();
-        }
+        int size()const;
 
         ResultType registerType() const override {
-            return ResultType::Integer;
+            return ResultType::StructAddress;
         }
 
     private:
@@ -288,7 +285,7 @@ namespace tvlm {
         enum class Opcode {
             ADD,
             SUB,
-            NEG,
+            UNSUB,
             MOD,
             MUL,
             DIV,
@@ -431,7 +428,10 @@ namespace tvlm {
     class Instruction::ImmIndex : public Instruction {
     public:
 
-        size_t index() {
+        Type * type()const{
+            return type_;
+        }
+        size_t index() const{
             return index_;   
         }
         std::vector<Instruction *> args()const{
@@ -449,10 +449,11 @@ namespace tvlm {
         // void accept(ILVisitor * v) override;
         ImmIndex(size_t index, const std::vector<Instruction*> & args, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type->registerType(), ast, instrName, opcode},
-            index_{index}, args_(args) {
+            index_{index}, args_(args), type_(type) {
         }
         std::vector<Instruction*> args_;
         size_t index_;
+        Type * type_;
     };
 
     class Instruction::ImmValue : public Instruction {
@@ -537,7 +538,7 @@ namespace tvlm {
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
-            p << p.keyword << resolve_operator() << " ";
+            p << p.keyword << resolve_operator();
             printRegister(p, lhs_);
             printRegister(p, rhs_);
         };
@@ -611,6 +612,7 @@ namespace tvlm {
     public:
 
         Instruction * address() const { return address_; }
+        Type * type() const { return type_; }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);

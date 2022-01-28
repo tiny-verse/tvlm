@@ -163,7 +163,7 @@ namespace tvlm{
         std::unordered_map<BasicBlock *, Label> compiledBB_;
         std::vector<std::pair<Label, BasicBlock*>> future_patch_;
         std::vector<std::pair<Label, Symbol>> unpatchedCalls_;
-        size_t functionLocalAllocSize = 0;
+//        size_t functionLocalAllocSize = 0;
         size_t globalPointer_ = 0;
 
 

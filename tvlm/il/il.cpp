@@ -2,6 +2,8 @@
 #include "il_builder.h"
 #include "tvlm_backend"
 
+#include <cmath>
+
 namespace tvlm {
     using Backend = t86_Backend; //TODO Modular use macros
 
@@ -168,19 +170,28 @@ namespace tvlm {
     }
 
     int Type::Char::size() const {
-        return 1/Backend::MemoryCellSize;
+        return std::ceil(1/(double) Backend::MemoryCellSize);
     }
 
     int Type::Double::size() const {
-        return 8/ Backend::MemoryCellSize;
+        return std::ceil(8/ (double) Backend::MemoryCellSize);
     }
 
     int Type::Integer::size() const {
-        return 4 / Backend::MemoryCellSize;
+        return std::ceil(4 / (double) Backend::MemoryCellSize);
     }
 
     int Type::Pointer::size() const {
-        return 4 / Backend::MemoryCellSize;
+        return std::ceil(4 / (double) Backend::MemoryCellSize);
+    }
+
+    int Type::Array::size() const {
+        //throw "unknown size"; TODO
+        auto sz = dynamic_cast<LoadImm *>(size_);
+        assert(sz && sz->resultType() == ResultType::Integer);
+        if(sz){
+            return base_->size() * sz->valueInt();
+        }
     }
 }
 
