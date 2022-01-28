@@ -21,6 +21,22 @@ namespace tvlm{
                 return clearAllFloatReg();
             }
 
+            Register fillTmpIntRegister(){
+                auto reg = getFreeIntRegister();
+                tmpIntRegs_.emplace(reg);
+                return reg;
+            }
+            FRegister fillTmpFloatRegister(){
+                auto reg = getFreeFloatRegister();
+                tmpFloatRegs_.emplace(reg);
+                return reg;
+            }
+
+            virtual void clearTmpIntRegister(const Register & reg ){
+                tmpIntRegs_.erase(reg);
+                alloc_regs_[reg.index()] = nullptr;
+            }
+
             void replaceInt(Instruction * from, Instruction * to ){
                 alloc_regs_[getIntRegister(from).index()] = to;
             }
@@ -44,8 +60,14 @@ namespace tvlm{
             virtual Register getIntRegister(Instruction * ins) = 0;
             virtual FRegister getFloatRegister(Instruction * ins) = 0;
 
+            virtual Register getFreeIntRegister() = 0; //care not to take tmpAllocated
+            virtual FRegister getFreeFloatRegister() = 0; //care not to take tmpAllocated
+
             std::vector< Instruction *> alloc_regs_;
             std::vector< Instruction *> alloc_fregs_;
+
+            std::set<Register> tmpIntRegs_;
+            std::set<FRegister> tmpFloatRegs_;
 
     };
 }

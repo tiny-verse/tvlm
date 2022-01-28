@@ -8,7 +8,10 @@ tvlm::Register tvlm::NaiveRegisterAllocator::fillIntRegister(tvlm::Instruction *
 }
 
 tvlm::FRegister tvlm::NaiveRegisterAllocator::fillFloatRegister(tvlm::Instruction *ins) {
-    return tvlm::FRegister(fcounter++);
+    auto reg = getFloatRegister(ins);
+    alloc_fregs_.resize( fcounter);
+    alloc_fregs_[reg.index()] = ins;
+    return reg;
 }
 
 void tvlm::NaiveRegisterAllocator::clearInt(tvlm::Instruction *ins) {
@@ -45,9 +48,7 @@ tvlm::Register tvlm::NaiveRegisterAllocator::getIntRegister(tvlm::Instruction *i
         // register is already assigned to this  register
         return tiny::t86::Reg(f.second);
     }
-    auto reg = tiny::t86::Reg(counter++);
-
-    return reg;
+    return getFreeIntRegister();
 }
 
 tvlm::FRegister tvlm::NaiveRegisterAllocator::getFloatRegister(tvlm::Instruction *ins) {
@@ -76,4 +77,18 @@ std::pair<bool, int> tvlm::NaiveRegisterAllocator::findInFloatRegs(tvlm::Instruc
     }else{
         return std::make_pair(false, 197);
     }
+}
+
+
+void tvlm::NaiveRegisterAllocator::clearTmpIntRegister(const tvlm::Register &reg) {
+
+    RegisterAllocator::clearTmpIntRegister(reg);
+}
+
+tvlm::Register tvlm::NaiveRegisterAllocator::getFreeIntRegister() {
+    return tiny::t86::Reg(counter++);
+}
+
+tvlm::FRegister tvlm::NaiveRegisterAllocator::getFreeFloatRegister() {
+    return tiny::t86::FReg(fcounter++);
 }

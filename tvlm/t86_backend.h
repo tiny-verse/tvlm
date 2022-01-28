@@ -395,6 +395,8 @@ namespace tvlm {
 
     class t86_Backend{
     public:
+        static int MemoryCellSize;
+
         using IL = tvlm::ILBuilder;
         using PB = tiny::t86::Program;
         PB compileToTarget( IL && il);

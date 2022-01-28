@@ -71,9 +71,7 @@ namespace tvlm {
     class Type::Integer : public Type{
     public:
         explicit Integer(){}
-        int size() const {
-            return 4;
-        }
+        int size() const;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -87,9 +85,7 @@ namespace tvlm {
     class Type::Char : public Type{
     public:
         explicit Char(){}
-        int size() const {
-            return 1;
-        }
+        int size() const;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -119,7 +115,7 @@ namespace tvlm {
 
     class Type::String : public Type{
     public:
-        explicit String(size_t size_){}
+        explicit String(size_t size):size_(size){}
         int size() const {
             return (int)size_;
         }
@@ -137,9 +133,7 @@ namespace tvlm {
     class Type::Double : public Type{
     public:
         Double(){}
-        int size() const {
-            return 8;
-        }
+        int size() const ;
 
         ResultType registerType() const override {
             return ResultType::Double;
@@ -154,9 +148,7 @@ namespace tvlm {
     class Type::Pointer : public Type{
     public:
         Pointer(Type * base) : base_{base}{}
-        int size()const{
-            return 4;
-        }
+        int size()const;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -223,7 +215,9 @@ namespace tvlm {
         ResultType registerType() const override {
             return ResultType::StructAddress; // Address of that Struct
         }
-
+        const std::vector<std::pair<Symbol, Type *>> & fields() const {
+            return fields_;
+        }
     private:
 
         void toStream(std::ostream & s) const override {
@@ -294,7 +288,7 @@ namespace tvlm {
         enum class Opcode {
             ADD,
             SUB,
-            UNSUB,
+            NEG,
             MOD,
             MUL,
             DIV,
@@ -707,20 +701,25 @@ namespace tvlm {
             return returnValue_;
         }
 
+        Type * returnType()const{
+            return type_;
+        }
+
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
-            printRegister(p, returnValue_);
+            if(returnValue_) printRegister(p, returnValue_);
         }
 
         virtual ~Returnator(){}
     protected:
         // void accept(ILVisitor * v) override;
 
-        Returnator(Instruction * retValue, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-            Terminator0{ast, instrName, opcode}, returnValue_{retValue} {
+        Returnator(Instruction * retValue, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+            Terminator0{ast, instrName, opcode}, returnValue_{retValue}, type_(type) {
         }
         Instruction * returnValue_;
+        Type * type_;
     }; // Instruction::Returnator
 
     class Instruction::Terminator1 : public Instruction::Terminator {
@@ -844,10 +843,22 @@ namespace tvlm {
         void print(tiny::ASTPrettyPrinter & p) const override;
 
       virtual ~StructAssignInstruction(){}
+
+      Instruction * srcVal()const {
+          return srcVal_;
+      }
+
+      Instruction * dstAddr()const {
+          return dstAddr_;
+      }
+
+      Type::Struct * type()const {
+          return type_;
+      }
     protected:
 //      virtual void accept(ILVisitor * v) override;
 
-        StructAssignInstruction( Instruction * dstAddr, Instruction * srcVal, Type::Struct * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+        StructAssignInstruction( Instruction * srcVal, Instruction * dstAddr, Type::Struct * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{ResultType::Void, ast, instrName, opcode},
                 srcVal_(srcVal),
                 dstAddr_(dstAddr),
@@ -932,23 +943,24 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public:
         Instruction * operator [] (size_t i) const {
             assert(i < args_.size());
-            return args_[i];
+            return args_[i].first;
         }
 
-        const std::vector<Instruction *> & args()const {
+        const std::vector<std::pair< Instruction *, Type*>> & args()const {
             return args_;
         }
 
         virtual ~CallInstruction(){}
     protected:
 
-        CallInstruction(std::vector<Instruction*> && args, ASTBase const * ast, const std::string & instrName
+        CallInstruction(std::vector<std::pair< Instruction *, Type*>> && args,
+                        ASTBase const * ast, const std::string & instrName
                         , Opcode opcode , const ResultType & resultType):
                 Instruction{resultType, ast, instrName, opcode},
                 args_{args}{
 
         }
-        std::vector<Instruction *> args_;
+        std::vector<std::pair< Instruction *, Type*>> args_;
     }; // Instruction::CallInstruction
 
     class Instruction::DirectCallInstruction : public CallInstruction{
@@ -962,7 +974,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
-        DirectCallInstruction(Function * f, std::vector<Instruction*> && args,const ASTBase * ast , const std::string & instrName, Opcode opcode);
+        DirectCallInstruction(Function * f, std::vector<std::pair< Instruction *, Type*>> && args,
+                              const ASTBase * ast , const std::string & instrName, Opcode opcode);
         Function * f_;
     }; // Instruction::DirectCallInstruction
 
@@ -971,6 +984,9 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         Instruction * f() const {
             return f_;
         }
+        Type * retType() const {
+            return retType_;
+        }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
@@ -978,7 +994,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             printRegisterAddress(p, f_);
             p << p.symbol << "(";
             for (auto & i : args_)
-                printRegister(p, i);
+                printRegister(p, i.first);
             p << p.symbol << ")";
         };
 
@@ -986,13 +1002,14 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
-        IndirectCallInstruction(Instruction * f, std::vector<Instruction*> && args,const ASTBase * ast, const std::string & instrName, Opcode opcode ):
+        IndirectCallInstruction(Instruction * f,Type * retType, std::vector<std::pair< Instruction *, Type*>> && args,const ASTBase * ast, const std::string & instrName, Opcode opcode ):
                 CallInstruction{std::move(args), ast, instrName, opcode, f->resultType()},
-                f_{f}
+                f_{f}, retType_(retType)
                 {
 
         }
         Instruction * f_;
+        Type * retType_;
     }; // Instruction::IndirectCallInstruction
 
 
@@ -1068,13 +1085,13 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 #define BinaryOperator(NAME, ENCODING) NAME (BinOpType oper, Opcode op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, oper, lhs, rhs, ast, #NAME} {}
 #define UnaryOperator(NAME, ENCODING) NAME (UnOpType oper, Opcode op, Instruction * operand, ASTBase const * ast): Instruction::ENCODING{op, oper, operand, ast, #NAME} {}
 #define Terminator0(NAME, ENCODING) NAME (ASTBase const * ast): Instruction::ENCODING{ast, #NAME, Instruction::Opcode::NAME} {}
-#define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, ASTBase const * ast): Instruction::ENCODING{returnValue, ast, #NAME, Instruction::Opcode::NAME} {}
+#define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, Type * type, ASTBase const * ast): Instruction::ENCODING{returnValue, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast, #NAME, Instruction::Opcode::NAME} {}
 #define TerminatorN(NAME, ENCODING) NAME (Instruction * condition, ASTBase const * ast): Instruction::ENCODING{condition, ast, #NAME, Instruction::Opcode::NAME} {}
 #define LoadAddress(NAME, ENCODING) NAME (Instruction * address, Type * type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define StoreAddress(NAME, ENCODING) NAME (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast, #NAME, Instruction::Opcode::NAME} {}
-#define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
-#define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, std::vector<Instruction*> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
+#define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<std::pair< Instruction *, Type*>> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
+#define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, Type * retType, std::vector<std::pair< Instruction *, Type*>> && args, ASTBase const * ast): Instruction::ENCODING{f, retType, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
 #define PhiInstruction(NAME, ENCODING) NAME ( ResultType type, ASTBase const * ast): Instruction::ENCODING{type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ElemIndexInstruction(NAME, ENCODING) NAME (  Instruction * base, Instruction * offset, Instruction * index, ASTBase const * ast): Instruction::ENCODING{base,offset, index, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ElemOffsetInstruction(NAME, ENCODING) NAME (  Instruction * base, Instruction * offset, ASTBase const * ast): Instruction::ENCODING{base, offset, ast, #NAME, Instruction::Opcode::NAME} {}
@@ -1163,6 +1180,12 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         ResultType getResultType()const{
             return resultType_;
         }
+        void setType(Type * r){
+            type_ = r;
+        }
+        Type * getType()const{
+            return type_;
+        }
 
         bool contains(BasicBlock * b) const {
             for (auto const & i : bbs_)
@@ -1204,6 +1227,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         std::vector<std::unique_ptr<BasicBlock>> bbs_;
 
         ResultType resultType_;
+
+        Type * type_;
 
     };   // tvlm::Function
 

@@ -11,6 +11,7 @@ namespace tvlm{
 
     class NaiveIS  : public ILVisitor{
     public:
+
         using Label = tiny::t86::Label;
         using DataLabel = tiny::t86::DataLabel;
         using Register = tiny::t86::Register;
@@ -20,6 +21,11 @@ namespace tvlm{
         static tiny::t86::Program translate(ILBuilder &ilb);
 
         void visit(Program *p) override;
+        virtual  ~NaiveIS(){
+            for (auto & i:instructionToEmplace) {
+                delete i.second;
+            }
+        }
     protected:
         NaiveIS();
 
@@ -93,6 +99,15 @@ namespace tvlm{
         auto fillIntRegister(Instruction * ins){
             return regAllocator->fillIntRegister(ins);
         }
+        Register fillTmpIntRegister(){
+            return regAllocator->fillTmpIntRegister();
+        }
+        FRegister fillTmpFloatRegister(){
+            return regAllocator->fillTmpFloatRegister();
+        }
+        auto clearTmpIntRegister(const Register & reg ){
+            return regAllocator->clearTmpIntRegister(reg);
+        }
         auto fillFloatRegister(Instruction * ins){
             return regAllocator->fillFloatRegister(ins);
         }
@@ -119,8 +134,10 @@ namespace tvlm{
             return regAllocator->spillAllReg();
         }
 
+
         auto clearReg(Instruction * ins){
             switch (ins->resultType()) {
+                case ResultType::StructAddress:
                 case ResultType::Integer:
                     return clearIntReg(ins);
                     break;
@@ -132,6 +149,11 @@ namespace tvlm{
             }
         }
 
+        void copyStruct(const Register & from, Type * type, const Register & to );
+        int getTrueMemSize(Type * type) const {
+
+
+        }
 
         tiny::t86::ProgramBuilder pb_;
         Label lastIns_;
@@ -157,5 +179,9 @@ namespace tvlm{
         void addFunction(Symbol symbol, Label label);
 
         size_t countArgOffset(std::vector<Instruction *> args, size_t index);
+
+        template<typename T>
+        void replace(Label label, const T& sub);
+
     };
 }

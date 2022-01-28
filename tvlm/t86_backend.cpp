@@ -486,7 +486,6 @@ std::map<Opcode, std::set<tvlm::Rule*>> tvlm::ILTiler::allRules_ = [](){
     auto rules = AllRulesInit();
     std::vector<tvlm::Opcode> opcodes = {tvlm::Opcode::ADD,
                                          tvlm::Opcode::SUB,
-                                         tvlm::Opcode::UNSUB,
                                          tvlm::Opcode::MOD,
                                          tvlm::Opcode::MUL,
                                          tvlm::Opcode::DIV,
@@ -578,3 +577,9 @@ void tvlm::ILTiler::visit(tvlm::StructAssign *ins) {
 
 //tvlm::DummyRule* tvlm::DummyRule::dummy = nullptr;
 int tvlm::Rule::counter = 0;
+
+#if (defined TARGET_t86)
+int tvlm::t86_Backend::MemoryCellSize = 4; // inBytes
+#elif
+int tvlm::t86_Backend::MemoryCellSize = 1; // inBytes
+#endif

@@ -14,6 +14,7 @@ namespace tvlm{
     void NaiveIS::visit(StructAssign *ins) {
         auto ret = pb_.currentLabel();
         //TODO
+        copyStruct(fillIntRegister(ins->srcVal()), ins->type(), fillIntRegister(ins->dstAddr()));
         lastIns_ = ret;
     }
 
@@ -43,17 +44,46 @@ namespace tvlm{
     
     void NaiveIS::visit(Return *ins) {
         auto ret = pb_.currentLabel();
-        //TODO do i have to know types?
-        // ro add Address as resultType??
-        /*
-         * if(struct) resolveCopyStruct */
+        if(!ins->returnValue()){
+             // void
+            add(tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()));
+            add(tiny::t86::POP(tiny::t86::Bp()));
+            add(tiny::t86::RET());
+            return;
+        }
 
-        add(tiny::t86::MOV(tiny::t86::Reg(0 /*or Somwhere on stack*/  ), fillIntRegister(ins->returnValue())));
-        clearIntReg(ins->returnValue());
-        add(tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()));
-        add(tiny::t86::POP(tiny::t86::Bp()));
-        add(tiny::t86::RET());
+        if(ins->returnType()->registerType() == ResultType::StructAddress){
 
+            copyStruct(fillIntRegister(ins->returnValue()), ins->returnType(), tiny::t86::Reg(0));
+
+            clearIntReg(ins->returnValue());
+            add(tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()));
+            add(tiny::t86::POP(tiny::t86::Bp()));
+
+            add(tiny::t86::RET());
+
+        }else if (ins->returnType()->registerType() == ResultType::Double){
+            add(tiny::t86::MOV(tiny::t86::FReg(0 /*or Somwhere on stack*/  ), fillFloatRegister(ins->returnValue())));
+            clearFloatReg(ins->returnValue());
+            add(tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()));
+            add(tiny::t86::POP(tiny::t86::Bp()));
+
+
+            add(tiny::t86::RET());
+        }else if (ins->returnType()->registerType() == ResultType::Integer){
+
+            add(tiny::t86::MOV(tiny::t86::Reg(0 /*or Somwhere on stack*/  ), fillIntRegister(ins->returnValue())));
+            clearIntReg(ins->returnValue());
+            add(tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()));
+            add(tiny::t86::POP(tiny::t86::Bp()));
+
+            add(tiny::t86::RET());
+        }else{ // void
+            add(tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()));
+            add(tiny::t86::POP(tiny::t86::Bp()));
+            add(tiny::t86::RET());
+
+        }
         lastIns_= ret;
     }
     
@@ -63,29 +93,63 @@ namespace tvlm{
 
         //spill everything
         spillAllReg();
-        //TODO prepare place for returnValue
+
+        if(ins->f()->getType()->registerType() == ResultType::StructAddress){//replace for ReturnValue
+            functionLocalAllocSize += ins->f()->getType()->size();
+            auto regTmp  = tiny::t86::Reg(0); // tmpAddress prepared for return Value
+            add(tiny::t86::MOV(regTmp ,tiny::t86::Bp()));
+            add(tiny::t86::SUB(regTmp, (int64_t)functionLocalAllocSize));
+
+        }
 
         //args
         for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
-            //TODO struct allocation, doubles
-            if((*it)->resultType() == ResultType::Integer){
-                add(tiny::t86::PUSH(fillIntRegister(*it)));
-                clearIntReg(*it);
-            }else if ((*it)->resultType() == ResultType::Double){
-                add(tiny::t86::FPUSH(fillFloatRegister(*it)));
-                clearFloatReg(*it);
+            if((*it).second->registerType() == ResultType::StructAddress) {
+                functionLocalAllocSize += (*it).second->size();
+                auto reg = fillIntRegister(it->first); // // reg with a structure
+                auto regTmp  = fillTmpIntRegister(); // Working reg
+                add(tiny::t86::MOV(regTmp ,tiny::t86::Bp()));
+                add(tiny::t86::SUB(regTmp, (int64_t)functionLocalAllocSize));
+
+
+                copyStruct(reg, it->second, regTmp);
+
+                add(tiny::t86::PUSH(regTmp));
+                clearTmpIntRegister(regTmp);
+            }else if((*it).second->registerType() == ResultType::Integer){
+                add(tiny::t86::PUSH(fillIntRegister(it->first)));
+                clearIntReg(it->first);
+            }else if ((*it).second->registerType() == ResultType::Double){
+                add(tiny::t86::FPUSH(fillFloatRegister(it->first)));
+                clearFloatReg(it->first);
             }
 
         }
         clearAllReg();
         //call
         tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()});
-        add(tiny::t86::MOV(fillIntRegister(ins),tiny::t86::Reg(0)));
-        add(tiny::t86::ADD(tiny::t86::Sp(), ins->args().size()));//clear arguments; need?
+        if(ins->resultType() == ResultType::Double){
+            add(tiny::t86::MOV(fillFloatRegister(ins),tiny::t86::FReg(0)));
+        }else if (ins->resultType() == ResultType::Integer || ins->resultType() == ResultType::StructAddress){
+            add(tiny::t86::MOV(fillIntRegister(ins),tiny::t86::Reg(0)));
+        } else if(ins->resultType() == ResultType::Void){
+
+        }
+
+
+        int argSize  = 0;
+        for (auto & a :ins->args()) {  //CountArgSize;
+            if(a.second->registerType() == ResultType:: Double){
+                argSize +=2;
+            }else{
+                argSize ++;
+            }
+        }
+
+        add(tiny::t86::ADD(tiny::t86::Sp(), argSize));
 
         unpatchedCalls_.emplace_back(callLabel, ins->f()->name());
-//        return ret;
-        lastIns_ = ret;
+        lastIns_ = ret; //return ret;
     }
 
     void NaiveIS::visit(Call *ins) {
@@ -94,10 +158,21 @@ namespace tvlm{
         //spilll everything
         spillAllReg();
 
+        //returnValue
+        if(ins->retType()->registerType() == ResultType::StructAddress){
+            functionLocalAllocSize += ins->retType()->size();
+            auto reg = fillIntRegister(ins); // // reg with a structure
+            auto regTmp  = tiny::t86::Reg(0); // Working reg
+            add(tiny::t86::MOV(regTmp ,tiny::t86::Bp()));
+            add(tiny::t86::SUB(regTmp, (int64_t)functionLocalAllocSize));
+
+
+        }
+
         //parameters
         for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
-            add(tiny::t86::PUSH(fillIntRegister(*it)));
-            clearIntReg(*it);
+            add(tiny::t86::PUSH(fillIntRegister(it->first)));
+            clearIntReg(it->first);
 
         }
 
@@ -403,8 +478,6 @@ namespace tvlm{
                     if( it!= instructionToEmplace.end()){
                         auto * ins = dynamic_cast<LoadImm * >(it->second);
                         value = ins->valueInt();
-                        instructionToEmplace.erase(it);
-                        delete ins;
                     }
                 }
                 add( tiny::t86::MOV(fillIntRegister(ins), value ));
@@ -425,7 +498,10 @@ namespace tvlm{
         auto reg = fillIntRegister(ins);
         size_t offset = countArgOffset(ins->args(), ins->index());
         add(tiny::t86::MOV(reg, tiny::t86::Bp() ));
-        add(tiny::t86::ADD(reg, offset ));
+        add(tiny::t86::ADD(reg, offset  + 2));
+//        if(ins->resultType() == ResultType::StructAddress){
+            add(tiny::t86::MOV(reg, tiny::t86::Mem(reg)));
+//        }
 
 //        return ret;
         lastIns_ = ret;
@@ -434,7 +510,7 @@ namespace tvlm{
     void NaiveIS::visit(AllocL *ins) {
         Label ret = pb_.currentLabel();
         Register reg = fillIntRegister(ins);
-        functionLocalAllocSize +=ins->size()/4;//TODO make size decomposition according target memory laout
+        functionLocalAllocSize +=ins->size();
         // already allocated, now just find addr for this allocation
                 add(tiny::t86::MOV(reg ,tiny::t86::Bp()));
         add(tiny::t86::SUB(reg, (int64_t)functionLocalAllocSize));
@@ -444,7 +520,7 @@ namespace tvlm{
 
     void NaiveIS::visit(AllocG *ins) {
         throw "allocG?? done in globals";
-        DataLabel glob = pb_.addData((int64_t)(ins->size()/4));
+        DataLabel glob = pb_.addData((int64_t)(ins->size()));
         int64_t addr = (int64_t)glob;
         globalPointer_ += 1;
         Label ret = add( tiny::t86::MOV(fillIntRegister(ins) , addr));
@@ -499,7 +575,7 @@ namespace tvlm{
             add(tiny::t86::MOV(fillFloatRegister(ins), tiny::t86::Mem(fillIntRegister(ins->address()))));
             lastIns_ = ret; //return ret;
             return;
-        }else{
+        }else if (ins->resultType() == ResultType::Integer){
 
 
             auto it = globalTable_.find(ins->address());
@@ -512,7 +588,13 @@ namespace tvlm{
             add(tiny::t86::MOV(fillIntRegister(ins), tiny::t86::Mem(fillIntRegister(ins->address()))));
             lastIns_ = ret; //return ret;
             return;
+        }else if (ins->resultType() == ResultType::StructAddress){
+            regAllocator->replaceInt(ins->address(), ins);
+            lastIns_ = ret; //return ret;
+            return;
+
         }
+        throw "ouch?";
     }
 
     void NaiveIS::visit(Store *ins) {
@@ -538,10 +620,13 @@ namespace tvlm{
     void NaiveIS::visit(ElemAddrOffset *ins) {
         auto ret = pb_.currentLabel();
 
-        add(tiny::t86::ADD(fillIntRegister(ins->base()),
+
+        add(tiny::t86::MOV(fillIntRegister(ins),
+                fillIntRegister(ins->base())));
+        add(tiny::t86::ADD(fillIntRegister(ins),
                 fillIntRegister(ins->offset())));
 //        regAllocator->alloc_regs_[getIntRegister(ins->base()).index()] = ins;
-        regAllocator->replaceInt(ins->base(), ins);
+//        regAllocator->replaceInt(ins->base(), ins);
         clearIntReg(ins->offset());
 //        return ret;
         lastIns_ = ret;
@@ -550,14 +635,16 @@ namespace tvlm{
     void NaiveIS::visit(ElemAddrIndex *ins) {
         auto ret = pb_.currentLabel();
 
-        add(tiny::t86::ADD(fillIntRegister(ins->index()),
+        add(tiny::t86::MOV(fillIntRegister(ins),
+                fillIntRegister(ins->base())));
+        add(tiny::t86::MUL(fillIntRegister(ins->index()),
                            fillIntRegister(ins->offset())));
         clearIntReg(ins->offset());
-        add(tiny::t86::ADD(fillIntRegister(ins->base()),
+        add(tiny::t86::ADD(fillIntRegister(ins),
                            fillIntRegister(ins->index())));
-//        regAllocator->alloc_regs_[getIntRegister(ins->base()).index()] = ins;
-        regAllocator->replaceInt(ins->base(), ins);
         clearIntReg(ins->index());
+//        regAllocator->alloc_regs_[getIntRegister(ins->base()).index()] = ins;
+//        regAllocator->replaceInt(ins->base(), ins);
 //        return ret;
         lastIns_ = ret;
     }
@@ -592,7 +679,7 @@ namespace tvlm{
         for (const auto & bb : getFunctionBBs(fnc)) {
             visitChild(bb);
         }
-        // TODO replace(toPatchStack, tiny::t86::SUB(tiny::t86::Sp(), (int64_t)functionLocalAllocSize ));
+        replace(toPatchStack, tiny::t86::SUB(tiny::t86::Sp(), (int64_t)functionLocalAllocSize ));
 
         lastIns_ = ret; //return ret;
     }
@@ -661,7 +748,6 @@ namespace tvlm{
     tiny::t86::Program NaiveIS::translate(ILBuilder &ilb) {
         //TODO
         NaiveIS v;
-//        v.visit( &prog);
         v.visit(ilb);
         tiny::t86::Program rawProg = v.pb_.program();
         std::vector<tiny::t86::Instruction*> instrs = rawProg.moveInstructions();
@@ -711,7 +797,7 @@ namespace tvlm{
                 add(tiny::t86::MOV( tiny::t86::Reg(0), (int64_t)address));
                 add(tiny::t86::MOV(Mem(tiny::t86::Reg(0)), (int64_t)value));
             }else{
-                throw "unknown global instruction - compile";
+                throw tiny::ParserError("unknown global instruction", ins->ast()->location());
             }
 
         }
@@ -747,6 +833,55 @@ namespace tvlm{
         }
         assert(tmp == index);
         return acc;
+    }
+
+    template<typename T>
+    void NaiveIS::replace(NaiveIS::Label label, const T & instruction) {
+        if(label >= pb_.currentLabel()){
+            //ERROR
+            std::cerr << "replace unable to continue" << std::endl;
+            return;
+        }
+        auto p = pb_.program();
+        auto instrs = p.moveInstructions();
+        delete instrs[label];
+        instrs[label] = new T(instruction);
+
+        auto resProg = tiny::t86::Program(instrs, p.data());
+        pb_ = tiny::t86::ProgramBuilder(std::move(resProg));
+    }
+
+    void NaiveIS::copyStruct(const Register &from, Type *type, const Register &to) {
+//        auto tmpReg = fillTmpIntRegister();
+//        auto tmpFReg = fillTmpFloatRegister();
+//
+//        Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
+//        int offset = 0;
+//        for (auto & f : strct->fields()) { // field By Field
+//            offset = strct->getFieldOffset(f.first);
+//            if(f.second->registerType() == ResultType::Double){
+//                add(tiny::t86::MOV(tmpFReg, tiny::t86::Mem(from + offset )));
+//                add(tiny::t86::MOV(tiny::t86::Mem(to + offset), tmpFReg));
+//
+//            }else if (f.second->registerType() == ResultType::Integer){
+//                add(tiny::t86::MOV(tmpReg, tiny::t86::Mem(from + offset )));
+//                add(tiny::t86::MOV(tiny::t86::Mem(to + offset), tmpReg));
+//            }else if (f.second->registerType() == ResultType::StructAddress){
+//                add(tiny::t86::ADD(tmpReg, offset));
+//
+//                copyStruct()
+//                add(tiny::t86::MOV(tiny::t86::Mem(), tiny::t86::Mem()));
+//            }
+//        }
+
+        auto tmpReg = fillTmpIntRegister();
+        Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
+        for (int i = 0; i < strct->size(); ++i) {
+            add(tiny::t86::MOV(tmpReg, tiny::t86::Mem(from + i )));
+            add(tiny::t86::MOV(tiny::t86::Mem(to + i), tmpReg));
+        }
+
+        clearTmpIntRegister(tmpReg); tmpReg = -15654;
     }
 
 

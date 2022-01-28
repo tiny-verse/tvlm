@@ -26,13 +26,19 @@ namespace tvlm{
 
         void registerPhi(Phi *phi) override;
 
+        void clearTmpIntRegister(const Register &reg) override;
+
     protected:
+        Register getFreeIntRegister() override;
+
+        FRegister getFreeFloatRegister() override;
+
         Register getIntRegister(Instruction *ins) override;
 
         FRegister getFloatRegister(Instruction *ins) override;
 
-        int counter = 0;
-        int fcounter = 0;
+        int counter = 1;
+        int fcounter = 1;
 
         std::pair<bool, int> findInIntRegs(Instruction *ins);
         std::pair<bool, int> findInFloatRegs(Instruction *ins);

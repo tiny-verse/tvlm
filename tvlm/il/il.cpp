@@ -1,7 +1,10 @@
 #include "il.h"
 #include "il_builder.h"
+#include "tvlm_backend"
 
 namespace tvlm {
+    using Backend = t86_Backend; //TODO Modular use macros
+
     void Instruction::Terminator1::print(tiny::ASTPrettyPrinter &p) const {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier << target_->name();
@@ -22,7 +25,7 @@ namespace tvlm {
         p << p.keyword << instrName_ << " " << p.identifier << f_->name().name();
         p << p.symbol << " (";
         for (auto & i : args_)
-            printRegister(p, i);
+            printRegister(p, i.first);
         p << p.symbol << ")";
     }
 
@@ -38,7 +41,7 @@ namespace tvlm {
 
 
 
-    Instruction::DirectCallInstruction::DirectCallInstruction(Function *f, std::vector<Instruction *> &&args,
+    Instruction::DirectCallInstruction::DirectCallInstruction(Function *f, std::vector<std::pair< Instruction *, Type*>> &&args,
                                                               const ASTBase *ast, const std::string &instrName,
                                                               Instruction::Opcode opcode) :
             Instruction::CallInstruction{std::move(args), ast, instrName, opcode, f->getResultType()},
@@ -164,5 +167,20 @@ namespace tvlm {
         return p.getVariableAddress(name);
     }
 
+    int Type::Char::size() const {
+        return 1/Backend::MemoryCellSize;
+    }
+
+    int Type::Double::size() const {
+        return 8/ Backend::MemoryCellSize;
+    }
+
+    int Type::Integer::size() const {
+        return 4 / Backend::MemoryCellSize;
+    }
+
+    int Type::Pointer::size() const {
+        return 4 / Backend::MemoryCellSize;
+    }
 }
 
