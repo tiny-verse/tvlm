@@ -154,7 +154,7 @@ namespace tvlm{
 
         clearAllReg();
         //call
-        tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()});
+        tiny::t86::Label callLabel = add(tiny::t86::CALL{fillIntRegister(ins->f())});
         if(ins->resultType() == ResultType::Double){
             add(tiny::t86::MOV(fillFloatRegister(ins),tiny::t86::FReg(0)));
         }else if (ins->resultType() == ResultType::Integer){
@@ -175,7 +175,7 @@ namespace tvlm{
 
         add(tiny::t86::ADD(tiny::t86::Sp(), argSize));
 
-        unpatchedCalls_.emplace_back(callLabel, ins->f()->name());
+//        unpatchedCalls_.emplace_back(callLabel, ins->f()->name());
         lastIns_ = ret; //return ret;
 
     }
@@ -431,8 +431,8 @@ namespace tvlm{
                 if(!instructionToEmplace.empty() ){
                     auto it = instructionToEmplace.find(ins);
                     if( it!= instructionToEmplace.end()){
-                        auto * ins = dynamic_cast<LoadImm * >(it->second);
-                        value = ins->valueInt();
+                        auto * newIns = dynamic_cast<LoadImm * >(it->second);
+                        value = newIns->valueInt();
                     }
                 }
                 add( tiny::t86::MOV(fillIntRegister(ins), value ));
@@ -448,7 +448,6 @@ namespace tvlm{
     }
     
     void NaiveIS::visit(ArgAddr *ins) {
-        //TODO double args ?
         auto ret = pb_.currentLabel();
         auto reg = fillIntRegister(ins);
         size_t offset = countArgOffset(ins->args(), ins->index());
@@ -560,7 +559,7 @@ namespace tvlm{
     }
 
     void NaiveIS::visit(Phi *ins) {
-        regAllocator->registerPhi(ins);// TODO so reg allocator respects this
+        regAllocator->registerPhi(ins);
 //        return pb_.currentLabel();
         lastIns_ = pb_.currentLabel();
     }
@@ -687,7 +686,6 @@ namespace tvlm{
     }
 
     tiny::t86::Program NaiveIS::translate(ILBuilder &ilb) {
-        //TODO
         NaiveIS v;
         v.visit(ilb);
         tiny::t86::Program rawProg = v.pb_.program();
