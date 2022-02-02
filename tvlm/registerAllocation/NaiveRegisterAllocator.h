@@ -1,9 +1,15 @@
 #pragma once
 
-#include "register_allocator.h"
+#include "RegisterAllocator.h"
+#include "t86/instruction.h"
+#include "t86/t86_target"
+#include "t86/program.h"
+#include "t86/program/programbuilder.h"
+
 namespace tvlm{
 
     class NaiveRegisterAllocator :public RegisterAllocator{
+
     public:
         NaiveRegisterAllocator(tiny::t86::ProgramBuilder * pb):
                 RegisterAllocator(), pb_(pb){}
@@ -16,9 +22,7 @@ namespace tvlm{
 
         void clearFloat(Instruction *ins) override;
 
-        void clearAllIntReg() override;
-
-        void clearAllFloatReg() override;
+        void spillCallReg() override;
 
         void clearAllReg() override;
 

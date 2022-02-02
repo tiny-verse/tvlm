@@ -139,8 +139,9 @@ namespace tvlm {
         Instruction * getStringLiteral(std::string const & lit, const tiny::ASTBase * ast){
             auto i = stringLiterals_.find(lit);
             if (i == stringLiterals_.end()) {
-                auto strType = registerType(new Type::String(lit.size() + 1));
-                Instruction * addr = globalAdd(new tvlm::AllocG{strType,nullptr , ast});
+                auto arrSize = add(new LoadImm(lit.size() + 1, ast));
+                auto strType = registerType(new Type::Array(registerType(new Type::Char()), arrSize));
+                Instruction * addr = globalAdd(new tvlm::AllocG{strType, arrSize , ast});
                 stringLiterals_.insert(std::make_pair(lit, addr));
                 return addr;
             } else {

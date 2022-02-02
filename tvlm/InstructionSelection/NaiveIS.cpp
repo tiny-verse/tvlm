@@ -1,6 +1,9 @@
 #include "NaiveIS.h"
 #include "t86/program/helpers.h"
 #include "t86/instruction.h"
+#include "tvlm/il/il.h"
+#include "tvlm/il/il_builder.h"
+#include "tvlm/il/il_insns.h"
 
 #define ZeroFlag 0x02
 #define SignFlag 0x01
@@ -83,7 +86,7 @@ namespace tvlm{
     void NaiveIS::visit(CallStatic *ins) {
         auto ret = pb_.currentLabel();
         //spill everything
-        spillAllReg();
+        regAllocator->spillAllReg();
         //args
         for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
             if((*it).second->registerType() == ResultType::StructAddress) {
@@ -102,7 +105,7 @@ namespace tvlm{
             regAllocator->prepareReturnValue(ins->f()->getType()->size()):
             regAllocator->prepareReturnValue();
 
-        clearAllReg();
+        regAllocator->spillCallReg();
         //call
         tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()});
         if(ins->resultType() == ResultType::Double){
@@ -132,7 +135,7 @@ namespace tvlm{
     void NaiveIS::visit(Call *ins) {
         auto ret = pb_.currentLabel();
         //spill everything
-        spillAllReg();
+        regAllocator->spillAllReg();
         //args
         for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
             if((*it).second->registerType() == ResultType::StructAddress) {
@@ -152,7 +155,7 @@ namespace tvlm{
             regAllocator->prepareReturnValue(ins->retType()->size()) :
             regAllocator->prepareReturnValue();
 
-        clearAllReg();
+        regAllocator->spillCallReg();
         //call
         tiny::t86::Label callLabel = add(tiny::t86::CALL{fillIntRegister(ins->f())});
         if(ins->resultType() == ResultType::Double){
@@ -606,9 +609,9 @@ namespace tvlm{
             compiled_.emplace(insns[i], tmp);
         }
         auto last = insns[len];
-        spillAllReg();
+        regAllocator->spillAllReg();
         visitChild(last);
-        clearAllReg();
+//        regAllocator->clearAllReg();
         lastIns_ = ret; // return ret;
     }
     
@@ -653,7 +656,7 @@ namespace tvlm{
              instructionToEmplace.emplace(fnc_addr, new LoadImm((int64_t)f.second.address(), nullptr));
         }
 
-        clearAllReg();
+        regAllocator->clearAllReg();
         tiny::t86::Label prolog = //t86::Label(lastInstruction_index +1);
                 compileGlobalTable(globs);
 

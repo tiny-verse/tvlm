@@ -15,23 +15,26 @@ tvlm::FRegister tvlm::NaiveRegisterAllocator::fillFloatRegister(tvlm::Instructio
 }
 
 void tvlm::NaiveRegisterAllocator::clearInt(tvlm::Instruction *ins) {
-
+    auto it = std::find(alloc_regs_.begin(), alloc_regs_.end(), ins);
+    if(it != alloc_regs_.end()){
+        alloc_regs_.erase(it);
+    }
 }
 
 void tvlm::NaiveRegisterAllocator::clearFloat(tvlm::Instruction *ins) {
-
+    auto it = std::find(alloc_fregs_.begin(), alloc_fregs_.end(), ins);
+    if(it != alloc_fregs_.end()){
+        alloc_fregs_.erase(it);
+    }
 }
 
-void tvlm::NaiveRegisterAllocator::clearAllIntReg() {
-
-}
-
-void tvlm::NaiveRegisterAllocator::clearAllFloatReg() {
-
-}
 
 void tvlm::NaiveRegisterAllocator::clearAllReg() {
-    RegisterAllocator::clearAllReg();
+    for (int i = 0; i < tiny::t86::Cpu::Config::instance().registerCnt(); ++i) {
+        alloc_regs_[i] = nullptr;
+    }    for (int i = 0; i < tiny::t86::Cpu::Config::instance().floatRegisterCnt(); ++i) {
+        alloc_fregs_[i] = nullptr;
+    }
 }
 
 void tvlm::NaiveRegisterAllocator::spillAllReg() {
@@ -148,4 +151,8 @@ void tvlm::NaiveRegisterAllocator::resetAllocSize() {
 void tvlm::NaiveRegisterAllocator::correctStackAlloc(size_t patch) {
     replace(patch, tiny::t86::SUB(tiny::t86::Sp(), (int64_t)functionLocalAllocSize ));
 
+}
+
+void tvlm::NaiveRegisterAllocator::spillCallReg() {
+    spillAllReg();
 }

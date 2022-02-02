@@ -6,8 +6,11 @@
 namespace tvlm{
     using Register = tiny::t86::Register;
     using FRegister = tiny::t86::FloatRegister;
+    using TInstruction = tiny::t86::Instruction;
+    using ILInstruction = ::tvlm::Instruction;
 
     /*abstract*/ class RegisterAllocator {
+
     public:
             RegisterAllocator();
 
@@ -16,12 +19,8 @@ namespace tvlm{
 
             virtual void clearInt(Instruction * ins) = 0;
             virtual void clearFloat(Instruction * ins) = 0;
-            virtual void clearAllIntReg() = 0;
-            virtual void clearAllFloatReg() = 0;
-            virtual void clearAllReg() {
-                clearAllIntReg();
-                return clearAllFloatReg();
-            }
+            virtual void spillCallReg() = 0;
+            virtual void clearAllReg() = 0;
 
             Register fillTmpIntRegister(){
                 auto reg = getFreeIntRegister();

@@ -90,6 +90,15 @@ namespace tvlm {
         }
     }
 
+    void Instruction::BinaryOperator::replaceWith(Instruction *sub, Instruction *toReplace) {
+        if(lhs_ == sub){
+            lhs_ = toReplace;
+        }
+        if(rhs_ == sub){
+            rhs_ = toReplace;
+        }
+    }
+
     const char *Instruction::UnaryOperator::resolve_operator() const {
         switch (operator_) {
             case UnOpType::UNSUB:
@@ -102,6 +111,12 @@ namespace tvlm {
                 return "Not ";
             default:
                 throw "unknown opcode";
+        }
+    }
+
+    void Instruction::UnaryOperator::replaceWith(Instruction *sub, Instruction *toReplace) {
+        if(operand_ == sub){
+            operand_ = toReplace;
         }
     }
 

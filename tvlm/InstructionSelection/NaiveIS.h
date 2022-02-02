@@ -2,8 +2,8 @@
 #include "tvlm/tvlm/il/il.h"
 #include "t86/program/label.h"
 #include "t86/program/programbuilder.h"
-#include "RegisterAllocator.h"
-#include "NaiveRegisterAllocator.h"
+#include "tvlm/tvlm/registerAllocation/RegisterAllocator.h"
+#include "tvlm/tvlm/registerAllocation/NaiveRegisterAllocator.h"
 
 namespace tvlm{
 
@@ -116,22 +116,6 @@ namespace tvlm{
         }
         auto clearFloatReg(Instruction * ins){
             return regAllocator->clearFloat(ins);
-        }
-//
-//        auto clearAllIntReg(){
-//            return regAllocator->clearAllIntReg();
-//        }
-//
-//        void clearAllFloatReg(){
-//            return regAllocator->clearAllFloatReg();
-//        }
-
-        auto clearAllReg(){
-            return regAllocator->clearAllReg();
-        }
-
-        auto spillAllReg(){
-            return regAllocator->spillAllReg();
         }
 
 

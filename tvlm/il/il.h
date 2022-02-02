@@ -256,6 +256,16 @@ namespace tvlm {
 
         virtual ~Instruction() = default;
 
+        virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
+        void replaceMe(Instruction * with ) {
+            for (auto  * ins: used_) {
+                replaceWith(this, with);
+            }
+        }
+        virtual void registerUsage(Instruction * usage){
+            used_.push_back(usage);
+        };
+
         /** Returns the result type of the instruction. 
          */
         ResultType resultType() const {
@@ -376,7 +386,7 @@ namespace tvlm {
         }
 
 
-
+        std::vector<Instruction *> used_;
         std::string instrName_;
         ASTBase const * ast_;
     private:
@@ -392,6 +402,12 @@ namespace tvlm {
 
         int size() const {
             return type_->size();
+        }
+
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+            if(amount_ == sub){
+                amount_ = toReplace;
+            }
         }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
@@ -434,8 +450,12 @@ namespace tvlm {
         size_t index() const{
             return index_;   
         }
-        std::vector<Instruction *> args()const{
-            return args_;
+//        std::vector<Instruction *> args()const{
+//            return args_;
+//        }
+
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+
         }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
@@ -447,11 +467,10 @@ namespace tvlm {
     protected:
 
         // void accept(ILVisitor * v) override;
-        ImmIndex(size_t index, const std::vector<Instruction*> & args, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+        ImmIndex(size_t index, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type->registerType(), ast, instrName, opcode},
-            index_{index}, args_(args), type_(type) {
+            index_{index}, type_(type) {
         }
-        std::vector<Instruction*> args_;
         size_t index_;
         Type * type_;
     };
@@ -470,6 +489,9 @@ namespace tvlm {
             p << p.keyword << instrName_ << " " << p.numberLiteral << (resultType() == ResultType::Integer ? value_.i : value_.f);
         };
 
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+
+        }
 
         virtual ~ImmValue(){}
     protected:
@@ -515,6 +537,8 @@ namespace tvlm {
         GT,
         GTE,
     };
+
+
     class Instruction::BinaryOperator : public Instruction {
     public:
 
@@ -544,6 +568,9 @@ namespace tvlm {
         };
 
         virtual ~BinaryOperator(){}
+
+        void replaceWith(Instruction *sub, Instruction *toReplace) override;
+
     protected:
         const char *  resolve_operator() const;
         // void accept(ILVisitor * v) override;
@@ -577,6 +604,7 @@ namespace tvlm {
         INC,
         DEC,
     };
+
     class Instruction::UnaryOperator : public Instruction {
     public:
         Instruction * operand() const {
@@ -592,6 +620,9 @@ namespace tvlm {
         };
 
         virtual ~UnaryOperator(){}
+
+        void replaceWith(Instruction *sub, Instruction *toReplace) override;
+
     protected:
         const char *  resolve_operator() const;
         // void accept(ILVisitor * v) override;
@@ -621,6 +652,13 @@ namespace tvlm {
         };
 
         virtual ~LoadAddress(){}
+
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+            if(address_ == sub){
+                address_ = toReplace;
+            }
+        }
+
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -648,7 +686,14 @@ namespace tvlm {
             printRegisterAddress(p, address_);
             printRegister(p, value_);
         };
-
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+            if(address_ == sub){
+                address_ = toReplace;
+            }
+            if(value_ == sub){
+                value_ = toReplace;
+            }
+        }
         virtual ~StoreAddress(){}
     protected:
         // void accept(ILVisitor * v) override;
@@ -707,6 +752,12 @@ namespace tvlm {
             return type_;
         }
 
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+            if(returnValue_ == sub){
+                returnValue_ = toReplace;
+            }
+        }
+
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
@@ -731,6 +782,12 @@ namespace tvlm {
         BasicBlock * getTarget(size_t i) const override { return i == 1 ? target_ : nullptr; }
 
         virtual void print(tiny::ASTPrettyPrinter & p) const override ;
+
+    protected:
+    public:
+        void replaceWith(Instruction *sub, Instruction *toReplace) override{
+
+    }
 
     protected:
         // void accept(ILVisitor * v) override;
@@ -758,7 +815,11 @@ namespace tvlm {
             targets_.push_back(target);
         }
         virtual void print(tiny::ASTPrettyPrinter & p) const override;
-
+        void replaceWith(Instruction *sub, Instruction *toReplace) override{
+            if(cond_ == sub){
+                cond_ = toReplace;
+            }
+        }
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -784,7 +845,11 @@ namespace tvlm {
             p << p.keyword << instrName_ << " ";
             printRegister(p, src_);
         }
-
+        void replaceWith(Instruction *sub, Instruction *toReplace) override{
+            if(src_ == sub){
+                src_ = toReplace;
+            }
+        }
         virtual ~SrcInstruction(){}
     protected:
         // void accept(ILVisitor * v) override;
@@ -826,7 +891,12 @@ namespace tvlm {
         std::unordered_map<BasicBlock*, Instruction *> contents()const{
             return contents_;
         }
-
+        void replaceWith(Instruction *sub, Instruction *toReplace) override{
+            for (auto & i : contents_) {
+                if(i.second == sub);
+                i.second = toReplace;
+            }
+        }
         virtual ~PhiInstruction(){}
 
     protected:
@@ -857,6 +927,15 @@ namespace tvlm {
       Type::Struct * type()const {
           return type_;
       }
+      void replaceWith(Instruction *sub, Instruction *toReplace) override{
+        if(srcVal_ == sub){
+            srcVal_ = toReplace;
+        }
+        if(dstAddr_ == sub){
+            dstAddr_ = toReplace;
+        }
+      }
+
     protected:
 //      virtual void accept(ILVisitor * v) override;
 
@@ -903,6 +982,15 @@ namespace tvlm {
         Instruction * offset()const {
             return offset_;
         }
+        void replaceWith(Instruction *sub, Instruction *toReplace) override{
+            if(base_ == sub) {
+                base_ = toReplace;
+            }
+            if(offset_ == sub){
+                offset_ = toReplace;
+            }
+
+        }
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
@@ -927,6 +1015,17 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         Instruction * index()const {
             return index_;
         }
+    void replaceWith(Instruction *sub, Instruction *toReplace) override{
+        if(base_ == sub){
+            base_ = toReplace;
+        }
+        if(offset_ == sub){
+            offset_ = toReplace;
+        }
+        if(index_ == sub){
+            index_ = toReplace;
+        }
+    }
     protected:
 //    virtual void accept(ILVisitor * v) override;
 
@@ -953,6 +1052,9 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         }
 
         virtual ~CallInstruction(){}
+
+
+
     protected:
 
         CallInstruction(std::vector<std::pair< Instruction *, Type*>> && args,
@@ -973,6 +1075,13 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
         virtual ~DirectCallInstruction(){}
         virtual void print(tiny::ASTPrettyPrinter & p) const override;
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+            for (auto & a : args_) {
+                if(a.first == sub){
+                    a.first = toReplace;
+                }
+            }
+        }
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
@@ -989,7 +1098,16 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         Type * retType() const {
             return retType_;
         }
-
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+            if(f_ == sub){
+                f_ = toReplace;
+            }
+            for (auto & a : args_) {
+                if(a.first == sub){
+                    a.first = toReplace;
+                }
+            }
+        }
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
@@ -1081,7 +1199,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
 #define ImmSize(NAME, ENCODING) NAME (Type * type,Instruction * amount, ASTBase const * ast) : Instruction::ENCODING{type, amount, ast, #NAME, Instruction::Opcode::NAME} {}
 //#define ImmSize(NAME, ENCODING) NAME (Type * type, ASTBase const * ast) : Instruction::ENCODING{type, ast, #NAME, Instruction::Opcode::NAME} {}
-#define ImmIndex(NAME, ENCODING) NAME (size_t index, const std::vector<Instruction*> & args, Type * type,  ASTBase const * ast) : Instruction::ENCODING{index,args, type, ast, #NAME, Instruction::Opcode::NAME} {}
+#define ImmIndex(NAME, ENCODING) NAME (size_t index, Type * type,  ASTBase const * ast) : Instruction::ENCODING{index,type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {} \
                                  NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {}
 #define BinaryOperator(NAME, ENCODING) NAME (BinOpType oper, Opcode op, Instruction * lhs, Instruction * rhs, ASTBase const * ast): Instruction::ENCODING{op, oper, lhs, rhs, ast, #NAME} {}
