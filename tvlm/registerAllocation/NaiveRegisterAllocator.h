@@ -104,6 +104,35 @@ namespace tvlm{
             return true;
         }
 
+        bool spillFloatReg(const FRegister & reg){
+
+
+            //if empty Reg - do nothing
+            if (!alloc_fregs_[reg.index()]) {
+                return false;
+            }
+
+            const Instruction *ins_to_spill = alloc_fregs_[reg.index()];
+
+            int64_t mem_offset = std::numeric_limits<int64_t>::max();
+            auto it = spilled_.find(ins_to_spill);
+            if(it == spilled_.end()){
+                functionLocalAllocSize+=1;
+                mem_offset =  (int64_t)functionLocalAllocSize;
+                //pb_.add(t86::SUB(t86::Sp(), 1)); // aggregating allocation - no need anymore
+                spilled_.emplace(ins_to_spill, mem_offset);
+
+            }else{
+                mem_offset = it->second;
+            }
+
+
+            pb_->add(tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Bp() - mem_offset), reg));
+
+            alloc_fregs_[reg.index()] = nullptr;
+            return true;
+        }
+
 
         void copyStruct(Register aRegister, Type *pType, Register aRegister1);
 

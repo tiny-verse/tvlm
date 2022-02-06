@@ -41,6 +41,9 @@ void tvlm::NaiveRegisterAllocator::spillAllReg() {
     for (int i = reserve_upbound; i < tiny::t86::Cpu::Config::instance().registerCnt(); ++i) {
         spillIntReg(tiny::t86::Reg(i));
     }
+    for (int i = reserve_upbound; i < tiny::t86::Cpu::Config::instance().floatRegisterCnt(); ++i) {
+        spillFloatReg(tiny::t86::FReg(i));
+    }
 }
 
 void tvlm::NaiveRegisterAllocator::registerPhi(tvlm::Phi *phi) {
@@ -75,9 +78,26 @@ tvlm::FRegister tvlm::NaiveRegisterAllocator::getFloatRegister(tvlm::Instruction
         // register is already assigned to this  register
         return tiny::t86::FReg(f.second);
     }
-    auto reg = tiny::t86::FReg(fcounter++);
 
-    return reg;
+    auto reg = getFreeFloatRegister();
+    //restore spilled if not ... nothing
+    auto const it = spilled_.find(ins);
+    if (it != spilled_.end()) {
+        //good guy compiler will obey:
+
+        //TODO
+//        pb_->add(tiny::t86::MOV{reg, tiny::t86::Mem(tiny::t86::Bp() - it->second)});
+        auto tmp = fillTmpIntRegister();
+        pb_->add(tiny::t86::MOV{tmp, tiny::t86::Mem(tiny::t86::Bp() - it->second)});
+        pb_->add(tiny::t86::MOV{reg,tmp});
+        clearTmpIntRegister(tmp);
+
+        alloc_regs_[reg.index()] = ins;
+
+        return reg; // restored
+    }
+
+    return reg; // empty
 }
 
 std::pair<bool, int> tvlm::NaiveRegisterAllocator::findInIntRegs(tvlm::Instruction * ins) {

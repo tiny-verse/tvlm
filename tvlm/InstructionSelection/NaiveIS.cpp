@@ -80,13 +80,14 @@ namespace tvlm{
             add(tiny::t86::RET());
 
         }
+        regAllocator->clearAllReg();
         lastIns_= ret;
     }
     
     void NaiveIS::visit(CallStatic *ins) {
         auto ret = pb_.currentLabel();
         //spill everything
-        regAllocator->spillAllReg();
+//        regAllocator->spillAllReg();
         //args
         for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
             if((*it).second->registerType() == ResultType::StructAddress) {
@@ -120,7 +121,7 @@ namespace tvlm{
         int argSize  = 0;
         for (auto & a :ins->args()) {
             if(a.second->registerType() == ResultType:: Double){
-                argSize +=2;
+                argSize +=1;
             }else{
                 argSize ++;
             }
@@ -135,7 +136,7 @@ namespace tvlm{
     void NaiveIS::visit(Call *ins) {
         auto ret = pb_.currentLabel();
         //spill everything
-        regAllocator->spillAllReg();
+//        regAllocator->spillAllReg();
         //args
         for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
             if((*it).second->registerType() == ResultType::StructAddress) {
@@ -453,7 +454,8 @@ namespace tvlm{
     void NaiveIS::visit(ArgAddr *ins) {
         auto ret = pb_.currentLabel();
         auto reg = fillIntRegister(ins);
-        size_t offset = countArgOffset(ins->args(), ins->index());
+//        size_t offset = countArgOffset(ins->args(), ins->index());
+        size_t offset =  ins->index();
         add(tiny::t86::MOV(reg, tiny::t86::Bp() ));
         add(tiny::t86::ADD(reg, offset  + 3));
         if( ins->type()->registerType() == ResultType::StructAddress){

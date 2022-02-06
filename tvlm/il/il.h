@@ -52,7 +52,7 @@ namespace tvlm {
         class Array;
         class Char;
         class Void;
-        class String;
+//        class String;
         virtual ~Type() = default;
 
         virtual int size() const  = 0;
@@ -113,23 +113,23 @@ namespace tvlm {
         }
     };
 
-    class Type::String : public Type{
-    public:
-        explicit String(size_t size):size_(size){}
-        int size() const {
-            return (int)size_;
-        }
-
-        ResultType registerType() const override {
-            return ResultType::Integer; // Address of that string
-        }
-
-    private:
-        void toStream(std::ostream & s) const override {
-            s << "string (of size: " << size_ << ")";
-        }
-        size_t size_;
-    };
+//    class Type::String : public Type{
+//    public:
+//        explicit String(size_t size):size_(size){}
+//        int size() const {
+//            return (int)size_;
+//        }
+//
+//        ResultType registerType() const override {
+//            return ResultType::Integer; // Address of that string
+//        }
+//
+//    private:
+//        void toStream(std::ostream & s) const override {
+//            s << "string (of size: " << size_ << ")";
+//        }
+//        size_t size_;
+//    };
     class Type::Double : public Type{
     public:
         Double(){}
@@ -871,6 +871,10 @@ namespace tvlm {
         }
 
         virtual ~VoidInstruction(){}
+
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+
+        }
 
     protected:
 //        virtual void accept(ILVisitor * v) override;

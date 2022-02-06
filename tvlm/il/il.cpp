@@ -189,7 +189,7 @@ namespace tvlm {
     }
 
     int Type::Double::size() const {
-        return std::ceil(8/ (double) Backend::MemoryCellSize);
+        return std::ceil(4/ (double) Backend::MemoryCellSize);
     }
 
     int Type::Integer::size() const {

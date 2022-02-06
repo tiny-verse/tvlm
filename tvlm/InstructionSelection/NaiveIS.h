@@ -80,10 +80,25 @@ namespace tvlm{
 //            return lastIns_;
 //        }
 
+//        template<typename T>
+//        Label add( const T& instruction) {
+//            lastIns_ = pb_.add( instruction);
+//            return lastIns_;
+//        }
+
         template<typename T>
-        Label add( const T& instruction) {
-            lastIns_ = pb_.add( instruction);
-            return lastIns_;
+        Label add(const T& instruction){
+            Label ret= pb_.add(instruction);
+            if(hardDBG_){
+                pb_.add(tiny::t86::DBG(
+                        [](tiny::t86::Cpu & cpu){
+                            printAllRegisters(cpu,std::cerr);
+                            std::cin.get();
+                        }
+                ));
+            }
+//            lastInstruction_index = ret.address();
+            return ret;
         }
 
         Label find(Instruction * ins){
@@ -139,7 +154,14 @@ namespace tvlm{
 
         }
 
+
         tiny::t86::ProgramBuilder pb_;
+           /*
+        bool hardDBG_ = true;
+         /*/
+        bool hardDBG_ = false;/**/
+
+
         Label lastIns_;
         std::unordered_map<tiny::Symbol, Label> functionTable_;
         std::unordered_map<Instruction*, uint64_t> globalTable_;
