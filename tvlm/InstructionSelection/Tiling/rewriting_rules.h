@@ -5,6 +5,8 @@
 //#include "t86_backend.h"
 #include "tvlm/tvlm/il/il.h"
 #include "tvlm/t86_backend.h"
+
+#include "TilingRule.h"
 //#include "tvlm_backend"
 
 using Opcode = tvlm::Instruction::Opcode;
@@ -54,7 +56,7 @@ namespace tvlm{
 
 std::vector<std::unique_ptr<Rule>> tvlm::ILTiler::AllRulesInit(){
     std::vector<std::unique_ptr<Rule>> all;
-    all.emplace_back(new DummyRule());
+//    all.emplace_back(new DummyRule());
     //--------------------------------------------------------------------
 //
 //    std::set<std::unique_ptr<Rule>> addRules;
@@ -223,6 +225,7 @@ std::vector<std::unique_ptr<Rule>> tvlm::ILTiler::AllRulesInit(){
 //    all.emplace(Opcode::Call,std::move(callRules) );
 //    all.emplace(Opcode::CallStatic,std::move(callStaticRules) );
 
+    auto Add = new SpecializedTilingRule(true);
 
 
     return std::move(all);

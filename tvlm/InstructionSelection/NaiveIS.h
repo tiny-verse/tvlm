@@ -1,7 +1,7 @@
 #pragma once
 #include "tvlm/tvlm/il/il.h"
 #include "t86/program/label.h"
-#include "t86/program/programbuilder.h"
+#include "ProgramBuilder.h"
 #include "tvlm/tvlm/registerAllocation/RegisterAllocator.h"
 #include "tvlm/tvlm/registerAllocation/NaiveRegisterAllocator.h"
 
@@ -22,16 +22,29 @@ namespace tvlm{
 
         void visit(Program *p) override;
         virtual  ~NaiveIS(){
-            for (auto & i:instructionToEmplace) {
-                delete i.second;
+//            for (auto & i:instructionToEmplace) {
+//                delete i.second;
+//            }
+            instructionToEmplace.~unordered_map();
+
+            functionTable_.~unordered_map();
+
+            for (auto it = globalTable_.begin(); it != globalTable_.end(); it=globalTable_.begin()) {
+                std::cout << "deleting" <<  it->second << std::endl;
+                globalTable_.erase(it);
             }
+            std::cout << "deleted " << std::endl;
+
+            globalTable_.~unordered_map(); //!!!
+            compiled_.~unordered_map();
+            compiledBB_.~unordered_map();
+
+            std::cout << "calling ~NaiveIS" << std::endl;
         }
     protected:
         NaiveIS();
 
         void visit(Instruction *ins) override{};
-
-    public:
 
         void visit(ILBuilder & ilb);
         void visit(Jump *ins) override;
@@ -58,7 +71,6 @@ namespace tvlm{
         void visit(Halt *ins) override;
         void visit(StructAssign *ins) override;
 
-    protected:
         void visit(BasicBlock *bb) override;
         void visit(Function *fce) override;
 
@@ -87,8 +99,8 @@ namespace tvlm{
 //        }
 
         template<typename T>
-        Label add(const T& instruction){
-            Label ret= pb_.add(instruction);
+        Label add(const T& instruction, ILInstruction * ins){
+            Label ret= pb_.add(instruction, ins);
             if(hardDBG_){
                 pb_.add(tiny::t86::DBG(
                         [](tiny::t86::Cpu & cpu){
@@ -115,13 +127,13 @@ namespace tvlm{
             return regAllocator->fillIntRegister(ins);
         }
         Register fillTmpIntRegister(){
-            return regAllocator->fillTmpIntRegister();
+            return regAllocator->fillIntRegister();
         }
         FRegister fillTmpFloatRegister(){
-            return regAllocator->fillTmpFloatRegister();
+            return regAllocator->fillFloatRegister();
         }
         auto clearTmpIntRegister(const Register & reg ){
-            return regAllocator->clearTmpIntRegister(reg);
+            return regAllocator->clearIntRegister(reg);
         }
         auto fillFloatRegister(Instruction * ins){
             return regAllocator->fillFloatRegister(ins);
@@ -148,14 +160,14 @@ namespace tvlm{
             }
         }
 
-        void copyStruct(const Register & from, Type * type, const Register & to );
+        void copyStruct(const Register & from, Type * type, const Register & to, ILInstruction * ins );
         int getTrueMemSize(Type * type) const {
 
 
         }
 
 
-        tiny::t86::ProgramBuilder pb_;
+        tvlm::ProgramBuilder pb_;
            /*
         bool hardDBG_ = true;
          /*/
@@ -164,8 +176,8 @@ namespace tvlm{
 
         Label lastIns_;
         std::unordered_map<tiny::Symbol, Label> functionTable_;
-        std::unordered_map<Instruction*, uint64_t> globalTable_;
-        std::unordered_map<Instruction *, Label> compiled_;
+        std::unordered_map<const Instruction*, uint64_t> globalTable_;
+        std::unordered_map<const Instruction *, Label> compiled_;
         std::unordered_map<BasicBlock *, Label> compiledBB_;
         std::vector<std::pair<Label, BasicBlock*>> future_patch_;
         std::vector<std::pair<Label, Symbol>> unpatchedCalls_;

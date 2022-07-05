@@ -13,12 +13,30 @@ namespace tvlm {
 
     }
 
+    Instruction::Terminator1::Terminator1(BasicBlock *target, const ASTBase *ast, const std::string &instrName,
+                                          Opcode opcode) :
+            Terminator{ast, instrName, opcode},
+            target_{target} {
+
+        target_->registerUsage(this);
+    }
+
     void Instruction::TerminatorN::print(tiny::ASTPrettyPrinter &p) const {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier;
         printRegister(p, cond_);
         for(auto & t : targets_){
             p << p.identifier << t->name() << " ";
+        }
+    }
+
+    Instruction::TerminatorN::TerminatorN(Instruction *cond, const ASTBase *ast, const std::string &instrName,
+                                          Opcode opcode) :
+            Terminator{ast, instrName, opcode},
+            cond_{cond} {
+        cond_->registerUsage(this);
+        for (auto * bb: targets_) {
+            bb->registerUsage(this);
         }
     }
 
@@ -204,9 +222,9 @@ namespace tvlm {
         //throw "unknown size"; TODO
         auto sz = dynamic_cast<LoadImm *>(size_);
         assert(sz && sz->resultType() == ResultType::Integer);
-        if(sz){
+//        if(sz){
             return base_->size() * sz->valueInt();
-        }
+//        }
     }
 }
 

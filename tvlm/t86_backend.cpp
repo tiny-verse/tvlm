@@ -1,4 +1,6 @@
 #include "t86_backend.h"
+
+#include <memory>
 #include "t86/instruction.h"
 #include "analysis/liveness_analysis.h"
 
@@ -317,14 +319,14 @@ namespace tvlm{
 //        lastIns_ = tmp;
 //
 //    }
-    bool DummyRule::operator==(const DAG *other) {
-//        return *other == this;
-        return true;
-    }
-
-    int DummyRule::countCost() {
-        return 1;
-    }
+//    bool DummyRule::operator==(const DAG *other) {
+////        return *other == this;
+//        return true;
+//    }
+//
+//    int DummyRule::countCost() {
+//        return 1;
+//    }
 
 //    DummyRule *DummyRule::get() {
 //        if(dummy==nullptr){
@@ -476,7 +478,7 @@ namespace tvlm{
 
 } //namespace tvlm
 
-#include "tvlm/tvlm/InstructionSelection/rewriting_rules.h"
+#include "tvlm/tvlm/InstructionSelection/Tiling/rewriting_rules.h"
 #include "tvlm/analysis/next_use_analysis.h"
 
 
@@ -556,9 +558,9 @@ tiny::t86::Program tvlm::ILTiler::translate(tvlm::Program & prog){
 //    v.visit( &prog);//create dag
 
     //analyse
-    auto la = std::unique_ptr<LivenessAnalysis>(LivenessAnalysis::create(&prog));
+    auto la = std::make_unique<LivenessAnalysis<TileInfo>>(&prog);
     auto analysis = la->analyze();
-    auto nla = std::unique_ptr<NextUseAnalysis>(NextUseAnalysis::create(&prog));
+    auto nla = std::make_unique<NextUseAnalysis<TileInfo>>(&prog);
     auto nanalysis = nla->analyze();
     std::cerr << "huh" << std::endl;
 //    v.functionTable_.begin()->second->tile();

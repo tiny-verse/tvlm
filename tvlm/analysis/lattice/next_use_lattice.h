@@ -31,13 +31,17 @@ namespace tvlm{
 //        }
 
     public:
-        FlatElem<const Declaration*> * makeVal(const Declaration *val){
-            auto tmp = new FlatVal<const Declaration *>(val);
-            stored_.emplace_back(tmp);
-            return tmp;
-         }
+        FlatElem<const Declaration*> * makeVal(const Declaration *val);
     private:
         std::vector<std::unique_ptr<FlatVal<const Declaration *>>> stored_;
     };
+
+
+
+    FlatElem<const Declaration*> * NextUseLattice::makeVal(const Declaration *val){
+        auto tmp = new FlatVal<const Declaration *>(val);
+        stored_.emplace_back(tmp);
+        return tmp;
+    }
 
 }

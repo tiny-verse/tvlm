@@ -9,9 +9,8 @@
 #include "tinyc/types.h"
 
 namespace tvlm{
+    template<class T>
     class CfgBuilder;
-}
-namespace tvlm {
 
     using ASTBase = tiny::ASTBase;
     using Symbol = tiny::Symbol;
@@ -316,8 +315,8 @@ namespace tvlm {
             GTE,
 
 
-            BinOp,
-            UnOp,
+            //BinOp,
+            //UnOp,
             LoadImm,
             AllocG,
             AllocL,
@@ -347,6 +346,7 @@ namespace tvlm {
     protected:
 
         friend class ILVisitor;
+        template<typename T>
         friend class LivenessAnalysis;
         /** Creates the instruction with given return type and corresponding abstract syntax tree. 
          */
@@ -434,6 +434,8 @@ namespace tvlm {
                 throw tiny::ParserError(STR("vector size has to be of type Int"), ast->location());
             }
             assert(!amount || amount->resultType() == ResultType::Integer );
+
+            if(amount_) amount_->registerUsage(this);
         }
         ImmSize(Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode ):
                 ImmSize(type, nullptr, ast, instrName, opcode){}
@@ -470,6 +472,7 @@ namespace tvlm {
         ImmIndex(size_t index, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type->registerType(), ast, instrName, opcode},
             index_{index}, type_(type) {
+
         }
         size_t index_;
         Type * type_;
@@ -478,10 +481,10 @@ namespace tvlm {
     class Instruction::ImmValue : public Instruction {
     public:
 
-        int64_t valueInt() {
+        int64_t valueInt() const {
             return value_.i;
         }
-        double valueFloat() {
+        double valueFloat() const {
             return value_.f;
         }
         virtual void print(tiny::ASTPrettyPrinter & p) const override {
@@ -490,7 +493,7 @@ namespace tvlm {
         };
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
-
+            //nothing to do
         }
 
         virtual ~ImmValue(){}
@@ -581,7 +584,10 @@ namespace tvlm {
             operator_{oper},
             lhs_{lhs},
             rhs_{rhs} {
-        }        
+
+            lhs->registerUsage(this);
+            rhs->registerUsage(this);
+        }
 
         static ResultType GetResultType(Instruction * lhs, Instruction * rhs) {
             assert(lhs->resultType() != ResultType::Void && rhs->resultType() != ResultType::Void);
@@ -631,6 +637,7 @@ namespace tvlm {
             Instruction{operand->resultType(), ast, instrName, op},
             operator_{oper},
             operand_{operand} {
+            operand->registerUsage(this);
         }
 
     private:
@@ -665,6 +672,8 @@ namespace tvlm {
         LoadAddress(Instruction * address,Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type->registerType(), ast, instrName, opcode},
             address_{address}, type_(type) {
+
+            address_->registerUsage(this);
         }
     private:
 
@@ -702,6 +711,9 @@ namespace tvlm {
             Instruction{ResultType::Void, ast, instrName, opcode},
             value_{value},
             address_{address} {
+
+            address_->registerUsage(this);
+            value_->registerUsage(this);
         }
     private:
 
@@ -770,6 +782,8 @@ namespace tvlm {
 
         Returnator(Instruction * retValue, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Terminator0{ast, instrName, opcode}, returnValue_{retValue}, type_(type) {
+
+            if(returnValue_) returnValue_->registerUsage(this);
         }
         Instruction * returnValue_;
         Type * type_;
@@ -792,10 +806,7 @@ namespace tvlm {
     protected:
         // void accept(ILVisitor * v) override;
 
-        Terminator1(BasicBlock * target, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-            Terminator{ast, instrName, opcode},
-            target_{target} {
-        }
+        Terminator1(BasicBlock * target, ASTBase const * ast, const std::string & instrName, Opcode opcode);
 
         virtual ~Terminator1(){}
     private:
@@ -823,10 +834,7 @@ namespace tvlm {
     protected:
         // void accept(ILVisitor * v) override;
 
-        TerminatorN(Instruction * cond, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-            Terminator{ast, instrName, opcode},
-            cond_{cond} {
-        }
+        TerminatorN(Instruction * cond, ASTBase const * ast, const std::string & instrName, Opcode opcode);
 
         virtual ~TerminatorN(){}
     private:
@@ -857,7 +865,7 @@ namespace tvlm {
         SrcInstruction(Instruction * src, ResultType type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{type, ast, instrName, opcode},
                 src_{src}{
-
+            src_->registerUsage(this);
         }
     private:
         Instruction * src_;
@@ -908,7 +916,9 @@ namespace tvlm {
 
         PhiInstruction( ResultType type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{type, ast, instrName, opcode}{
-
+            for (auto & p : contents_) {
+                p.second->registerUsage(this);
+            }
         }
     private:
         std::unordered_map<BasicBlock*, Instruction *> contents_;
@@ -949,7 +959,8 @@ namespace tvlm {
                 dstAddr_(dstAddr),
                 type_(type)
                 {
-
+                srcVal_->registerUsage(this);
+                dstAddr_->registerUsage(this);
         }
     private:
         Instruction * srcVal_;
@@ -969,7 +980,6 @@ namespace tvlm {
         ElemInstruction( Instruction * base, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{ResultType::Integer, ast, instrName, opcode},
                 base_(base){
-
         }
 
     protected:
@@ -1002,6 +1012,8 @@ namespace tvlm {
                 ElemInstruction{base, ast, instrName, opcode },
                 offset_(offset){
 
+            base_->registerUsage(this);
+            offset_->registerUsage(this);
         }
     private:
         Instruction * offset_;
@@ -1038,6 +1050,9 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
                 index_(index),
                 offset_(offset){
 
+            base_->registerUsage(this);
+            index_->registerUsage(this);
+            offset_->registerUsage(this);
         }
     private:
         Instruction * index_;
@@ -1066,7 +1081,10 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
                         , Opcode opcode , const ResultType & resultType):
                 Instruction{resultType, ast, instrName, opcode},
                 args_{args}{
+            for (auto & a :args_ ) {
+                a.first->registerUsage(this);
 
+            }
         }
         std::vector<std::pair< Instruction *, Type*>> args_;
     }; // Instruction::CallInstruction
@@ -1130,7 +1148,11 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
                 CallInstruction{std::move(args), ast, instrName, opcode, f->resultType()},
                 f_{f}, retType_(retType)
                 {
+                for (auto & a :args_ ) {
+                    a.first->registerUsage(this);
 
+                }
+                f->registerUsage(this);
         }
         Instruction * f_;
         Type * retType_;
@@ -1141,7 +1163,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class ILVisitor {
     public:
-
+        virtual ~ILVisitor(){}
         virtual void visit(Instruction * ins) = 0;
         virtual void visit(Jump * ins) = 0;
         virtual void visit(CondJump * ins) = 0;
@@ -1197,7 +1219,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public: \
         ENCODING(NAME, ENCODING)                                        \
         virtual ~NAME(){}                                           \
-        inline virtual void accept(ILVisitor * v)     \
+        virtual void accept(ILVisitor * v)     \
         { v->visit(this); } \
 };
 
@@ -1225,7 +1247,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public: \
         ENCODING(NAME, ENCODING, TYPE)                                            \
         virtual ~NAME(){}                                                     \
-        inline virtual void accept(ILVisitor * v)     \
+        virtual void accept(ILVisitor * v)     \
         { v->visit(this); } \
 };
 
@@ -1272,14 +1294,23 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             return this;
         }
 
+        void registerUsage(Instruction * ins){
+            usages_.emplace_back(ins);
+        }
+        void replaceWith(BasicBlock *sub, BasicBlock *toReplace) {
+            //TODO
+            throw "not implemented replacing of BasicBLocks";
+        }
     protected:
-        void accept(ILVisitor * v) override;
+        virtual void accept(ILVisitor * v) override{ v->visit(this); };
 
         friend class ILVisitor;
+        template<class T>
         friend class tvlm::CfgBuilder;
     private:
         std::string name_;
         std::vector<std::unique_ptr<Instruction>> insns_;
+        std::vector<Instruction*> usages_;
     }; // BasicBlock
 
     class Function : public IL{
@@ -1334,11 +1365,11 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         const ASTBase * ast(){
             return ast_;
         }
-
+        template<class T>
         friend class CfgBuilder;
     protected:
 
-         void accept(ILVisitor * v) override;
+         virtual void accept(ILVisitor * v) override{ v->visit(this); };
 
     private:
         friend class ILBuilder;
@@ -1383,7 +1414,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     protected:
         friend class ILVisitor;
         friend class ILBuilder;
-         void accept(ILVisitor * v) override;
+        inline virtual  void accept(ILVisitor * v) override{ v->visit(this); };
     private:
         std::unordered_map<std::string, Instruction*> stringLiterals_;
         std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
@@ -1415,9 +1446,6 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 //    inline void Instruction::ImmSize::accept(ILVisitor * v) { v->visit(this); }
 //    inline void Instruction::ImmIndex::accept(ILVisitor * v) { v->visit(this); }
 
-    inline void BasicBlock::accept(ILVisitor * v) { v->visit(this); }
-    inline void Function::accept(ILVisitor * v) { v->visit(this); }
-    inline void Program::accept(ILVisitor * v) { v->visit(this); }
 
 
 } // namespace tvlm

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "analysis.h"
 
 #include <memory>
 #include "./lattice/map_lattice.h"
@@ -9,6 +8,7 @@
 #include "tvlm/tvlm/il/il.h"
 #include "../t86_backend.h"
 
+#include "analysis.h"
 
 namespace tvlm{
     using Declaration = tvlm::IL;

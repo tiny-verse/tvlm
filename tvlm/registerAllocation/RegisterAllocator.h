@@ -2,6 +2,7 @@
 
 #include "t86/program/helpers.h"
 #include "tvlm/tvlm/il/il.h"
+#include "tvlm/InstructionSelection/ProgramBuilder.h"
 
 namespace tvlm{
     using Register = tiny::t86::Register;
@@ -12,72 +13,78 @@ namespace tvlm{
     /*abstract*/ class RegisterAllocator {
 
     public:
-            RegisterAllocator();
+        explicit RegisterAllocator(ProgramBuilder * pb);
 
-            virtual Register fillIntRegister(Instruction * ins) = 0;
-            virtual FRegister fillFloatRegister(Instruction * ins) = 0;
+        virtual Register fillIntRegister(ILInstruction * ins) = 0;
+        virtual FRegister fillFloatRegister(ILInstruction * ins) = 0;
 
-            virtual void clearInt(Instruction * ins) = 0;
-            virtual void clearFloat(Instruction * ins) = 0;
-            virtual void spillCallReg() = 0;
-            virtual void clearAllReg() = 0;
+        virtual void clearInt(ILInstruction * ins) = 0;
+        virtual void clearFloat(ILInstruction * ins) = 0;
+        virtual void spillCallReg() = 0;
+        virtual void clearAllReg() = 0;
 
-            Register fillTmpIntRegister(){
-                auto reg = getFreeIntRegister();
-                tmpIntRegs_.emplace(reg);
-                return reg;
-            }
-            FRegister fillTmpFloatRegister(){
-                auto reg = getFreeFloatRegister();
-                tmpFloatRegs_.emplace(reg);
-                return reg;
-            }
 
-            virtual void clearTmpIntRegister(const Register & reg ){
-                tmpIntRegs_.erase(reg);
-                alloc_regs_[reg.index()] = nullptr;
-            }
+        Register fillIntRegister(){
+            auto reg = getFreeIntRegister();
+            tmpIntRegs_.emplace(reg);
+            return reg;
+        }
 
-            void replaceInt(Instruction * from, Instruction * to ){
-                alloc_regs_[getIntRegister(from).index()] = to;
-            }
-            void replaceFloat(Instruction * from, Instruction * to ){
-                alloc_fregs_[getFloatRegister(from).index()] = to;
-            }
-            virtual void spillAllReg()  = 0;
+        FRegister fillFloatRegister(){
+            auto reg = getFreeFloatRegister();
+            tmpFloatRegs_.emplace(reg);
+            return reg;
+        }
 
-            virtual void registerPhi(Phi * phi) {
-                for(auto & content : phi->contents() ){
-                    auto f = std::find(alloc_regs_.begin(), alloc_regs_.end(), content.second);
-                    if(f != alloc_regs_.end()){
-                        *f = phi;
-                        break;
-                    }
+        virtual void clearIntRegister(const Register & reg ){
+            tmpIntRegs_.erase(reg);
+            alloc_regs_[reg.index()] = nullptr;
+        }
+
+        void replaceInt(ILInstruction * from, ILInstruction * to ){
+            alloc_regs_[getIntRegister(from).index()] = to;
+        }
+        void replaceFloat(ILInstruction * from, ILInstruction * to ){
+            alloc_fregs_[getFloatRegister(from).index()] = to;
+        }
+        virtual void spillAllReg()  = 0;
+
+        virtual void registerPhi(Phi * phi) {
+            for(auto & content : phi->contents() ){
+                auto f = std::find(alloc_regs_.begin(), alloc_regs_.end(), content.second);
+                if(f != alloc_regs_.end()){
+                    *f = phi;
+                    break;
                 }
             }
+        }
 
 
-            virtual void prepareReturnValue(size_t size = 0) = 0;
-            virtual void makeLocalAllocation(size_t size, const Register & reg) = 0;
+        virtual void prepareReturnValue(size_t size, ILInstruction * ret) = 0;
+        virtual void makeLocalAllocation(size_t size, const Register & reg, ILInstruction * ins) = 0;
 
-            virtual void allocateStructArg(Type * type, Instruction * ins) = 0;
+        virtual void allocateStructArg(Type * type, ILInstruction * ins) = 0;
 
-            virtual void resetAllocSize() = 0;
+        virtual void resetAllocSize() = 0;
 
-            virtual void correctStackAlloc(size_t patch ) = 0;
+        virtual void correctStackAlloc(size_t patch ) = 0;
 
     protected:
-            virtual Register getIntRegister(Instruction * ins) = 0;
-            virtual FRegister getFloatRegister(Instruction * ins) = 0;
+        virtual Register getIntRegister(ILInstruction * ins) = 0;
+        virtual FRegister getFloatRegister(ILInstruction * ins) = 0;
 
-            virtual Register getFreeIntRegister() = 0; //care not to take tmpAllocated
-            virtual FRegister getFreeFloatRegister() = 0; //care not to take tmpAllocated
+        virtual Register getFreeIntRegister() = 0; //care not to take tmpAllocated
+        virtual FRegister getFreeFloatRegister() = 0; //care not to take tmpAllocated
 
-            std::vector< Instruction *> alloc_regs_;
-            std::vector< Instruction *> alloc_fregs_;
 
-            std::set<Register> tmpIntRegs_;
-            std::set<FRegister> tmpFloatRegs_;
+        std::vector< ILInstruction *> alloc_regs_;
+        std::vector< ILInstruction *> alloc_fregs_;
+
+        std::set<Register> tmpIntRegs_;
+        std::set<FRegister> tmpFloatRegs_;
+
+        ProgramBuilder * pb_;
+
 
     };
 }

@@ -41,24 +41,24 @@ namespace tvlm {
         std::vector<tiny::t86::Instruction *> code_;
     };
 
-    class DummyRule : public Rule{
-    public:
-        DummyRule():Rule(0){}
-        bool matchesOpcode(const Opcode & ins) const override{
-            return true;
-        }
-        void operator=(const DummyRule &) = delete;
-
-        Rule * makeCopy() const override {
-            return new DummyRule(*this);
-        }
-        bool operator== (const DAG * other)  override;
-        int countCost () override;
-    protected:
-        DummyRule(const DummyRule & other) :Rule(other.cost_, other.num_), dag_(other.dag_){
-        };
-        DAG * dag_;
-    };
+//    class DummyRule : public Rule{
+//    public:
+//        DummyRule():Rule(0){}
+//        bool matchesOpcode(const Opcode & ins) const override{
+//            return true;
+//        }
+//        void operator=(const DummyRule &) = delete;
+//
+//        Rule * makeCopy() const override {
+//            return new DummyRule(*this);
+//        }
+//        bool operator== (const DAG * other)  override;
+//        int countCost () override;
+//    protected:
+//        DummyRule(const DummyRule & other) :Rule(other.cost_, other.num_), dag_(other.dag_){
+//        };
+//        DAG * dag_;
+//    };
 
     class VirtualRegisterPlaceholder{
         virtual VirtualRegisterPlaceholder * makeCopy() = 0;

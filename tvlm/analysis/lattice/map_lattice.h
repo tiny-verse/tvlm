@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <unordered_set>
 #include "tvlm/tvlm/analysis/lattice/lattice.h"
 #include "flat_lattice.h"
 
