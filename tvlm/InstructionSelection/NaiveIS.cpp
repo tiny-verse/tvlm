@@ -694,14 +694,15 @@ namespace tvlm{
     tiny::t86::Program NaiveIS::translate(ILBuilder &ilb) {
         auto v = new NaiveIS();
         v->visit(ilb);
-        tiny::t86::Program rawProg = v->pb_.program();
+        tvlm::ProgramBuilder rawProgB = v->pb_;
+        delete v; //TODO unordered_map failing - double free()
+        tiny::t86::Program rawProg = rawProgB.program();
         std::vector<tiny::t86::Instruction*> instrs = rawProg.moveInstructions();
         int line = 0;
         for(const tiny::t86::Instruction * i : instrs){
             std::cerr << tiny::color::blue << line++ << ": " << tiny::color::green << i->toString() << std::endl;
         }
 
-//        delete v; //TODO unordered_map failing - double free()
         return {std::move(instrs), rawProg.data()};
     }
 
@@ -749,10 +750,17 @@ namespace tvlm{
         return ret;
     }
 
-    NaiveIS::NaiveIS(): pb_(ProgramBuilder()), lastIns_(Label::empty()),
-                        regAllocator(new NaiveRegisterAllocator(&pb_)){
-
-    }
+    NaiveIS::NaiveIS(): pb_(ProgramBuilder()), lastIns_(Label::empty())
+                        ,functionTable_()
+                        ,globalTable_()
+                        ,compiled_()
+                        ,compiledBB_()
+                        ,future_patch_()
+                        ,unpatchedCalls_()
+                        ,globalPointer_(0)
+                        ,instructionToEmplace()
+                        ,regAllocator(new NaiveRegisterAllocator(&pb_))
+                        { }
 
   uint64_t NaiveIS::functionAddr(const std::string & name) const{
 
@@ -828,7 +836,7 @@ namespace tvlm{
         globalTable_.~unordered_map(); //!!!
         compiled_.~unordered_map();
         compiledBB_.~unordered_map();
-
+        regAllocator.reset(nullptr);
         std::cout << "calling ~NaiveIS" << std::endl;
     }
 

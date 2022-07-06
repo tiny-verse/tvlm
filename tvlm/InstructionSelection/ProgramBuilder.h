@@ -29,7 +29,8 @@ namespace tvlm {
         template<typename T>
         Label add(const T& instruction, const ILInstruction * ilIns) {
             instruction.validate();
-            instructions_.emplace_back(std::make_pair<TInstruction*, const ILInstruction*>(new T(instruction), std::move(ilIns) ));
+//            instructions_.emplace_back(std::make_pair<TInstruction*, const ILInstruction*>(new T(instruction), ilIns ));
+            instructions_.emplace_back(new T(instruction), ilIns );
             return Label(instructions_.size() - 1);
         }
 
@@ -83,10 +84,10 @@ namespace tvlm {
         TProgram program() {
             std::vector<TInstruction *> tmp;
             for (auto & i: instructions_) {
-                tmp.emplace_back(std::move(i.first));
+                tmp.emplace_back(i.first);
             }
 
-            return TProgram(std::move(tmp), std::move(data_));
+            return TProgram(tmp, std::move(data_));
         }
 
         template<typename T>

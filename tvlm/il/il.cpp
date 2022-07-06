@@ -21,6 +21,13 @@ namespace tvlm {
         target_->registerUsage(this);
     }
 
+    bool Instruction::Terminator1::operator==(const IL *il) const {
+        if( auto * other = dynamic_cast<const Instruction::Terminator1*>(il)){
+            return target_->operator==(other->target_);
+        }
+        else return false;
+    }
+
     void Instruction::TerminatorN::print(tiny::ASTPrettyPrinter &p) const {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier;
@@ -38,6 +45,17 @@ namespace tvlm {
         for (auto * bb: targets_) {
             bb->registerUsage(this);
         }
+    }
+
+    bool Instruction::TerminatorN::operator==(const IL *il) const{
+        if( auto * other = dynamic_cast<const Instruction::TerminatorN*>(il)){
+            bool tmp = cond_->operator==(other->cond_) ;
+            for (int i = 0 ; i < targets_.size(); i++) {
+                tmp = tmp && targets_[i]->operator==(other->targets_[i]);
+            }
+            return tmp;
+        }
+        else return false;
     }
 
     void Instruction::DirectCallInstruction::print(tiny::ASTPrettyPrinter &p) const {
@@ -69,6 +87,19 @@ namespace tvlm {
     {
 
     }
+
+    bool Instruction::DirectCallInstruction::operator==(const IL *il) const {
+        if( auto * other = dynamic_cast<const Instruction::DirectCallInstruction*>(il)){
+            bool tmp = f_->operator==(other->f_);
+            for (int i = 0; i < args_.size(); ++i) {
+                tmp = tmp && args_[i].second == other->args_[i].second
+                      && args_[i].first->operator==(other->args_[i].first);
+            }
+            return tmp;
+        }
+        else return false;
+    }
+
     const char *Instruction::BinaryOperator::resolve_operator() const{
         switch (operator_) {
             case BinOpType::ADD:
@@ -225,6 +256,13 @@ namespace tvlm {
 //        if(sz){
             return base_->size() * sz->valueInt();
 //        }
+    }
+
+    bool Instruction::Terminator0::operator==(const IL *il) const {
+        if( dynamic_cast<const Halt*>(il) && dynamic_cast<const Halt *>(this)){
+            return true;
+        }
+        else return false;
     }
 }
 

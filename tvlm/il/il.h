@@ -29,6 +29,7 @@ namespace tvlm{
     public:
         virtual ~IL() = default;
         virtual void accept(ILVisitor * v) = 0;
+        virtual bool operator==(const IL * il) const = 0;
     protected:
         friend class ILVisitor;
     };
@@ -256,6 +257,8 @@ namespace tvlm{
 
         ~Instruction() override = default;
 
+        virtual bool operator==(const IL *il) const override = 0;
+
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
         void replaceMe(Instruction * with ) {
             for (auto  * ins: used_) {
@@ -400,6 +403,12 @@ namespace tvlm{
 
     class Instruction::ImmSize : public Instruction {
     public:
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::ImmSize*>(il)){
+                return type_ == other->type_ && amount_->operator==(other->amount_);
+            }
+            else return false;
+        }
 
         int size() const {
             return type_->size();
@@ -446,6 +455,12 @@ namespace tvlm{
 
     class Instruction::ImmIndex : public Instruction {
     public:
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::ImmIndex*>(il)){
+                return type_ == other->type_ && index_ == other->index_;
+            }
+            else return false;
+        }
 
         Type * type()const{
             return type_;
@@ -481,6 +496,14 @@ namespace tvlm{
 
     class Instruction::ImmValue : public Instruction {
     public:
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::ImmValue *>(il)){
+                return
+                resultType() == other->resultType() &&
+                resultType() == ResultType::Integer ? (value_.i == other->value_.i) :  (value_.f == other -> value_.f);
+            }
+            else return false;
+        }
 
         int64_t valueInt() const {
             return value_.i;
@@ -545,7 +568,14 @@ namespace tvlm{
 
     class Instruction::BinaryOperator : public Instruction {
     public:
-
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::BinaryOperator*>(il)){
+                return
+                op_ == other->op_&& operator_ == other->operator_ &&
+                lhs_->operator==(other->lhs_) && rhs_->operator==(other->rhs_);
+            }
+            else return false;
+        }
         Opcode op() const {
             return op_;
         }
@@ -614,6 +644,15 @@ namespace tvlm{
 
     class Instruction::UnaryOperator : public Instruction {
     public:
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::UnaryOperator*>(il)){
+                return
+                operator_ == other->operator_ &&
+                operand_->operator==( other->operand_ )
+                ;
+            }
+            else return false;
+        }
         Instruction * operand() const {
             return operand_;
         }
@@ -649,7 +688,12 @@ namespace tvlm{
 
     class Instruction::LoadAddress : public Instruction {
     public:
-
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::LoadAddress*>(il)){
+                return type_ == other->type_ && address_->operator==(other->address_);
+            }
+            else return false;
+        }
         Instruction * address() const { return address_; }
         Type * type() const { return type_; }
 
@@ -686,6 +730,12 @@ namespace tvlm{
     class Instruction::StoreAddress : public Instruction {
     public:
 
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::StoreAddress*>(il)){
+                return address_->operator==(other->address_) && value_->operator==(other->value_);
+            }
+            else return false;
+        }
         Instruction * value() const { return value_; }
 
         Instruction * address() const { return address_; }
@@ -739,6 +789,7 @@ namespace tvlm{
 
     class Instruction::Terminator0 : public Instruction::Terminator {
     public:
+        virtual bool operator==(const IL *il) const override;
         size_t numTargets() const override { return 0; }
 
         BasicBlock * getTarget(size_t i) const override { return nullptr; }
@@ -757,6 +808,13 @@ namespace tvlm{
 
     class Instruction::Returnator : public Instruction::Terminator0 {
     public:
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::Returnator*>(il)){
+                return type_ == other->type_ && returnValue_->operator==(other->returnValue_);
+            }
+            else return false;
+        }
+
         Instruction * returnValue()const{
             return returnValue_;
         }
@@ -792,6 +850,8 @@ namespace tvlm{
 
     class Instruction::Terminator1 : public Instruction::Terminator {
     public:
+        bool operator==(const IL *il) const override;
+
         size_t numTargets() const override { return 1; }
 
         BasicBlock * getTarget(size_t i) const override { return i == 1 ? target_ : nullptr; }
@@ -816,7 +876,7 @@ namespace tvlm{
 
     class Instruction::TerminatorN : public Instruction::Terminator {
     public:
-
+        bool operator==(const IL *il) const override;
         Instruction * condition() const { return cond_; }
 
         size_t numTargets() const override { return targets_.size(); }
@@ -845,6 +905,13 @@ namespace tvlm{
 
     class Instruction::SrcInstruction : public Instruction{
     public:
+        bool operator==(const IL *il) const override{
+            if( auto * other = dynamic_cast<const Instruction::SrcInstruction*>(il)){
+                return opcode_ == other->opcode_ && src_->operator==(other->src_);
+            }
+            else return false;
+        }
+
         Instruction * src(){
             return src_;
         }
@@ -874,6 +941,14 @@ namespace tvlm{
 
     class Instruction::VoidInstruction : public Instruction{
     public:
+        bool operator==(const IL *il) const override{
+            if( auto * other = dynamic_cast<const Instruction::VoidInstruction*>(il)){
+                return opcode_ == other->opcode_;
+            }
+            else return false;
+        }
+
+
         void print(tinyc::ASTPrettyPrinter & p) const override{
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
@@ -896,6 +971,14 @@ namespace tvlm{
 
     class Instruction::PhiInstruction : public Instruction{
     public:
+        bool operator==(const IL *il) const override{
+            if( auto * other = dynamic_cast<const Instruction::PhiInstruction*>(il)){
+                return contents_ ==  other->contents_;
+            }
+            else return false;
+        }
+
+
         void addIncomming( Instruction * src, BasicBlock * bb){
             contents_.emplace(bb, src);
         }
@@ -927,7 +1010,17 @@ namespace tvlm{
 
   class Instruction::StructAssignInstruction : public Instruction{
     public:
-        void print(tiny::ASTPrettyPrinter & p) const override;
+      bool operator==(const IL *il) const override{
+          if( auto * other = dynamic_cast<const Instruction::StructAssignInstruction*>(il)){
+              return type_ == other->type_ &&
+                    srcVal_->operator==(other->srcVal_) &&
+                    dstAddr_->operator==(other->dstAddr_) ;
+          }
+          else return false;
+      }
+
+
+      void print(tiny::ASTPrettyPrinter & p) const override;
 
       ~StructAssignInstruction() override = default;
 
@@ -971,6 +1064,12 @@ namespace tvlm{
 
     class Instruction::ElemInstruction : public Instruction{
     public:
+        bool operator==(const IL *il) const override{
+            if( auto * other = dynamic_cast<const Instruction::ElemInstruction*>(il)){
+                return base_->operator==(other->base_);
+            }
+            else return false;
+        }
 
         ~ElemInstruction() override = default;
         Instruction * base()const {
@@ -989,6 +1088,12 @@ namespace tvlm{
 
     class Instruction::ElemOffsetInstruction : public Instruction::ElemInstruction{
     public:
+        bool operator==(const IL *il) const override{
+            if( auto * other = dynamic_cast<const Instruction::ElemOffsetInstruction*>(il)){
+                return base_->operator==(other->base_) && offset_->operator==(other->offset_);
+            }
+            else return false;
+        }
 
         void print(tiny::ASTPrettyPrinter & p) const override;
 
@@ -1022,8 +1127,16 @@ namespace tvlm{
 
 class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public:
+        bool operator==(const IL *il) const override{
+            if( auto * other = dynamic_cast<const Instruction::ElemIndexInstruction*>(il)){
+                return base_->operator==(other->base_)
+                    && offset_->operator==(other->offset_)
+                    && index_->operator==(other->index_);
+            }
+            else return false;
+        }
 
-        void print(tiny::ASTPrettyPrinter & p) const override;
+    void print(tiny::ASTPrettyPrinter & p) const override;
 
     ~ElemIndexInstruction() override = default;
         Instruction * offset()const {
@@ -1062,6 +1175,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Instruction::CallInstruction : public Instruction{
     public:
+
+
         Instruction * operator [] (size_t i) const {
             assert(i < args_.size());
             return args_[i].first;
@@ -1092,6 +1207,9 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Instruction::DirectCallInstruction : public CallInstruction{
     public:
+        bool operator==(const IL *il) const override;
+
+
         Function * f() const {
             return f_;
         }
@@ -1115,6 +1233,19 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Instruction::IndirectCallInstruction : public CallInstruction{
     public:
+
+        virtual bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Instruction::IndirectCallInstruction*>(il)){
+                bool tmp = f_->operator==(other->f_) && retType_ == other->retType_ ;
+                for (int i = 0; i < args_.size(); ++i) {
+                    tmp = tmp && args_[i].second == other->args_[i].second
+                          && args_[i].first->operator==(other->args_[i].first);
+                }
+                return tmp;
+            }
+            else return false;
+        }
+
         Instruction * f() const {
             return f_;
         }
@@ -1158,6 +1289,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         Instruction * f_;
         Type * retType_;
     }; // Instruction::IndirectCallInstruction
+
+
 
 
 
@@ -1209,7 +1342,9 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         static BasicBlock*  getProgramsGlobals(ILBuilder & p) ;
         static Instruction*  getVariableAddress(ILBuilder &p, const Symbol & name);
 
-    }; // tinyc::ASTVisitor
+    };
+
+    // tinyc::ASTVisitor
 
 
 
@@ -1260,6 +1395,14 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class BasicBlock : public IL {
     public:
+
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const BasicBlock*>(il)){
+                return this == other;
+            }
+            else
+                return false;
+        }
 
         Instruction * add(Instruction * ins) {
             assert(! terminated());
@@ -1316,7 +1459,12 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Function : public IL{
     public:
-
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Function *>(il)){
+                return this == other;
+            }
+            else return false;
+        }
         explicit Function(ASTBase const * ast):
             ast_{ast}
             ,type_()
@@ -1392,6 +1540,12 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Program : public IL{
     public:
+        bool operator==(const IL *il) const override {
+            if( auto * other = dynamic_cast<const Program*>(il)){
+                return this == other;
+            }
+            else return false;
+        }
         Program()= default;
         Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
                  std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,

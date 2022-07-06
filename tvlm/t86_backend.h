@@ -60,47 +60,6 @@ namespace tvlm {
 //        DAG * dag_;
 //    };
 
-    class VirtualRegisterPlaceholder{
-    public:
-        virtual VirtualRegisterPlaceholder * makeCopy() = 0;
-        virtual ~VirtualRegisterPlaceholder() = default;
-    };
-
-    class VirtualRegister : public VirtualRegisterPlaceholder{
-    public:
-            VirtualRegister(): reg_(tiny::t86::Register(-1)), set_(false){}
-    private:
-        VirtualRegisterPlaceholder *makeCopy() override {
-            return new VirtualRegister(*this);
-        }
-
-    public:
-        void setRegister(const tiny::t86::Register & reg){
-            reg_ = reg;
-            set_ = true;
-        }
-    private:
-        tiny::t86::Register reg_;
-        bool set_;
-    };
-
-    class VirtualFloatRegister : public VirtualRegisterPlaceholder{
-    public:
-        VirtualFloatRegister(): reg_(tiny::t86::FloatRegister(-1)), set_(false){}
-        void setRegister(const tiny::t86::FloatRegister & reg){
-            reg_ = reg;
-            set_ = true;
-        }
-
-    private:
-        VirtualRegisterPlaceholder *makeCopy() override {
-            return new VirtualFloatRegister(*this);
-        }
-
-        tiny::t86::FloatRegister reg_;
-        bool set_;
-    };
-
 
     class DAG {
     public:
@@ -150,6 +109,105 @@ namespace tvlm {
         Instruction * src_;
         std::vector<tiny::t86::Instruction *> code_;
     };
+
+
+    class DAGNode {
+    public:
+        DAGNode(const Instruction * ins )
+                :instruction_(ins)
+                ,children_()
+                ,parent_()
+                ,common_ILInstructions_()
+                ,assigned_code_()
+        {}
+
+        bool sameInstr(const Instruction * ins) const {
+            return (*instruction_) == ins;
+        }
+
+        const Instruction * ins()const {
+            return instruction_;
+        }
+        std::vector<DAGNode*> children()const {
+            return children_;
+        }
+        std::vector<DAGNode*> parents()const {
+            return parent_;
+        }
+        std::vector<tiny::t86::Instruction *> moveCode() {
+
+            return std::move(assigned_code_);
+        }
+        std::vector<const Instruction *> common()const {
+            return common_ILInstructions_;
+        }
+        void addChildren(DAGNode * child){
+            children_.push_back(child);
+        }
+        void addParent(DAGNode * parent){
+            parent_.push_back(parent);
+        }
+        void addCommon(const Instruction * common){
+            common_ILInstructions_.push_back(common);
+        }
+        void addCode(std::vector<tiny::t86::Instruction *> && code){
+            for (auto * i : assigned_code_) {
+                delete i;
+            }
+            assigned_code_.clear();
+            assigned_code_ = std::move(code);
+        }
+    private:
+        const Instruction * instruction_;
+        std::vector<DAGNode*> children_;
+        std::vector<DAGNode*> parent_;
+
+
+        std::vector<tiny::t86::Instruction *> assigned_code_;
+        std::vector<const Instruction *> common_ILInstructions_;
+
+    };
+
+    class ConvertToDAGNode : public ILVisitor{
+    public:
+        ~ConvertToDAGNode() override = default;
+
+        void visit(Instruction *ins) override;
+        void visit(Jump *ins) override;
+        void visit(CondJump *ins) override;
+        void visit(Return *ins) override;
+        void visit(CallStatic *ins) override;
+        void visit(Call *ins) override;
+        void visit(Copy *ins) override;
+        void visit(Extend *ins) override;
+        void visit(Truncate *ins) override;
+        void visit(BinOp *ins) override;
+        void visit(UnOp *ins) override;
+        void visit(LoadImm *ins) override;
+        void visit(AllocL *ins) override;
+        void visit(AllocG *ins) override;
+        void visit(ArgAddr *ins) override;
+        void visit(PutChar *ins) override;
+        void visit(GetChar *ins) override;
+        void visit(Load *ins) override;
+        void visit(Store *ins) override;
+        void visit(Phi *ins) override;
+        void visit(ElemAddrOffset *ins) override;
+        void visit(ElemAddrIndex *ins) override;
+        void visit(Halt *ins) override;
+        void visit(StructAssign *ins) override;
+
+        void visit(BasicBlock *bb) override;
+        void visit(Function *fce) override;
+        void visit(Program *p) override;
+    private:
+        std::map<Instruction* , DAGNode * > seen_;
+//        std::unordered_map<Function *, DAGNode * > fncDag_;
+        std::unordered_map<BasicBlock *, DAGNode *> bbDag_;
+        DAGNode * last_dag_;
+    };
+
+
 //
 //    class SpecializedRule : public Rule{
 //    public:

@@ -476,6 +476,114 @@ namespace tvlm{
         return std::move(pb.program());
     }
 
+    void ConvertToDAGNode::visit(Instruction *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Jump *ins) {
+
+
+    }
+
+    void ConvertToDAGNode::visit(CondJump *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Return *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(CallStatic *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Call *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Copy *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Extend *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Truncate *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(BinOp *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(UnOp *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(LoadImm *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(AllocL *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(AllocG *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(ArgAddr *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(PutChar *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(GetChar *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Load *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Store *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Phi *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(ElemAddrOffset *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(ElemAddrIndex *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(Halt *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(StructAssign *ins) {
+
+    }
+
+    void ConvertToDAGNode::visit(BasicBlock *bb) {
+
+    }
+
+    void ConvertToDAGNode::visit(Function *fce) {
+
+    }
+
+    void ConvertToDAGNode::visit(Program *p) {
+
+    }
 } //namespace tvlm
 
 #include "tvlm/tvlm/InstructionSelection/Tiling/rewriting_rules.h"

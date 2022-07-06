@@ -7,6 +7,7 @@
 #include "cfg.h"
 #include "tvlm/tvlm/il/il.h"
 #include "../t86_backend.h"
+#include "tvlm/backendUtility/VirtualRegister.h"
 
 #include "analysis.h"
 
