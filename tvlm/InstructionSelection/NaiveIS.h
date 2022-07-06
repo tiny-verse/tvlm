@@ -21,29 +21,10 @@ namespace tvlm{
         static tiny::t86::Program translate(ILBuilder &ilb);
 
         void visit(Program *p) override;
-        virtual  ~NaiveIS(){
-//            for (auto & i:instructionToEmplace) {
-//                delete i.second;
-//            }
-            instructionToEmplace.~unordered_map();
 
-            functionTable_.~unordered_map();
-
-            for (auto it = globalTable_.begin(); it != globalTable_.end(); it=globalTable_.begin()) {
-                std::cout << "deleting" <<  it->second << std::endl;
-                globalTable_.erase(it);
-            }
-            std::cout << "deleted " << std::endl;
-
-            globalTable_.~unordered_map(); //!!!
-            compiled_.~unordered_map();
-            compiledBB_.~unordered_map();
-
-            std::cout << "calling ~NaiveIS" << std::endl;
-        }
     protected:
         NaiveIS();
-
+        ~NaiveIS() override ;
         void visit(Instruction *ins) override{};
 
         void visit(ILBuilder & ilb);
@@ -99,7 +80,7 @@ namespace tvlm{
 //        }
 
         template<typename T>
-        Label add(const T& instruction, ILInstruction * ins){
+        Label add(const T& instruction, const ILInstruction * ins){
             Label ret= pb_.add(instruction, ins);
             if(hardDBG_){
                 pb_.add(tiny::t86::DBG(
@@ -124,7 +105,7 @@ namespace tvlm{
         /** Prepare register for use with its value (sill if necessary)
          * */
         auto fillIntRegister(Instruction * ins){
-            return regAllocator->fillIntRegister(ins);
+            return regAllocator->getReg(ins);
         }
         Register fillTmpIntRegister(){
             return regAllocator->fillIntRegister();
@@ -136,7 +117,7 @@ namespace tvlm{
             return regAllocator->clearIntRegister(reg);
         }
         auto fillFloatRegister(Instruction * ins){
-            return regAllocator->fillFloatRegister(ins);
+            return regAllocator->getFloatReg(ins);
         }
         auto clearIntReg(Instruction * ins){
             return regAllocator->clearInt(ins);
@@ -160,7 +141,7 @@ namespace tvlm{
             }
         }
 
-        void copyStruct(const Register & from, Type * type, const Register & to, ILInstruction * ins );
+        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
         int getTrueMemSize(Type * type) const {
 
 
@@ -178,14 +159,14 @@ namespace tvlm{
         std::unordered_map<tiny::Symbol, Label> functionTable_;
         std::unordered_map<const Instruction*, uint64_t> globalTable_;
         std::unordered_map<const Instruction *, Label> compiled_;
-        std::unordered_map<BasicBlock *, Label> compiledBB_;
-        std::vector<std::pair<Label, BasicBlock*>> future_patch_;
+        std::unordered_map<const BasicBlock *, Label> compiledBB_;
+        std::vector<std::pair<Label, const BasicBlock*>> future_patch_;
         std::vector<std::pair<Label, Symbol>> unpatchedCalls_;
 //        size_t functionLocalAllocSize = 0;
         size_t globalPointer_ = 0;
 
 
-        std::unordered_map<const Instruction* ,Instruction * > instructionToEmplace;
+        std::unordered_map<const Instruction* ,const Instruction * > instructionToEmplace;
         std::unique_ptr<RegisterAllocator> regAllocator;
 
 
@@ -196,7 +177,7 @@ namespace tvlm{
 
         void addFunction(Symbol symbol, Label label);
 
-        size_t countArgOffset(std::vector<Instruction *> args, size_t index);
+        size_t countArgOffset(std::vector<const Instruction *> & args, size_t index);
 
         template<typename T>
         void replace(Label label, const T& sub);

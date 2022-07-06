@@ -27,6 +27,7 @@ namespace tvlm{
 
     class IL{
     public:
+        virtual ~IL() = default;
         virtual void accept(ILVisitor * v) = 0;
     protected:
         friend class ILVisitor;
@@ -70,7 +71,7 @@ namespace tvlm{
     class Type::Integer : public Type{
     public:
         explicit Integer(){}
-        int size() const;
+        int size() const override;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -84,7 +85,7 @@ namespace tvlm{
     class Type::Char : public Type{
     public:
         explicit Char(){}
-        int size() const;
+        int size() const override;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -98,7 +99,7 @@ namespace tvlm{
     class Type::Void : public Type{
     public:
         explicit Void(){}
-        int size() const {
+        int size() const override {
             return 0;
         }
 
@@ -132,7 +133,7 @@ namespace tvlm{
     class Type::Double : public Type{
     public:
         Double(){}
-        int size() const ;
+        int size() const override;
 
         ResultType registerType() const override {
             return ResultType::Double;
@@ -147,7 +148,7 @@ namespace tvlm{
     class Type::Pointer : public Type{
     public:
         Pointer(Type * base) : base_{base}{}
-        int size()const;
+        int size()const override;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -164,7 +165,7 @@ namespace tvlm{
     class Type::Array : public Type{
     public:
         Array(Type * base, Instruction * size) : base_{base}, size_(size){}
-        int size()const;
+        int size()const override;
 
         ResultType registerType() const override {
             return ResultType::StructAddress;
@@ -181,7 +182,7 @@ namespace tvlm{
     class Type::Struct : public Type{
     public:
         Struct(const  Symbol &name, const std::vector<std::pair<Symbol, Type *>> & fields):name_(name) , fields_(fields){}
-        int size()const{
+        int size()const override{
             int size = 0;
             for(auto & i : fields_){
                 size += i.second->size();
@@ -253,7 +254,7 @@ namespace tvlm{
         class IndirectCallInstruction;
         class StructAssignInstruction;
 
-        virtual ~Instruction() = default;
+        ~Instruction() override = default;
 
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
         void replaceMe(Instruction * with ) {
@@ -357,7 +358,7 @@ namespace tvlm{
             opcode_(opcode){
         }
 
-        void printResultType(tiny::ASTPrettyPrinter & p,const ResultType & res) const {
+        static void printResultType(tiny::ASTPrettyPrinter & p,const ResultType & res) {
             switch (res) {
                 case ResultType::Integer:
                     p << "int ";
@@ -381,7 +382,7 @@ namespace tvlm{
             printResultType(p, reg->resultType_);
         }
 
-        void printRegisterAddress(tiny::ASTPrettyPrinter & p, Instruction const * reg) const {
+        static void printRegisterAddress(tiny::ASTPrettyPrinter & p, Instruction const * reg) {
             p << p.symbol << "[" << p.identifier << reg->name() << p.symbol << "] ";
         }
 
@@ -410,7 +411,7 @@ namespace tvlm{
             }
         }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
 
             Instruction::print(p);
             p << p.keyword << instrName_ << " "<< p.numberLiteral << size() << p.keyword << " (" << type_->toString() <<   ")";
@@ -422,7 +423,7 @@ namespace tvlm{
         Instruction * amount()const {
             return amount_;
         }
-        virtual ~ImmSize(){}
+        ~ImmSize() override{}
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -460,12 +461,12 @@ namespace tvlm{
 
         }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " " << p.numberLiteral << index_;
         };
 
-        virtual ~ImmIndex(){}
+        ~ImmIndex() override = default;
     protected:
 
         // void accept(ILVisitor * v) override;
@@ -487,7 +488,7 @@ namespace tvlm{
         double valueFloat() const {
             return value_.f;
         }
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " " << p.numberLiteral << (resultType() == ResultType::Integer ? value_.i : value_.f);
         };
@@ -496,18 +497,18 @@ namespace tvlm{
             //nothing to do
         }
 
-        virtual ~ImmValue(){}
+        ~ImmValue() override= default;
     protected:
 
         // void accept(ILVisitor * v) override;
         ImmValue(int64_t value, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-        Instruction{ResultType::Integer, ast, instrName, opcode}
+        Instruction{ResultType::Integer, ast, instrName, opcode}, value_()
         {
             value_.i = value;
         }
 
         ImmValue(double value, ASTBase const * ast, const std::string & instrName, Opcode opcode):
-        Instruction{ResultType::Double, ast, instrName, opcode}
+        Instruction{ResultType::Double, ast, instrName, opcode}, value_()
         {
              value_.f = value;
         }
@@ -563,14 +564,14 @@ namespace tvlm{
         }
 
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << resolve_operator();
             printRegister(p, lhs_);
             printRegister(p, rhs_);
         };
 
-        virtual ~BinaryOperator(){}
+        ~BinaryOperator() override= default;
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override;
 
@@ -619,13 +620,13 @@ namespace tvlm{
         UnOpType opType() const{
             return operator_;
         }
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << resolve_operator() << " ";
             printRegister(p, operand_);
         };
 
-        virtual ~UnaryOperator(){}
+        ~UnaryOperator() override{}
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override;
 
@@ -652,13 +653,13 @@ namespace tvlm{
         Instruction * address() const { return address_; }
         Type * type() const { return type_; }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
             printRegisterAddress(p, address_);
         };
 
-        virtual ~LoadAddress(){}
+        ~LoadAddress() override= default;
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(address_ == sub){
@@ -689,7 +690,7 @@ namespace tvlm{
 
         Instruction * address() const { return address_; }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
             printRegisterAddress(p, address_);
@@ -703,7 +704,7 @@ namespace tvlm{
                 value_ = toReplace;
             }
         }
-        virtual ~StoreAddress(){}
+        ~StoreAddress() override= default;
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -729,7 +730,7 @@ namespace tvlm{
 
         virtual BasicBlock * getTarget(size_t i) const = 0;
 
-        virtual ~Terminator(){}
+        ~Terminator() override= default;
     protected:
         Terminator(ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Void, ast, instrName, opcode} {
@@ -742,7 +743,7 @@ namespace tvlm{
 
         BasicBlock * getTarget(size_t i) const override { return nullptr; }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
         }
@@ -770,13 +771,13 @@ namespace tvlm{
             }
         }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
-            Instruction::print(p);
+        void print(tiny::ASTPrettyPrinter & p) const override {
+            tvlm::Instruction::Terminator0::print(p);
             p << p.keyword << instrName_ << " ";
             if(returnValue_) printRegister(p, returnValue_);
         }
 
-        virtual ~Returnator(){}
+        ~Returnator() override= default;
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -795,7 +796,7 @@ namespace tvlm{
 
         BasicBlock * getTarget(size_t i) const override { return i == 1 ? target_ : nullptr; }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override ;
+        void print(tiny::ASTPrettyPrinter & p) const override ;
 
     protected:
     public:
@@ -808,7 +809,7 @@ namespace tvlm{
 
         Terminator1(BasicBlock * target, ASTBase const * ast, const std::string & instrName, Opcode opcode);
 
-        virtual ~Terminator1(){}
+        ~Terminator1() override = default;
     private:
         BasicBlock * target_;
     }; // Instruction::Terminator1
@@ -825,7 +826,7 @@ namespace tvlm{
         void addTarget(BasicBlock * target) {
             targets_.push_back(target);
         }
-        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+        void print(tiny::ASTPrettyPrinter & p) const override;
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             if(cond_ == sub){
                 cond_ = toReplace;
@@ -836,7 +837,7 @@ namespace tvlm{
 
         TerminatorN(Instruction * cond, ASTBase const * ast, const std::string & instrName, Opcode opcode);
 
-        virtual ~TerminatorN(){}
+        ~TerminatorN() override = default;
     private:
         Instruction * cond_;
         std::vector<BasicBlock *> targets_;
@@ -848,7 +849,7 @@ namespace tvlm{
             return src_;
         }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
             printRegister(p, src_);
@@ -858,7 +859,7 @@ namespace tvlm{
                 src_ = toReplace;
             }
         }
-        virtual ~SrcInstruction(){}
+        ~SrcInstruction() override = default;
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -873,12 +874,12 @@ namespace tvlm{
 
     class Instruction::VoidInstruction : public Instruction{
     public:
-        virtual void print(tinyc::ASTPrettyPrinter & p) const override{
+        void print(tinyc::ASTPrettyPrinter & p) const override{
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
         }
 
-        virtual ~VoidInstruction(){}
+        ~VoidInstruction() override = default;
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
 
@@ -899,17 +900,17 @@ namespace tvlm{
             contents_.emplace(bb, src);
         }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+        void print(tiny::ASTPrettyPrinter & p) const override;
         std::unordered_map<BasicBlock*, Instruction *> contents()const{
             return contents_;
         }
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             for (auto & i : contents_) {
-                if(i.second == sub);
-                i.second = toReplace;
+                if(i.second == sub)
+                    i.second = toReplace;
             }
         }
-        virtual ~PhiInstruction(){}
+        ~PhiInstruction() override = default;
 
     protected:
 //        virtual void accept(ILVisitor * v) override;
@@ -928,7 +929,7 @@ namespace tvlm{
     public:
         void print(tiny::ASTPrettyPrinter & p) const override;
 
-      virtual ~StructAssignInstruction(){}
+      ~StructAssignInstruction() override = default;
 
       Instruction * srcVal()const {
           return srcVal_;
@@ -971,7 +972,7 @@ namespace tvlm{
     class Instruction::ElemInstruction : public Instruction{
     public:
 
-        virtual ~ElemInstruction(){}
+        ~ElemInstruction() override = default;
         Instruction * base()const {
             return base_;
         }
@@ -989,9 +990,9 @@ namespace tvlm{
     class Instruction::ElemOffsetInstruction : public Instruction::ElemInstruction{
     public:
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+        void print(tiny::ASTPrettyPrinter & p) const override;
 
-        virtual ~ElemOffsetInstruction(){}
+        ~ElemOffsetInstruction() override = default;
 
         Instruction * offset()const {
             return offset_;
@@ -1022,9 +1023,9 @@ namespace tvlm{
 class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public:
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+        void print(tiny::ASTPrettyPrinter & p) const override;
 
-    virtual ~ElemIndexInstruction(){}
+    ~ElemIndexInstruction() override = default;
         Instruction * offset()const {
             return offset_;
         }
@@ -1070,7 +1071,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             return args_;
         }
 
-        virtual ~CallInstruction(){}
+        ~CallInstruction() override =default;
 
 
 
@@ -1095,8 +1096,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             return f_;
         }
 
-        virtual ~DirectCallInstruction(){}
-        virtual void print(tiny::ASTPrettyPrinter & p) const override;
+        ~DirectCallInstruction() override = default;
+        void print(tiny::ASTPrettyPrinter & p) const override;
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             for (auto & a : args_) {
                 if(a.first == sub){
@@ -1130,7 +1131,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
                 }
             }
         }
-        virtual void print(tiny::ASTPrettyPrinter & p) const override {
+        void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
             printRegisterAddress(p, f_);
@@ -1140,7 +1141,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             p << p.symbol << ")";
         };
 
-        virtual ~IndirectCallInstruction(){}
+        ~IndirectCallInstruction() override = default;
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
@@ -1163,7 +1164,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class ILVisitor {
     public:
-        virtual ~ILVisitor(){}
+        virtual ~ILVisitor() = default;
         virtual void visit(Instruction * ins) = 0;
         virtual void visit(Jump * ins) = 0;
         virtual void visit(CondJump * ins) = 0;
@@ -1302,7 +1303,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             throw "not implemented replacing of BasicBLocks";
         }
     protected:
-        virtual void accept(ILVisitor * v) override{ v->visit(this); };
+        void accept(ILVisitor * v) override{ v->visit(this); };
 
         friend class ILVisitor;
         template<class T>
@@ -1316,8 +1317,10 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     class Function : public IL{
     public:
 
-        Function(ASTBase const * ast):
-            ast_{ast} {
+        explicit Function(ASTBase const * ast):
+            ast_{ast}
+            ,type_()
+            ,resultType_(ResultType::Void){
         }
 
         Symbol name() const {
@@ -1369,7 +1372,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         friend class CfgBuilder;
     protected:
 
-         virtual void accept(ILVisitor * v) override{ v->visit(this); };
+         void accept(ILVisitor * v) override{ v->visit(this); };
 
     private:
         friend class ILBuilder;
@@ -1389,7 +1392,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Program : public IL{
     public:
-        Program(){}
+        Program()= default;
         Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
                  std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,
                  std::unique_ptr<BasicBlock> && globals,
@@ -1397,7 +1400,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)),
         globals_(std::move(globals)), allocated_types_(std::move(allocated_types)){}
 
-        Program(Program && p):
+        Program(Program && p) noexcept :
         stringLiterals_(std::move(p.stringLiterals_)),
         functions_(std::move(p.functions_)),
         globals_(std::move(p.globals_)),
@@ -1414,7 +1417,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     protected:
         friend class ILVisitor;
         friend class ILBuilder;
-        inline virtual  void accept(ILVisitor * v) override{ v->visit(this); };
+        inline  void accept(ILVisitor * v) override{ v->visit(this); };
     private:
         std::unordered_map<std::string, Instruction*> stringLiterals_;
         std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;

@@ -13,10 +13,19 @@ namespace tvlm{
     /*abstract*/ class RegisterAllocator {
 
     public:
+        virtual ~RegisterAllocator() = default;
         explicit RegisterAllocator(ProgramBuilder * pb);
 
-        virtual Register fillIntRegister(ILInstruction * ins) = 0;
-        virtual FRegister fillFloatRegister(ILInstruction * ins) = 0;
+        /**
+         * getReg : Code generator uses getReg function to determine the status of available registers
+         *           and the location of name values. getReg works as follows:\n
+         *
+         * - If variable Y is already in register R, it uses that register.\n
+         * - Else if some register R is available, it uses that register.\n
+         * - Else if both the above options are not possible, it chooses a register that requires minimal number of load and store instructions.
+         * */
+        virtual Register getReg(ILInstruction * ins) = 0;
+        virtual FRegister getFloatReg(ILInstruction * ins) = 0;
 
         virtual void clearInt(ILInstruction * ins) = 0;
         virtual void clearFloat(ILInstruction * ins) = 0;

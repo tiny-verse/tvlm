@@ -61,7 +61,9 @@ namespace tvlm {
 //    };
 
     class VirtualRegisterPlaceholder{
+    public:
         virtual VirtualRegisterPlaceholder * makeCopy() = 0;
+        virtual ~VirtualRegisterPlaceholder() = default;
     };
 
     class VirtualRegister : public VirtualRegisterPlaceholder{

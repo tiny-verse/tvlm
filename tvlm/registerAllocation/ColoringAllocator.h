@@ -35,10 +35,15 @@ namespace tvlm{
             analysisResult_ = la->analyze();
 
         }
+        void ReassignRegisters(Program * prog /*or ProgramBuilder and res of analysis*/){
+            auto la = new LivenessAnalysis<ColorInfo>( prog); // Integrate ILBuilder and ProgramBuilder
+            analysisResult_ = la->analyze();
 
-        Register fillIntRegister(Instruction *ins) override;
+        }
 
-        FRegister fillFloatRegister(Instruction *ins) override;
+        Register getReg(Instruction *ins) override;
+
+        FRegister getFloatReg(Instruction *ins) override;
 
         void clearInt(Instruction *ins) override;
 

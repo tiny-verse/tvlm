@@ -3,14 +3,14 @@
 
 namespace tvlm {
 
-    Register NaiveRegisterAllocator::fillIntRegister(ILInstruction *ins) {
+    Register NaiveRegisterAllocator::getReg(ILInstruction *ins) {
         auto reg = getIntRegister(ins);
         alloc_regs_.resize(counter);
         alloc_regs_[reg.index()] = ins;
         return reg;
     }
 
-    FRegister NaiveRegisterAllocator::fillFloatRegister(ILInstruction *ins) {
+    FRegister NaiveRegisterAllocator::getFloatReg(ILInstruction *ins) {
         auto reg = getFloatRegister(ins);
         alloc_fregs_.resize(fcounter);
         alloc_fregs_[reg.index()] = ins;
@@ -151,7 +151,7 @@ namespace tvlm {
 
     void NaiveRegisterAllocator::allocateStructArg(Type *type, ILInstruction *ins) {
         functionLocalAllocSize += type->size();
-        auto reg = NaiveRegisterAllocator::fillIntRegister(ins); // // reg with a structure
+        auto reg = NaiveRegisterAllocator::getReg(ins); // // reg with a structure
         auto regTmp = RegisterAllocator::fillIntRegister(); // Working reg
         pb_->add(tiny::t86::MOV(regTmp, tiny::t86::Bp()), ins);
         pb_->add(tiny::t86::SUB(regTmp, (int64_t) functionLocalAllocSize), ins);
@@ -243,12 +243,12 @@ namespace tvlm {
 
     void NaiveRegisterAllocator::prepareReturnValue(size_t size, Instruction *ret) {
         if(size == 0){
-            auto regTmp  = NaiveRegisterAllocator::fillIntRegister(ret);  // tmpAddress prepared for return Value
+            auto regTmp  = NaiveRegisterAllocator::getReg(ret);  // tmpAddress prepared for return Value
             pb_->add(tiny::t86::PUSH(regTmp),ret );
             clearIntRegister(regTmp);
         }else{
             functionLocalAllocSize += size;
-            auto regTmp  = NaiveRegisterAllocator::fillIntRegister(ret);  // tmpAddress prepared for return Value
+            auto regTmp  = NaiveRegisterAllocator::getReg(ret);  // tmpAddress prepared for return Value
             pb_->add(tiny::t86::MOV(regTmp ,tiny::t86::Bp()), ret);
             pb_->add(tiny::t86::SUB(regTmp, (int64_t)functionLocalAllocSize), ret);
             pb_->add(tiny::t86::PUSH(regTmp), ret);

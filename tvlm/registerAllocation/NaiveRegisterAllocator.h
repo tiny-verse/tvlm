@@ -15,9 +15,9 @@ namespace tvlm{
         NaiveRegisterAllocator(ProgramBuilder * pb):
                 RegisterAllocator(pb){}
 
-        Register fillIntRegister(Instruction *ins) override;
+        Register getReg(Instruction *ins) override;
 
-        FRegister fillFloatRegister(Instruction *ins) override;
+        FRegister getFloatReg(Instruction *ins) override;
 
         void clearInt(Instruction *ins) override;
 

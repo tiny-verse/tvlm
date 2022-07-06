@@ -436,7 +436,7 @@ namespace tvlm{
                 if(!instructionToEmplace.empty() ){
                     auto it = instructionToEmplace.find(ins);
                     if( it!= instructionToEmplace.end()){
-                        auto * newIns = dynamic_cast<LoadImm * >(it->second);
+                        auto * newIns = dynamic_cast<const LoadImm * >(it->second);
                         value = newIns->valueInt();
                     }
                 }
@@ -692,28 +692,28 @@ namespace tvlm{
     }
 
     tiny::t86::Program NaiveIS::translate(ILBuilder &ilb) {
-        NaiveIS  * v = new NaiveIS();
+        auto v = new NaiveIS();
         v->visit(ilb);
         tiny::t86::Program rawProg = v->pb_.program();
-//        delete v;
         std::vector<tiny::t86::Instruction*> instrs = rawProg.moveInstructions();
         int line = 0;
         for(const tiny::t86::Instruction * i : instrs){
             std::cerr << tiny::color::blue << line++ << ": " << tiny::color::green << i->toString() << std::endl;
         }
 
+//        delete v; //TODO unordered_map failing - double free()
         return {std::move(instrs), rawProg.data()};
     }
 
     void NaiveIS::makeGlobalTable(BasicBlock * globals) {
 
         for(const auto *ins : getBBsInstructions(globals)){
-            if(auto i = dynamic_cast<const  LoadImm *>(ins)){
+            if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 globalTable_.emplace(ins, i->valueInt());
-            }else if(dynamic_cast< const AllocG *>(ins)){
+            }else if(const auto * alloc = dynamic_cast< const AllocG *>(ins)){
                 tiny::t86::DataLabel label = pb_.addData(0);
-                globalTable_.emplace(ins, label);
-            }else if( auto store = dynamic_cast<const Store *>(ins)){
+                globalTable_.emplace(alloc, label);
+            }else if( const auto  * store = dynamic_cast<const Store *>(ins)){
                 auto val = globalTable_.find(store->value());
                 if(val == globalTable_.end()){
                     throw "uninitialized Global?";
@@ -731,12 +731,12 @@ namespace tvlm{
         auto ret = pb_.currentLabel();
         for(auto & ins : getBBsInstructions(globals)){
             const auto * inss = ins;
-            if(auto loadImm= dynamic_cast<const  LoadImm *>(inss)){
-                globalTable_.emplace(ins, loadImm->valueInt());
-            }else if(dynamic_cast<const AllocG *>(inss)){
+            if(const auto * loadImm= dynamic_cast<const  LoadImm *>(inss)){
+                globalTable_.emplace(loadImm, loadImm->valueInt());
+            }else if(const auto * allocG = dynamic_cast<const AllocG *>(inss)){
                 DataLabel label = pb_.addData(0);
-                globalTable_.emplace(ins, label);
-            }else if(auto store = dynamic_cast<const Store *>(inss)){
+                globalTable_.emplace(allocG, label);
+            }else if(const auto * store = dynamic_cast<const Store *>(inss)){
                 uint64_t value = globalTable_.find(store->value())->second;
                 uint64_t address = globalTable_.find(store->address())->second;
                 add(tiny::t86::MOV( tiny::t86::Reg(0), (int64_t)address), ins);
@@ -768,7 +768,7 @@ namespace tvlm{
 
     }
 
-    size_t NaiveIS::countArgOffset(std::vector<Instruction *> args, size_t index) {
+    size_t NaiveIS::countArgOffset(std::vector<const Instruction *>& args, size_t index) {
         size_t acc=  0;
         size_t tmp= 0;
 
@@ -798,7 +798,7 @@ namespace tvlm{
         pb_.replace(label, instruction);
     }
 
-    void NaiveIS::copyStruct(const Register &from, Type *type, const Register &to, Instruction * ins) {
+    void NaiveIS::copyStruct(const Register &from, Type *type, const Register &to, const Instruction * ins) {
 
         auto tmpReg = fillTmpIntRegister();
         Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
@@ -810,6 +810,27 @@ namespace tvlm{
         clearTmpIntRegister(tmpReg); tmpReg = -15654;
     }
 
+    NaiveIS::~NaiveIS(){
+//            for (auto & i:instructionToEmplace) {
+//                delete i.second;
+//            }
+        tiny::ASTPrettyPrinter p(std::cout);
+        for (auto it = globalTable_.begin(); it != globalTable_.end(); it=globalTable_.begin()) {
+            std::cout << "deleting" << it->second << std::endl;
+            it->first->print(p);
+            std::cout << std::endl;
+            globalTable_.erase(it);
+        }
+        std::cout << "deleted " << std::endl;
+
+        instructionToEmplace.~unordered_map();
+        functionTable_.~unordered_map();
+        globalTable_.~unordered_map(); //!!!
+        compiled_.~unordered_map();
+        compiledBB_.~unordered_map();
+
+        std::cout << "calling ~NaiveIS" << std::endl;
+    }
 
 
 }

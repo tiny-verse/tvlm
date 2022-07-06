@@ -27,9 +27,9 @@ namespace tvlm {
 //                  release_(release) {}
 
         template<typename T>
-        Label add(const T& instruction, ILInstruction * ilIns) {
+        Label add(const T& instruction, const ILInstruction * ilIns) {
             instruction.validate();
-            instructions_.emplace_back(std::make_pair<TInstruction*, ILInstruction*>(new T(instruction), std::move(ilIns)));
+            instructions_.emplace_back(std::make_pair<TInstruction*, const ILInstruction*>(new T(instruction), std::move(ilIns) ));
             return Label(instructions_.size() - 1);
         }
 
@@ -96,7 +96,7 @@ namespace tvlm {
         }
 
     private:
-        std::vector<std::pair<TInstruction*, ILInstruction*>> instructions_;
+        std::vector<std::pair<TInstruction*, const ILInstruction*>> instructions_;
 
         std::vector<int64_t> data_;
 

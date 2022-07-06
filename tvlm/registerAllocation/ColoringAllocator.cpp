@@ -5,11 +5,11 @@
 namespace tvlm {
 
 
-    Register ColoringAllocator::fillIntRegister(Instruction *ins) {
+    Register ColoringAllocator::getReg(Instruction *ins) {
         return tvlm::Register(0);
     }
 
-    FRegister ColoringAllocator::fillFloatRegister(Instruction *ins) {
+    FRegister ColoringAllocator::getFloatReg(Instruction *ins) {
         return tvlm::FRegister(0);
     }
 
