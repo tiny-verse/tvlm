@@ -5,6 +5,9 @@
 #include "tvlm/il/il_builder.h"
 #include "tvlm/il/il_insns.h"
 
+#include "tvlm/InstructionSelection/Tiling/TilingRule.h"
+#include "tvlm/analysis/liveness_analysis.h"
+
 #define ZeroFlag 0x02
 #define SignFlag 0x01
 namespace tvlm{
@@ -690,12 +693,76 @@ namespace tvlm{
 
 
     }
+    void NaiveIS::visit(Program * prog) {
+
+        //===================================GLOBALS=====================================
+        BasicBlock functionGlobals;
+//        makeGlobalTable(irb->globals_.get());
+        auto globs = getProgramsGlobals(prog);
+        makeGlobalTable(globs);
+        for (const auto & str : prog->stringLiterals() ) {
+            tiny::t86::DataLabel data = pb_.addData(str.first);
+            add(tiny::t86::MOV(fillIntRegister(str.second), data ), str.second);
+        }
+
+        tiny::t86::Label start = add(tiny::t86::JMP(tiny::t86::Label::empty()), nullptr); //TODO
+
+        //===================================FUNCTIONS=====================================
+        for (auto & i : prog->functions()){
+            visitChild(i.second.get());
+            Label fncLabel = lastIns_;
+            addFunction(i.first, fncLabel);
+        }
+
+        //===================================MEM INTERCEPT=====================================
+        for(auto & f : functionTable_){
+             const Instruction * fnc_addr = prog->getGlobalVariableAddress(f.first);
+             instructionToEmplace.emplace(fnc_addr, new LoadImm((int64_t)f.second.address(), nullptr));
+        }
+
+        regAllocator->clearAllReg();
+        tiny::t86::Label prolog = //t86::Label(lastInstruction_index +1);
+                compileGlobalTable(globs);
+
+        add(tiny::t86::CALL(functionAddr("main")), nullptr) ;//TODO
+
+        //===================================END of MEM INTERCEPT=====================================
+        add(tiny::t86::HALT(), nullptr); //TODO?
+        pb_.patch(start, prolog);
+        //===================================PATCHING JUMPS=====================================
+
+        for (const auto & toPatch: future_patch_) {
+            auto it = compiledBB_.find(toPatch.second);
+            if(it == compiledBB_.end()){
+                throw "wat now? - I can jump on invalid BB....";
+            }
+            pb_.patch(toPatch.first, it->second );
+
+        }
+        //===================================PATCHING Calls=====================================
+        for( auto & toPatch : unpatchedCalls_){
+            auto it = functionTable_.find(toPatch.second);
+            if(it == functionTable_.end()){
+                throw "WTF failed patching calls";
+            }
+            pb_.patch(toPatch.first,it->second);
+            std::cerr << "patching call at " << toPatch.first << " with " << it->second << std::endl;
+        }
+
+
+    }
 
     tiny::t86::Program NaiveIS::translate(ILBuilder &ilb) {
+        Program program = ilb.finish();
+        auto la = std::make_unique<LivenessAnalysis<TileInfo>>(&program);
+        auto analysis = la->analyze();
+        std::cerr << "huh" << std::endl;
         auto v = new NaiveIS();
-        v->visit(ilb);
+        v->visit(&program);
+
+
         tvlm::ProgramBuilder rawProgB = v->pb_;
-        delete v; //TODO unordered_map failing - double free()
+//        delete v; //TODO unordered_map failing - double free()
         tiny::t86::Program rawProg = rawProgB.program();
         std::vector<tiny::t86::Instruction*> instrs = rawProg.moveInstructions();
         int line = 0;
@@ -772,9 +839,6 @@ namespace tvlm{
         functionTable_.emplace(name, instr.address());
     }
 
-    void NaiveIS::visit(Program *p) {
-
-    }
 
     size_t NaiveIS::countArgOffset(std::vector<const Instruction *>& args, size_t index) {
         size_t acc=  0;

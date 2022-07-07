@@ -41,13 +41,13 @@ namespace tvlm{
 
         }
 
-        Register getReg(Instruction *ins) override;
+        Register getReg(const Instruction *ins) override;
 
-        FRegister getFloatReg(Instruction *ins) override;
+        FRegister getFloatReg(const Instruction *ins) override;
 
-        void clearInt(Instruction *ins) override;
+        void clearInt(const Instruction *ins) override;
 
-        void clearFloat(Instruction *ins) override;
+        void clearFloat(const Instruction *ins) override;
 
         void spillCallReg() override;
 
@@ -55,20 +55,20 @@ namespace tvlm{
 
         void spillAllReg() override;
 
-        void prepareReturnValue(size_t size, Instruction * ret) override;
+        void prepareReturnValue(size_t size, const Instruction * ret) override;
 
-        void makeLocalAllocation(size_t size, const Register &reg, Instruction * ins) override;
+        void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins) override;
 
-        void allocateStructArg(Type *type, Instruction *ins) override;
+        void allocateStructArg(Type *type, const Instruction *ins) override;
 
         void resetAllocSize() override;
 
         void correctStackAlloc(size_t patch) override;
 
     protected:
-        Register getIntRegister(Instruction *ins) override;
+        Register getIntRegister(const Instruction *ins) override;
 
-        FRegister getFloatRegister(Instruction *ins) override;
+        FRegister getFloatRegister(const Instruction *ins) override;
 
         Register getFreeIntRegister() override;
 

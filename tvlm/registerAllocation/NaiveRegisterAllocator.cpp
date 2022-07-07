@@ -3,28 +3,28 @@
 
 namespace tvlm {
 
-    Register NaiveRegisterAllocator::getReg(ILInstruction *ins) {
+    Register NaiveRegisterAllocator::getReg(const ILInstruction *ins) {
         auto reg = getIntRegister(ins);
         alloc_regs_.resize(counter);
         alloc_regs_[reg.index()] = ins;
         return reg;
     }
 
-    FRegister NaiveRegisterAllocator::getFloatReg(ILInstruction *ins) {
+    FRegister NaiveRegisterAllocator::getFloatReg(const ILInstruction *ins) {
         auto reg = getFloatRegister(ins);
         alloc_fregs_.resize(fcounter);
         alloc_fregs_[reg.index()] = ins;
         return reg;
     }
 
-    void NaiveRegisterAllocator::clearInt(ILInstruction *ins) {
+    void NaiveRegisterAllocator::clearInt(const ILInstruction *ins) {
         auto it = std::find(alloc_regs_.begin(), alloc_regs_.end(), ins);
         if (it != alloc_regs_.end()) {
             alloc_regs_.erase(it);
         }
     }
 
-    void NaiveRegisterAllocator::clearFloat(ILInstruction *ins) {
+    void NaiveRegisterAllocator::clearFloat(const ILInstruction *ins) {
         auto it = std::find(alloc_fregs_.begin(), alloc_fregs_.end(), ins);
         if (it != alloc_fregs_.end()) {
             alloc_fregs_.erase(it);
@@ -54,7 +54,7 @@ namespace tvlm {
         RegisterAllocator::registerPhi(phi);
     }
 
-    Register NaiveRegisterAllocator::getIntRegister(ILInstruction *ins) {
+    Register NaiveRegisterAllocator::getIntRegister(const ILInstruction *ins) {
         auto f = findInIntRegs(ins);
         if (f.first) {
             // register is already assigned to this  register
@@ -76,7 +76,7 @@ namespace tvlm {
         return reg; // empty
     }
 
-    FRegister NaiveRegisterAllocator::getFloatRegister(ILInstruction *ins) {
+    FRegister NaiveRegisterAllocator::getFloatRegister(const ILInstruction *ins) {
         auto f = findInFloatRegs(ins);
         if (f.first) {
             // register is already assigned to this  register
@@ -104,7 +104,7 @@ namespace tvlm {
         return reg; // empty
     }
 
-    std::pair<bool, int> NaiveRegisterAllocator::findInIntRegs(ILInstruction *ins) {
+    std::pair<bool, int> NaiveRegisterAllocator::findInIntRegs(const ILInstruction *ins) {
         auto f = std::find(alloc_regs_.begin(), alloc_regs_.end(), ins);
         if (f != alloc_regs_.end()) {
             return std::make_pair(true, f - alloc_regs_.begin());
@@ -113,7 +113,7 @@ namespace tvlm {
         }
     }
 
-    std::pair<bool, int> NaiveRegisterAllocator::findInFloatRegs(ILInstruction *ins) {
+    std::pair<bool, int> NaiveRegisterAllocator::findInFloatRegs(const ILInstruction *ins) {
         auto f = std::find(alloc_fregs_.begin(), alloc_fregs_.end(), ins);
         if (f != alloc_fregs_.end()) {
             return std::make_pair(true, f - alloc_fregs_.begin());
@@ -136,7 +136,7 @@ namespace tvlm {
         return tiny::t86::FReg(fcounter++);
     }
 
-    void NaiveRegisterAllocator::copyStruct(Register from, Type *type, Register to, ILInstruction *ins) {
+    void NaiveRegisterAllocator::copyStruct(Register from, Type *type, Register to,const ILInstruction *ins) {
 
         auto tmpReg = RegisterAllocator::fillIntRegister();
         Type::Struct *strct = dynamic_cast<Type::Struct *>(type);
@@ -149,7 +149,7 @@ namespace tvlm {
         tmpReg = -15654;
     }
 
-    void NaiveRegisterAllocator::allocateStructArg(Type *type, ILInstruction *ins) {
+    void NaiveRegisterAllocator::allocateStructArg(Type *type, const ILInstruction *ins) {
         functionLocalAllocSize += type->size();
         auto reg = NaiveRegisterAllocator::getReg(ins); // // reg with a structure
         auto regTmp = RegisterAllocator::fillIntRegister(); // Working reg
@@ -163,7 +163,7 @@ namespace tvlm {
         clearIntRegister(regTmp);
     }
 
-    void NaiveRegisterAllocator::makeLocalAllocation(size_t size, const Register &reg, ILInstruction *ins) {
+    void NaiveRegisterAllocator::makeLocalAllocation(size_t size, const Register &reg, const ILInstruction *ins) {
         functionLocalAllocSize += size;
         // already allocated, now just find addr for this allocation
         pb_->add(tiny::t86::MOV(reg, tiny::t86::Bp()), ins);
@@ -183,7 +183,7 @@ namespace tvlm {
         spillAllReg();
     }
 
-    bool NaiveRegisterAllocator::spillIntReg(const Register &reg, Instruction *ins) {
+    bool NaiveRegisterAllocator::spillIntReg(const Register &reg, const Instruction *ins) {
 
 
         //if empty Reg - do nothing
@@ -212,7 +212,7 @@ namespace tvlm {
         return true;
     }
 
-    bool NaiveRegisterAllocator::spillFloatReg(const FRegister &reg, Instruction *ins) {
+    bool NaiveRegisterAllocator::spillFloatReg(const FRegister &reg,const Instruction *ins) {
 
 
         //if empty Reg - do nothing
@@ -241,7 +241,7 @@ namespace tvlm {
         return true;
     }
 
-    void NaiveRegisterAllocator::prepareReturnValue(size_t size, Instruction *ret) {
+    void NaiveRegisterAllocator::prepareReturnValue(size_t size,const Instruction *ret) {
         if(size == 0){
             auto regTmp  = NaiveRegisterAllocator::getReg(ret);  // tmpAddress prepared for return Value
             pb_->add(tiny::t86::PUSH(regTmp),ret );

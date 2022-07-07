@@ -257,13 +257,15 @@ namespace tvlm{
 
         ~Instruction() override = default;
 
-        virtual bool operator==(const IL *il) const override = 0;
+        bool operator==(const IL *il) const override = 0;
+        virtual std::vector<Instruction *> childs() const = 0;
 
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
         void replaceMe(Instruction * with ) {
             for (auto  * ins: used_) {
                 replaceWith(this, with);
             }
+            with->used_ = used_;
         }
         virtual void registerUsage(Instruction * usage){
             used_.push_back(usage);
@@ -403,6 +405,10 @@ namespace tvlm{
 
     class Instruction::ImmSize : public Instruction {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {amount_};
+        }
+
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::ImmSize*>(il)){
                 return type_ == other->type_ && amount_->operator==(other->amount_);
@@ -455,6 +461,9 @@ namespace tvlm{
 
     class Instruction::ImmIndex : public Instruction {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {};
+        }
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::ImmIndex*>(il)){
                 return type_ == other->type_ && index_ == other->index_;
@@ -473,7 +482,7 @@ namespace tvlm{
 //        }
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
-
+            //nothing to do
         }
 
         void print(tiny::ASTPrettyPrinter & p) const override {
@@ -496,6 +505,10 @@ namespace tvlm{
 
     class Instruction::ImmValue : public Instruction {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {};
+        }
+
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::ImmValue *>(il)){
                 return
@@ -568,6 +581,10 @@ namespace tvlm{
 
     class Instruction::BinaryOperator : public Instruction {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {lhs_, rhs_};
+        }
+
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::BinaryOperator*>(il)){
                 return
@@ -644,6 +661,10 @@ namespace tvlm{
 
     class Instruction::UnaryOperator : public Instruction {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {operand_};
+        }
+
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::UnaryOperator*>(il)){
                 return
@@ -688,6 +709,10 @@ namespace tvlm{
 
     class Instruction::LoadAddress : public Instruction {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {address_};
+        }
+
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::LoadAddress*>(il)){
                 return type_ == other->type_ && address_->operator==(other->address_);
@@ -729,7 +754,9 @@ namespace tvlm{
 
     class Instruction::StoreAddress : public Instruction {
     public:
-
+        std::vector<Instruction*> childs() const override{
+            return {address_, value_};
+        }
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::StoreAddress*>(il)){
                 return address_->operator==(other->address_) && value_->operator==(other->value_);
@@ -808,6 +835,10 @@ namespace tvlm{
 
     class Instruction::Returnator : public Instruction::Terminator0 {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {returnValue_};
+        }
+
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::Returnator*>(il)){
                 return type_ == other->type_ && returnValue_->operator==(other->returnValue_);
@@ -850,6 +881,10 @@ namespace tvlm{
 
     class Instruction::Terminator1 : public Instruction::Terminator {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {};
+        }
+
         bool operator==(const IL *il) const override;
 
         size_t numTargets() const override { return 1; }
@@ -876,6 +911,10 @@ namespace tvlm{
 
     class Instruction::Terminator2 : public Instruction::Terminator {
     public:
+        std::vector<Instruction*> childs() const override{
+            return {cond_};
+        }
+
         bool operator==(const IL *il) const override;
         Instruction * condition() const { return cond_; }
 
@@ -905,6 +944,10 @@ namespace tvlm{
 
     class Instruction::SrcInstruction : public Instruction{
     public:
+        std::vector<Instruction*> childs() const override{
+            return {src_};
+        }
+
         bool operator==(const IL *il) const override{
             if( auto * other = dynamic_cast<const Instruction::SrcInstruction*>(il)){
                 return opcode_ == other->opcode_ && src_->operator==(other->src_);
@@ -941,6 +984,10 @@ namespace tvlm{
 
     class Instruction::VoidInstruction : public Instruction{
     public:
+        std::vector<Instruction*> childs() const override{
+            return {};
+        }
+
         bool operator==(const IL *il) const override{
             if( auto * other = dynamic_cast<const Instruction::VoidInstruction*>(il)){
                 return opcode_ == other->opcode_;
@@ -971,6 +1018,14 @@ namespace tvlm{
 
     class Instruction::PhiInstruction : public Instruction{
     public:
+        std::vector<Instruction*> childs() const override{
+//            throw "not implemented childs on Phi Instruction";
+            std::vector<Instruction*> successors;
+            for (auto & c: contents_) {
+                successors.push_back(c.second);
+            }
+            return std::move(successors);
+        }
         bool operator==(const IL *il) const override{
             if( auto * other = dynamic_cast<const Instruction::PhiInstruction*>(il)){
                 return contents_ ==  other->contents_;
@@ -1010,6 +1065,9 @@ namespace tvlm{
 
   class Instruction::StructAssignInstruction : public Instruction{
     public:
+      std::vector<Instruction*> childs() const override{
+          return {srcVal_, dstAddr_};
+      }
       bool operator==(const IL *il) const override{
           if( auto * other = dynamic_cast<const Instruction::StructAssignInstruction*>(il)){
               return type_ == other->type_ &&
@@ -1064,6 +1122,9 @@ namespace tvlm{
 
     class Instruction::ElemInstruction : public Instruction{
     public:
+        std::vector<Instruction*> childs() const override{
+            return {base_};
+        }
         bool operator==(const IL *il) const override{
             if( auto * other = dynamic_cast<const Instruction::ElemInstruction*>(il)){
                 return base_->operator==(other->base_);
@@ -1088,6 +1149,9 @@ namespace tvlm{
 
     class Instruction::ElemOffsetInstruction : public Instruction::ElemInstruction{
     public:
+        std::vector<Instruction*> childs() const override{
+            return {base_, offset_};
+        }
         bool operator==(const IL *il) const override{
             if( auto * other = dynamic_cast<const Instruction::ElemOffsetInstruction*>(il)){
                 return base_->operator==(other->base_) && offset_->operator==(other->offset_);
@@ -1127,6 +1191,9 @@ namespace tvlm{
 
 class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public:
+        std::vector<Instruction*> childs() const override{
+            return {base_, offset_, index_};
+        }
         bool operator==(const IL *il) const override{
             if( auto * other = dynamic_cast<const Instruction::ElemIndexInstruction*>(il)){
                 return base_->operator==(other->base_)
@@ -1176,6 +1243,13 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     class Instruction::CallInstruction : public Instruction{
     public:
 
+        std::vector<Instruction*> childs() const override{
+            std::vector<Instruction*> predecessors;
+            for (auto & arg : args_) {
+                predecessors.push_back(arg.first);
+            }
+            return std::move(predecessors);
+        }
 
         Instruction * operator [] (size_t i) const {
             assert(i < args_.size());
@@ -1207,6 +1281,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Instruction::DirectCallInstruction : public CallInstruction{
     public:
+
+
         bool operator==(const IL *il) const override;
 
 
@@ -1233,7 +1309,13 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Instruction::IndirectCallInstruction : public CallInstruction{
     public:
-
+        std::vector<Instruction*> childs() const override{
+            std::vector<Instruction*> predecessors{f_};
+            for (auto & arg : args_) {
+                predecessors.push_back(arg.first);
+            }
+            return std::move(predecessors);
+        }
         virtual bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::IndirectCallInstruction*>(il)){
                 bool tmp = f_->operator==(other->f_) && retType_ == other->retType_ ;
@@ -1562,15 +1644,17 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
                  std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,
                  std::unique_ptr<BasicBlock> && globals,
-                 std::vector<std::unique_ptr<tvlm::Type>> && allocated_types
+                 std::vector<std::unique_ptr<tvlm::Type>> && allocated_types,
+                 std::unordered_map<Symbol, Instruction*> && globalNames
         ): stringLiterals_(std::move(stringLiterals)), functions_(std::move(functions)),
-        globals_(std::move(globals)), allocated_types_(std::move(allocated_types)){}
+        globals_(std::move(globals)), allocated_types_(std::move(allocated_types)), globalNames_(std::move(globalNames)){}
 
         Program(Program && p) noexcept :
         stringLiterals_(std::move(p.stringLiterals_)),
         functions_(std::move(p.functions_)),
         globals_(std::move(p.globals_)),
-        allocated_types_(std::move(p.allocated_types_)){
+        allocated_types_(std::move(p.allocated_types_)),
+        globalNames_(p.globalNames_){
         }
         Program(const Program & p) = delete;
 
@@ -1579,6 +1663,13 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         }
         const std::unordered_map<std::string, Instruction*> & stringLiterals() const{
             return stringLiterals_;
+        }
+        const Instruction * getGlobalVariableAddress(const Symbol & name)const {
+            auto i = globalNames_.find(name);
+            if (i != globalNames_.end())
+                return i->second;
+            else
+                return nullptr;
         }
     protected:
         friend class ILVisitor;
@@ -1589,6 +1680,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
         std::unique_ptr<BasicBlock> globals_;
         std::vector<std::unique_ptr<tvlm::Type>> allocated_types_;
+        std::unordered_map<Symbol, Instruction*> globalNames_;
     } ; // tvlm::Program
 
 

@@ -5,19 +5,19 @@
 namespace tvlm {
 
 
-    Register ColoringAllocator::getReg(Instruction *ins) {
+    Register ColoringAllocator::getReg(const Instruction *ins) {
         return tvlm::Register(0);
     }
 
-    FRegister ColoringAllocator::getFloatReg(Instruction *ins) {
+    FRegister ColoringAllocator::getFloatReg(const Instruction *ins) {
         return tvlm::FRegister(0);
     }
 
-    void ColoringAllocator::clearInt(Instruction *ins) {
+    void ColoringAllocator::clearInt(const Instruction *ins) {
 
     }
 
-    void ColoringAllocator::clearFloat(Instruction *ins) {
+    void ColoringAllocator::clearFloat(const Instruction *ins) {
 
     }
 
@@ -33,15 +33,15 @@ namespace tvlm {
 
     }
 
-    void ColoringAllocator::prepareReturnValue(size_t size, Instruction * ret) {
+    void ColoringAllocator::prepareReturnValue(size_t size, const Instruction * ret) {
 
     }
 
-    void ColoringAllocator::makeLocalAllocation(size_t size, const Register &reg, Instruction * ins) {
+    void ColoringAllocator::makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins) {
 
     }
 
-    void ColoringAllocator::allocateStructArg(Type *type, Instruction *ins) {
+    void ColoringAllocator::allocateStructArg(Type *type, const Instruction *ins) {
 
     }
 
@@ -53,11 +53,11 @@ namespace tvlm {
 
     }
 
-    Register ColoringAllocator::getIntRegister(Instruction *ins) {
+    Register ColoringAllocator::getIntRegister(const Instruction *ins) {
         return tvlm::Register(0);
     }
 
-    FRegister ColoringAllocator::getFloatRegister(Instruction *ins) {
+    FRegister ColoringAllocator::getFloatRegister(const Instruction *ins) {
         return tvlm::FRegister(0);
     }
 

@@ -66,8 +66,11 @@ public:
         for (auto *n : nodes_) {
             delete n;
         }
-        for (auto* n : frags_) {
-            delete n;
+//        for (auto* n : frags_) {
+//            delete n;
+//        }
+        for (int i = 0; i < frags_.size(); ++i) {
+            delete frags_[i];
         }
     }
     const CfgFunEntryNode<T> * entry()const {
@@ -233,7 +236,7 @@ private:
             exitNodes_ = newExitNodes_;
 
             for (CfgNode<T> *en :that->entryNodes_) {
-                en->pred_.insert(en->succ_.end(), exitNodes_.begin(), exitNodes_.end());
+                en->pred_.insert(en->pred_.end(), exitNodes_.begin(), exitNodes_.end());
                 newThatEntryNodes_.insert(en);
             }
             that->entryNodes_ = newThatEntryNodes_;

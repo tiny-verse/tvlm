@@ -472,8 +472,8 @@ namespace tvlm{
 
 //            return tvlm::ILTiler::translate(il);
         return NaiveIS::translate(il);
-        tiny::t86::ProgramBuilder pb;
-        return std::move(pb.program());
+//        tiny::t86::ProgramBuilder pb;
+//        return std::move(pb.program());
     }
 
     void ConvertToDAGNode::visit(Instruction *ins) {

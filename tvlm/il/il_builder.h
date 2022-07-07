@@ -184,9 +184,12 @@ namespace tvlm {
         }
 
         tvlm::Program finish(){
+            Environment * global = env_.get();
+            while(global->parent){ global = global->parent; }
+
             return {std::move(stringLiterals_),
                            std::move(functions_),
-                           std::move(globals_), std::move(allocated_types_)};
+                           std::move(globals_), std::move(allocated_types_), std::move(global->names)};
         }
 
         const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions()const {

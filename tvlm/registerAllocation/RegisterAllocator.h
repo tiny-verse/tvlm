@@ -24,11 +24,11 @@ namespace tvlm{
          * - Else if some register R is available, it uses that register.\n
          * - Else if both the above options are not possible, it chooses a register that requires minimal number of load and store instructions.
          * */
-        virtual Register getReg(ILInstruction * ins) = 0;
-        virtual FRegister getFloatReg(ILInstruction * ins) = 0;
+        virtual Register getReg(const ILInstruction * ins) = 0;
+        virtual FRegister getFloatReg(const ILInstruction * ins) = 0;
 
-        virtual void clearInt(ILInstruction * ins) = 0;
-        virtual void clearFloat(ILInstruction * ins) = 0;
+        virtual void clearInt(const ILInstruction * ins) = 0;
+        virtual void clearFloat(const ILInstruction * ins) = 0;
         virtual void spillCallReg() = 0;
         virtual void clearAllReg() = 0;
 
@@ -50,10 +50,10 @@ namespace tvlm{
             alloc_regs_[reg.index()] = nullptr;
         }
 
-        void replaceInt(ILInstruction * from, ILInstruction * to ){
+        void replaceInt(const ILInstruction * from, const ILInstruction * to ){
             alloc_regs_[getIntRegister(from).index()] = to;
         }
-        void replaceFloat(ILInstruction * from, ILInstruction * to ){
+        void replaceFloat(const ILInstruction * from, const ILInstruction * to ){
             alloc_fregs_[getFloatRegister(from).index()] = to;
         }
         virtual void spillAllReg()  = 0;
@@ -69,25 +69,25 @@ namespace tvlm{
         }
 
 
-        virtual void prepareReturnValue(size_t size, ILInstruction * ret) = 0;
-        virtual void makeLocalAllocation(size_t size, const Register & reg, ILInstruction * ins) = 0;
+        virtual void prepareReturnValue(size_t size, const ILInstruction * ret) = 0;
+        virtual void makeLocalAllocation(size_t size, const Register & reg, const ILInstruction * ins) = 0;
 
-        virtual void allocateStructArg(Type * type, ILInstruction * ins) = 0;
+        virtual void allocateStructArg(Type * type, const ILInstruction * ins) = 0;
 
         virtual void resetAllocSize() = 0;
 
         virtual void correctStackAlloc(size_t patch ) = 0;
 
     protected:
-        virtual Register getIntRegister(ILInstruction * ins) = 0;
-        virtual FRegister getFloatRegister(ILInstruction * ins) = 0;
+        virtual Register getIntRegister(const ILInstruction * ins) = 0;
+        virtual FRegister getFloatRegister(const ILInstruction * ins) = 0;
 
         virtual Register getFreeIntRegister() = 0; //care not to take tmpAllocated
         virtual FRegister getFreeFloatRegister() = 0; //care not to take tmpAllocated
 
 
-        std::vector< ILInstruction *> alloc_regs_;
-        std::vector< ILInstruction *> alloc_fregs_;
+        std::vector< const ILInstruction *> alloc_regs_; //register descriptor
+        std::vector< const ILInstruction *> alloc_fregs_;
 
         std::set<Register> tmpIntRegs_;
         std::set<FRegister> tmpFloatRegs_;

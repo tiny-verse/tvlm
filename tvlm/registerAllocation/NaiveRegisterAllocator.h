@@ -15,13 +15,13 @@ namespace tvlm{
         NaiveRegisterAllocator(ProgramBuilder * pb):
                 RegisterAllocator(pb){}
 
-        Register getReg(Instruction *ins) override;
+        Register getReg(const Instruction *ins) override;
 
-        FRegister getFloatReg(Instruction *ins) override;
+        FRegister getFloatReg(const Instruction *ins) override;
 
-        void clearInt(Instruction *ins) override;
+        void clearInt(const Instruction *ins) override;
 
-        void clearFloat(Instruction *ins) override;
+        void clearFloat(const Instruction *ins) override;
 
         void spillCallReg() override;
 
@@ -33,11 +33,11 @@ namespace tvlm{
 
         void clearIntRegister(const Register &reg) override;
 
-        void prepareReturnValue(size_t size, Instruction * ret)override;
+        void prepareReturnValue(size_t size,const Instruction * ret)override;
 
-        void makeLocalAllocation(size_t size, const Register &reg, Instruction * ins) override;
+        void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins) override;
 
-        void allocateStructArg(Type * type, Instruction * ins) override;
+        void allocateStructArg(Type * type,const Instruction * ins) override;
 
         void resetAllocSize() override;
 
@@ -48,9 +48,9 @@ namespace tvlm{
 
         FRegister getFreeFloatRegister() override;
 
-        Register getIntRegister(Instruction *ins) override;
+        Register getIntRegister(const Instruction *ins) override;
 
-        FRegister getFloatRegister(Instruction *ins) override;
+        FRegister getFloatRegister(const Instruction *ins) override;
 
         int counter = 1;
         int fcounter = 1;
@@ -58,17 +58,17 @@ namespace tvlm{
         size_t functionLocalAllocSize = 0;
 
 
-        std::unordered_map<const Instruction *, int64_t> spilled_; //ins, mem_offset
-        std::pair<bool, int> findInIntRegs(Instruction *ins);
-        std::pair<bool, int> findInFloatRegs(Instruction *ins);
+        std::unordered_map<const Instruction *, int64_t> spilled_; //ins, mem_offset //address descriptor
+        std::pair<bool, int> findInIntRegs(const Instruction *ins);
+        std::pair<bool, int> findInFloatRegs(const Instruction *ins);
 
-        bool spillIntReg(const Register & reg, Instruction * ins);
-
-
-        bool spillFloatReg(const FRegister & reg, Instruction * ins);
+        bool spillIntReg(const Register & reg, const Instruction * ins);
 
 
-        void copyStruct(Register aRegister, Type *pType, Register aRegister1, Instruction * ins);
+        bool spillFloatReg(const FRegister & reg, const Instruction * ins);
+
+
+        void copyStruct(Register aRegister, Type *pType, Register aRegister1, const Instruction * ins);
 
         template<typename T>
         void replace(size_t label,const T & instruction){

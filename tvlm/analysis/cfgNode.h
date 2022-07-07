@@ -71,7 +71,7 @@ namespace tvlm {
 
     template<class T>
     CfgNode<T>::CfgNode(IL *ins):
-            il_(ins), id_(counter_++) {
+            il_(ins), id_(counter_++), succ_(), pred_() {
 
     }
 
