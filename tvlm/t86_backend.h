@@ -307,7 +307,7 @@ namespace tvlm {
             //
             //        void visit(Instruction::Terminator0 * ins) override;
             //        void visit(Instruction::Terminator1 * ins) override;
-            //        void visit(Instruction::TerminatorN * ins) override;
+            //        void visit(Instruction::Terminator2 * ins) override;
             //        void visit(Instruction::Returnator * ins) override;
             //        void visit(Instruction::DirectCallInstruction * ins) override;
             //        void visit(Instruction::IndirectCallInstruction * ins) override;

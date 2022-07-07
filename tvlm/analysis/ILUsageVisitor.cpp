@@ -9,7 +9,7 @@
 //    result_.insert(ins);
 //}
 //
-//void tvlm::ILUsageVisitor::visit(tvlm::Instruction::TerminatorN *ins) {
+//void tvlm::ILUsageVisitor::visit(tvlm::Instruction::Terminator2 *ins) {
 //    visitChild(ins->getTarget(0));
 //    visitChild(ins->getTarget(1));
 //    result_.insert(ins);

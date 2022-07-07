@@ -243,7 +243,7 @@ namespace tvlm{
         class Terminator0;
         class Returnator;
         class Terminator1;
-        class TerminatorN;
+        class Terminator2;
         class SrcInstruction;
         class PhiInstruction;
         class ElemInstruction;
@@ -874,7 +874,7 @@ namespace tvlm{
         BasicBlock * target_;
     }; // Instruction::Terminator1
 
-    class Instruction::TerminatorN : public Instruction::Terminator {
+    class Instruction::Terminator2 : public Instruction::Terminator {
     public:
         bool operator==(const IL *il) const override;
         Instruction * condition() const { return cond_; }
@@ -883,9 +883,9 @@ namespace tvlm{
 
         BasicBlock * getTarget(size_t i) const override { return targets_[i]; }
 
-        void addTarget(BasicBlock * target) {
-            targets_.push_back(target);
-        }
+//        void addTarget(BasicBlock * target) {
+//            targets_.push_back(target);
+//        }
         void print(tiny::ASTPrettyPrinter & p) const override;
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             if(cond_ == sub){
@@ -895,13 +895,13 @@ namespace tvlm{
     protected:
         // void accept(ILVisitor * v) override;
 
-        TerminatorN(Instruction * cond, ASTBase const * ast, const std::string & instrName, Opcode opcode);
+        Terminator2(Instruction * cond,BasicBlock * trueTarget, BasicBlock * falseTarget, ASTBase const * ast, const std::string & instrName, Opcode opcode);
 
-        ~TerminatorN() override = default;
+        ~Terminator2() override = default;
     private:
         Instruction * cond_;
         std::vector<BasicBlock *> targets_;
-    }; // Instruction::TerminatorN
+    }; // Instruction::Terminator2
 
     class Instruction::SrcInstruction : public Instruction{
     public:
@@ -1369,7 +1369,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 #define Terminator0(NAME, ENCODING) NAME (ASTBase const * ast): Instruction::ENCODING{ast, #NAME, Instruction::Opcode::NAME} {}
 #define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, Type * type, ASTBase const * ast): Instruction::ENCODING{returnValue, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast, #NAME, Instruction::Opcode::NAME} {}
-#define TerminatorN(NAME, ENCODING) NAME (Instruction * condition, ASTBase const * ast): Instruction::ENCODING{condition, ast, #NAME, Instruction::Opcode::NAME} {}
+#define Terminator2(NAME, ENCODING) NAME (Instruction * condition,BasicBlock * trueTarget, BasicBlock * falseTarget,  ASTBase const * ast): Instruction::ENCODING{condition, trueTarget, falseTarget, ast, #NAME, Instruction::Opcode::NAME} {}
 #define LoadAddress(NAME, ENCODING) NAME (Instruction * address, Type * type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define StoreAddress(NAME, ENCODING) NAME (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast, #NAME, Instruction::Opcode::NAME} {}
 #define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<std::pair< Instruction *, Type*>> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
@@ -1441,9 +1441,19 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         void registerUsage(Instruction * ins){
             usages_.emplace_back(ins);
         }
+
+        void addSucc(BasicBlock * bl){
+            successor_.push_back(bl);
+        }
+        void addPred(BasicBlock * bl){
+            predecessor_.push_back(bl);
+        }
         void replaceWith(BasicBlock *sub, BasicBlock *toReplace) {
             //TODO
             throw "not implemented replacing of BasicBLocks";
+
+
+
         }
     protected:
         void accept(ILVisitor * v) override{ v->visit(this); };
@@ -1455,6 +1465,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         std::string name_;
         std::vector<std::unique_ptr<Instruction>> insns_;
         std::vector<Instruction*> usages_;
+        std::vector<BasicBlock*>predecessor_;   //only inside function
+        std::vector<BasicBlock*>successor_;     //only inside function
     }; // BasicBlock
 
     class Function : public IL{
@@ -1582,7 +1594,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
 //    inline void Instruction::Terminator0::accept(ILVisitor * v) { v->visit(this); }
 //    inline void Instruction::Terminator1::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::TerminatorN::accept(ILVisitor * v) { v->visit(this); }
+//    inline void Instruction::Terminator2::accept(ILVisitor * v) { v->visit(this); }
 //    inline void Instruction::Returnator::accept(ILVisitor * v) { v->visit(this); }
 //    inline void Instruction::BinaryOperator::accept(ILVisitor * v) { v->visit(this); }
 //    inline void Instruction::UnaryOperator::accept(ILVisitor * v) { v->visit(this); }

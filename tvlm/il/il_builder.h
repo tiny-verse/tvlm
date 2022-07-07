@@ -43,6 +43,24 @@ namespace tvlm {
                 else
                     ins->setName(STR("g" << (globalRegisterCounter_++)));
             }
+
+
+
+            if(auto * jmp = dynamic_cast<tvlm::Jump *>(ins)){
+                tvlm::BasicBlock * target = jmp->getTarget(1);
+                bb_->addSucc(target);
+                target->addPred(bb_);
+            }else if (auto * condJump = dynamic_cast<tvlm::CondJump*>(ins)){
+                tvlm::BasicBlock * trueTarget = condJump->getTarget(1);
+                tvlm::BasicBlock * falseTarget = condJump->getTarget(0);
+
+                bb_->addSucc(trueTarget);
+                bb_->addSucc(falseTarget);
+                falseTarget->addPred(bb_);
+                trueTarget->addPred(bb_);
+            }
+
+
             lastInstr_ = ins;
             return ins;
         }
@@ -70,6 +88,13 @@ namespace tvlm {
             result->setName(STR("bb_" << f_->bbs_.size()));
             f_->bbs_.push_back(std::unique_ptr<BasicBlock>{result});
             return result;
+        }
+
+        void registerBBSuccessor(BasicBlock * bb){
+            bb_->addSucc(bb);
+        }
+        void registerBBPredecessor(BasicBlock * bb){
+            bb_->addPred(bb);
         }
 
         Context const & context() const {

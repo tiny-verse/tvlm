@@ -28,7 +28,7 @@ namespace tvlm {
         else return false;
     }
 
-    void Instruction::TerminatorN::print(tiny::ASTPrettyPrinter &p) const {
+    void Instruction::Terminator2::print(tiny::ASTPrettyPrinter &p) const {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier;
         printRegister(p, cond_);
@@ -37,18 +37,20 @@ namespace tvlm {
         }
     }
 
-    Instruction::TerminatorN::TerminatorN(Instruction *cond, const ASTBase *ast, const std::string &instrName,
+Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget,
+                                          BasicBlock * falseTarget,  const ASTBase *ast, const std::string &instrName,
                                           Opcode opcode) :
             Terminator{ast, instrName, opcode},
-            cond_{cond} {
+            cond_{cond},
+            targets_{falseTarget, trueTarget}{
         cond_->registerUsage(this);
         for (auto * bb: targets_) {
             bb->registerUsage(this);
         }
     }
 
-    bool Instruction::TerminatorN::operator==(const IL *il) const{
-        if( auto * other = dynamic_cast<const Instruction::TerminatorN*>(il)){
+    bool Instruction::Terminator2::operator==(const IL *il) const{
+        if( auto * other = dynamic_cast<const Instruction::Terminator2*>(il)){
             bool tmp = cond_->operator==(other->cond_) ;
             for (int i = 0 ; i < targets_.size(); i++) {
                 tmp = tmp && targets_[i]->operator==(other->targets_[i]);

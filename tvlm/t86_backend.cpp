@@ -108,7 +108,7 @@ namespace tvlm{
 //
 //    }
 //
-//    void ILTiler::visit(Instruction::TerminatorN * ins) {
+//    void ILTiler::visit(Instruction::Terminator2 * ins) {
 //        std::vector<DAG*> children = std::vector<DAG*>();
 //        //TODO where all BBs?
 //        children.push_back(visitChild(ins->condition()));

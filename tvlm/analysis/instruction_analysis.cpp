@@ -20,7 +20,7 @@ tvlm::VirtualRegisterPlaceholder * tvlm::InstructionAnalysis::InsVisitor::getVir
 //
 //}
 //
-//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::TerminatorN *ins) {
+//void tvlm::InstructionAnalysis::InsVisitor::visit(Instruction::Terminator2 *ins) {
 //
 //}
 //

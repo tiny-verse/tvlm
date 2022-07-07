@@ -49,7 +49,7 @@ INS(Return, Returnator)
  *
  *  @targets are created by calling 'addTarget' function
  */
-INS(CondJump, TerminatorN)
+INS(CondJump, Terminator2)
 
 /**
  * Performs jump to BasicBLock specified by @target
@@ -155,8 +155,8 @@ INS(StructAssign, StructAssignInstruction )
 #ifdef Terminator1
 #undef Terminator1
 #endif
-#ifdef TerminatorN
-#undef TerminatorN
+#ifdef Terminator2
+#undef Terminator2
 #endif
 #ifdef LoadAddress
 #undef LoadAddress
