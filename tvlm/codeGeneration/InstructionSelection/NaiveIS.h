@@ -103,23 +103,11 @@ namespace tvlm{
             return it->second;
         }
 
-        /** Prepare register for use with its value (sill if necessary)
-         * */
-        auto fillIntRegister(Instruction * ins){
-            return getReg(ins);
-//            return regAllocator->getReg(ins);
-        }
-        auto fillFloatRegister(Instruction * ins){
-            return getFReg(ins);
-//            return regAllocator->getFloatReg(ins);
-        }
-        Register fillTmpIntRegister(){
-            return getFreeIntRegister();
-//            return regAllocator->fillIntRegister();
-        }
+
+
 //        FRegister fillTmpFloatRegister(){
 //            return getFreeFloatRegister();
-//            return regAllocator->fillFloatRegister();
+//            return regAllocator->getFReg();
 //        }
 //        auto clearTmpIntRegister(const Register & reg ){
 //            return regAllocator->clearIntRegister(reg);
@@ -172,7 +160,7 @@ namespace tvlm{
 
 
         std::unordered_map<const Instruction* ,const Instruction * > instructionToEmplace;
-        std::unique_ptr<RegisterAllocator> regAllocator;
+//        std::unique_ptr<RegisterAllocator> regAllocator;
         std::unique_ptr<RegisterAssigner> regAssigner;
 
         // ******************** Virtual Registers ******************************
@@ -180,27 +168,13 @@ namespace tvlm{
         std::map<const Instruction *, FRegister> assignedFloatRegisters_;
         size_t regIntCounter_;
         size_t regFloatCounter_;
-        Register getReg(const Instruction * ins){
-            auto it = assignedIntRegisters_.find(ins);
-            if(it != assignedIntRegisters_.end()){
-                return it->second;
-            }else{
-                auto reg = getFreeIntRegister();
-                assignedIntRegisters_.emplace(ins, reg);
-                return reg;
-            }
 
+
+        Register getReg(const Instruction * ins){
+            regAssigner->getReg(ins);
         }
         FRegister getFReg(const Instruction * ins){
-            auto it = assignedFloatRegisters_.find(ins);
-            if(it != assignedFloatRegisters_.end()){
-                return it->second;
-            }else{
-                auto reg =  getFreeFloatRegister();
-                assignedFloatRegisters_.emplace(ins, reg);
-                return reg;
-            }
-
+            regAssigner->getFReg(ins);
         }
         Register getFreeIntRegister() {
             return {regIntCounter_++};
@@ -210,35 +184,32 @@ namespace tvlm{
         }
 
         void replaceIntReg(const Instruction * ins, const Instruction * with){
-            auto it = assignedIntRegisters_.find(ins);
-            if(it != assignedIntRegisters_.end()){
-
-                assignedIntRegisters_.emplace(with, it->second);
-            }else{
-                return;
-            }
+            regAssigner->replaceIntReg(ins, with);
         }
         void replaceFloatReg(const Instruction * ins, const Instruction * with){
-            auto it = assignedFloatRegisters_.find(ins);
-            if(it != assignedFloatRegisters_.end()){
-
-                assignedFloatRegisters_.emplace(with, it->second);
-            }else{
-                return;
-            }
+            regAssigner->replaceFloatReg(ins, with);
         }
 
         void allocateStructArg(const Type * type, const Instruction * ins){
-            regAllocator->allocateStructArg(type, ins);
+            regAssigner->allocateStructArg(type, ins);
         }
         void prepareReturnValue(size_t size, const Instruction * ins){
-
+            regAssigner->prepareReturnValue(size, ins);
         }
 
         void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins){
-
+            regAssigner->makeLocalAllocation(size, reg, ins);
         }
 
+        void registerPhi(const Phi * phi){
+            regAssigner->registerPhi(phi);
+        }
+        void correctStackAlloc(size_t patch) {
+            regAssigner->correctStackAlloc(patch);
+        }
+        void resetAllocSize(){
+            regAssigner->resetAllocSize();
+        }
         // ******************** \\ Virtual Registers ******************************
 
 
