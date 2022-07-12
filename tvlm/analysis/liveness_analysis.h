@@ -35,7 +35,12 @@ namespace tvlm{
 //        static LivenessAnalysis<Info> * create(Program * p);
         explicit LivenessAnalysis(Program * p);
         LiveVars<Info> analyze() override;
+
+        std::map<const CfgNode<Info>*, const Instruction *>instr_mapping(){
+            return instr_mapping_;
+        };
     private:
+        std::map<const CfgNode<Info>*, const Instruction *>instr_mapping_;
         NodeState allVars_;
         PowersetLattice<Declaration*> nodeLattice_;
         MapLattice<const CfgNode<Info> *, NodeState> lattice_;

@@ -66,12 +66,12 @@ public:
         for (auto *n : nodes_) {
             delete n;
         }
-//        for (auto* n : frags_) {
-//            delete n;
-//        }
-        for (int i = 0; i < frags_.size(); ++i) {
-            delete frags_[i];
+        for (auto* n : frags_) {
+            delete n;
         }
+//        for (int i = 0; i < frags_.size(); ++i) {
+//            delete frags_[i];
+//        }
     }
     const CfgFunEntryNode<T> * entry()const {
         return entry_;
@@ -112,6 +112,7 @@ protected:
     }
 
 public:
+    virtual ~ProgramCfg() = default;
     ProgramCfg(ProgramCfg && other): FragmentCfg<T>(std::move(other.entryNodes_), std::move(other.exitNodes_)),
     functionsCfg_(std::move(other.functionsCfg_) ), p_(other.p_){
 
@@ -197,11 +198,11 @@ private:
     FragmentCfg<T> * append(FragmentCfg<T> * a){
 //        allFragments.emplace_back(a);
         current_fnc->addFragment(a);
-    return a;
+        return a;
     }
 
-    std::vector<std::unique_ptr<CfgNode<T>>> allNodes;
-    std::vector<std::unique_ptr<FragmentCfg<T>>> allFragments;
+//    std::vector<std::unique_ptr<CfgNode<T>>> allNodes;
+//    std::vector<std::unique_ptr<FragmentCfg<T>>> allFragments;
     std::map<IL*, CfgNode<T>*> allNodesMap_;
     std::map<IL*, FragmentCfg<T>*> allFragmentsMap_;
     FragmentCfg<T> * fncexit_;
@@ -317,12 +318,13 @@ private:
         append(entry);
         append(exit);
         append(cfg);
-        for (auto & e: allNodes) {
-            fncCfg->addNode(e.release());
-        }allNodes.clear();
-        for (auto & e: allFragments) {
-            fncCfg->addFragment(e.release());
-        }allFragments.clear();
+//        for (auto & e: allNodes) {
+//            fncCfg->addNode(e.release());
+//        }allNodes.clear();
+//        for (auto & e: allFragments) {
+//            fncCfg->addFragment(e.release());
+//            assert(e == nullptr);
+//        }allFragments.clear();
         current_fnc = nullptr;
         return fncCfg;
     }
@@ -374,15 +376,15 @@ private:
         return ProgramCfg(program, std::move(setEntry) ,std::move(setExit) , std::move(tmp) );
     }
 
-    template<class T>
-    FunctionCfg<T>::FunctionCfg(FunctionCfg &&fnc) : FragmentCfg<T>(std::move(fnc.entryNodes_), std::move(fnc.exitNodes_) ),
-                                                     entry_(fnc.entry_), exit_(fnc.exit_), cfg_(fnc.cfg_),
-                                                     nodes_(std::move(fnc.nodes_)),frags_(std::move(fnc.frags_)) {
-        fnc.entry_ = nullptr;
-        fnc.exit_ = nullptr;
-        fnc.cfg_ = nullptr;
-        fnc.nodes_.clear();
-        fnc.frags_.clear();
-    }
+//    template<class T>
+//    FunctionCfg<T>::FunctionCfg(FunctionCfg &&fnc) : FragmentCfg<T>(std::move(fnc.entryNodes_), std::move(fnc.exitNodes_) ),
+//                                                     entry_(fnc.entry_), exit_(fnc.exit_), cfg_(fnc.cfg_),
+//                                                     nodes_(std::move(fnc.nodes_)),frags_(std::move(fnc.frags_)) {
+//        fnc.entry_ = nullptr;
+//        fnc.exit_ = nullptr;
+//        fnc.cfg_ = nullptr;
+//        fnc.nodes_.clear();
+//        fnc.frags_.clear();
+//    }
 
 } // namespace tiny::tvlm

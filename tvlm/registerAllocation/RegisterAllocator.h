@@ -47,7 +47,8 @@ namespace tvlm{
 
         virtual void clearIntRegister(const Register & reg ){
             tmpIntRegs_.erase(reg);
-            alloc_regs_[reg.index()] = nullptr;
+            size_t regi= reg.index();
+            alloc_regs_[regi] = nullptr;
         }
 
         void replaceInt(const ILInstruction * from, const ILInstruction * to ){

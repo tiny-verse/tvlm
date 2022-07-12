@@ -41,6 +41,26 @@ namespace tvlm {
         }
     };
 
+//
+//    template<typename T>
+//    bool operator<(const CfgNode<T> * node, const Instruction * il) {
+//        return node->il() < il;
+//    }
+//
+//    template<typename T>
+//    bool operator<( const Instruction * il, const CfgNode<T> * node) {
+//        return il < node->il();
+//    }
+//
+//    template<typename T>
+//    bool operator==(const CfgNode<T> * node, const Instruction * il) {
+//        return node->il() == il;
+//    }
+//
+//    template<typename T>
+//    bool operator==( const Instruction * il, const CfgNode<T> * node) {
+//        return node->il() == il;
+//    }
 
     template<class T>
     class CfgStmtNode : public CfgNode<T> {

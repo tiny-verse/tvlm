@@ -762,7 +762,7 @@ namespace tvlm{
 
 
         tvlm::ProgramBuilder rawProgB = v->pb_;
-//        delete v; //TODO unordered_map failing - double free()
+        delete v; //TODO unordered_map failing - double free()
         tiny::t86::Program rawProg = rawProgB.program();
         std::vector<tiny::t86::Instruction*> instrs = rawProg.moveInstructions();
         int line = 0;
