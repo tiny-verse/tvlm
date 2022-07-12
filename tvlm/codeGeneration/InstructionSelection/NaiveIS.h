@@ -1,9 +1,10 @@
 #pragma once
 #include "tvlm/tvlm/il/il.h"
 #include "t86/program/label.h"
-#include "ProgramBuilder.h"
-#include "tvlm/tvlm/registerAllocation/RegisterAllocator.h"
-#include "tvlm/tvlm/registerAllocation/NaiveRegisterAllocator.h"
+#include "tvlm/tvlm/codeGeneration/ProgramBuilder.h"
+#include "tvlm/tvlm/codeGeneration/registerAllocation/RegisterAllocator.h"
+#include "tvlm/tvlm/codeGeneration/registerAllocation/NaiveRegisterAllocator.h"
+#include "tvlm/tvlm/codeGeneration/registerAssigner/RegisterAssigner.h"
 
 namespace tvlm{
 
@@ -22,9 +23,9 @@ namespace tvlm{
 
         void visit(Program *p) override;
 
+        ~NaiveIS() override ;
     protected:
         NaiveIS();
-        ~NaiveIS() override ;
         void visit(Instruction *ins) override{};
 
         void visit(ILBuilder & ilb);
@@ -105,41 +106,45 @@ namespace tvlm{
         /** Prepare register for use with its value (sill if necessary)
          * */
         auto fillIntRegister(Instruction * ins){
-            return regAllocator->getReg(ins);
-        }
-        Register fillTmpIntRegister(){
-            return regAllocator->fillIntRegister();
-        }
-        FRegister fillTmpFloatRegister(){
-            return regAllocator->fillFloatRegister();
-        }
-        auto clearTmpIntRegister(const Register & reg ){
-            return regAllocator->clearIntRegister(reg);
+            return getReg(ins);
+//            return regAllocator->getReg(ins);
         }
         auto fillFloatRegister(Instruction * ins){
-            return regAllocator->getFloatReg(ins);
+            return getFReg(ins);
+//            return regAllocator->getFloatReg(ins);
         }
-        auto clearIntReg(Instruction * ins){
-            return regAllocator->clearInt(ins);
+        Register fillTmpIntRegister(){
+            return getFreeIntRegister();
+//            return regAllocator->fillIntRegister();
         }
-        auto clearFloatReg(Instruction * ins){
-            return regAllocator->clearFloat(ins);
-        }
+//        FRegister fillTmpFloatRegister(){
+//            return getFreeFloatRegister();
+//            return regAllocator->fillFloatRegister();
+//        }
+//        auto clearTmpIntRegister(const Register & reg ){
+//            return regAllocator->clearIntRegister(reg);
+//        }
+//        auto clearIntReg(Instruction * ins){
+//            return regAllocator->clearInt(ins);
+//        }
+//        auto clearFloatReg(Instruction * ins){
+//            return regAllocator->clearFloat(ins);
+//        }
 
 
-        auto clearReg(Instruction * ins){
-            switch (ins->resultType()) {
-                case ResultType::StructAddress:
-                case ResultType::Integer:
-                    return clearIntReg(ins);
-                    break;
-                case ResultType::Double:
-                    return clearFloatReg(ins);
-                    break;
-                case ResultType::Void:
-                    break;
-            }
-        }
+//        auto clearReg(Instruction * ins){
+//            switch (ins->resultType()) {
+//                case ResultType::StructAddress:
+//                case ResultType::Integer:
+//                    return clearIntReg(ins);
+//                    break;
+//                case ResultType::Double:
+//                    return clearFloatReg(ins);
+//                    break;
+//                case ResultType::Void:
+//                    break;
+//            }
+//        }
 
         void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
         int getTrueMemSize(Type * type) const {
@@ -168,6 +173,73 @@ namespace tvlm{
 
         std::unordered_map<const Instruction* ,const Instruction * > instructionToEmplace;
         std::unique_ptr<RegisterAllocator> regAllocator;
+        std::unique_ptr<RegisterAssigner> regAssigner;
+
+        // ******************** Virtual Registers ******************************
+        std::map<const Instruction *, Register> assignedIntRegisters_;
+        std::map<const Instruction *, FRegister> assignedFloatRegisters_;
+        size_t regIntCounter_;
+        size_t regFloatCounter_;
+        Register getReg(const Instruction * ins){
+            auto it = assignedIntRegisters_.find(ins);
+            if(it != assignedIntRegisters_.end()){
+                return it->second;
+            }else{
+                auto reg = getFreeIntRegister();
+                assignedIntRegisters_.emplace(ins, reg);
+                return reg;
+            }
+
+        }
+        FRegister getFReg(const Instruction * ins){
+            auto it = assignedFloatRegisters_.find(ins);
+            if(it != assignedFloatRegisters_.end()){
+                return it->second;
+            }else{
+                auto reg =  getFreeFloatRegister();
+                assignedFloatRegisters_.emplace(ins, reg);
+                return reg;
+            }
+
+        }
+        Register getFreeIntRegister() {
+            return {regIntCounter_++};
+        }
+        FRegister getFreeFloatRegister() {
+            return {regFloatCounter_++};
+        }
+
+        void replaceIntReg(const Instruction * ins, const Instruction * with){
+            auto it = assignedIntRegisters_.find(ins);
+            if(it != assignedIntRegisters_.end()){
+
+                assignedIntRegisters_.emplace(with, it->second);
+            }else{
+                return;
+            }
+        }
+        void replaceFloatReg(const Instruction * ins, const Instruction * with){
+            auto it = assignedFloatRegisters_.find(ins);
+            if(it != assignedFloatRegisters_.end()){
+
+                assignedFloatRegisters_.emplace(with, it->second);
+            }else{
+                return;
+            }
+        }
+
+        void allocateStructArg(const Type * type, const Instruction * ins){
+            regAllocator->allocateStructArg(type, ins);
+        }
+        void prepareReturnValue(size_t size, const Instruction * ins){
+
+        }
+
+        void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins){
+
+        }
+
+        // ******************** \\ Virtual Registers ******************************
 
 
         void makeGlobalTable(BasicBlock *pBlock);

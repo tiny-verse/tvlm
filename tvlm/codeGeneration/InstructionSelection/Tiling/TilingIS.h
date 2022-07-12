@@ -4,8 +4,8 @@
 #include "tvlm/tvlm/il/il.h"
 #include "t86/program/label.h"
 #include "t86/program/programbuilder.h"
-#include "tvlm/tvlm/registerAllocation/RegisterAllocator.h"
-#include "tvlm/tvlm/registerAllocation/NaiveRegisterAllocator.h"
+#include "tvlm/tvlm/codeGeneration/registerAllocation/RegisterAllocator.h"
+#include "tvlm/tvlm/codeGeneration/registerAllocation/NaiveRegisterAllocator.h"
 
 
 

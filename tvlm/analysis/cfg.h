@@ -61,7 +61,6 @@ public:
             cfg_(cfg){
 
     }
-    FunctionCfg(FunctionCfg && fnc);
     virtual ~FunctionCfg(){
         for (auto *n : nodes_) {
             delete n;
@@ -131,7 +130,7 @@ public:
 
 public:
 
-    static ProgramCfg<T> get(Program * program, std::unordered_set<FunctionCfg<T>*> & functionsCfg);
+    static ProgramCfg<T> * get(Program * program, std::unordered_set<FunctionCfg<T>*> & functionsCfg);
 
 
 private:
@@ -149,7 +148,7 @@ public:
 
     virtual FunctionCfg<T>* fromFunction( Function * fnc) = 0;
 
-    ProgramCfg<T> fromProgram(Program * p){
+    ProgramCfg<T> * fromProgram(Program * p){
         CfgNode<T>::counter_ = 0;
         std::unordered_set<FunctionCfg<T>*> tmp;
         for (auto & ff : p->functions()) {
@@ -191,14 +190,12 @@ private:
 
     CfgNode<T> * append(CfgNode<T> * a){
 //        allNodes.emplace_back(a);
-        current_fnc->addNode(a);
-        return a;
+        return current_fnc->addNode(a);
     }
 
     FragmentCfg<T> * append(FragmentCfg<T> * a){
 //        allFragments.emplace_back(a);
-        current_fnc->addFragment(a);
-        return a;
+        return current_fnc->addFragment(a);
     }
 
 //    std::vector<std::unique_ptr<CfgNode<T>>> allNodes;
@@ -222,7 +219,7 @@ private:
 
     template<class T>
     FragmentCfg<T> * FragmentCfg<T>::concat(FragmentCfg * that) {
-        if(isEmpty()){
+        if(this->isEmpty()){
             return new FragmentCfg(*that);
         }else if ( that->isEmpty()){
             return new FragmentCfg(*this);
@@ -292,11 +289,11 @@ private:
         if( it != allFragmentsMap_.end()){
             return it->second;
         }
-        auto acc =append(empty());
+        auto acc = empty();
         allFragmentsMap_[bb] = acc;
         for ( auto & ins : CfgBuilder<T>::getInstructions(bb)) {
             auto tmp = acc->concat(fromInstruction(ins.get()));
-            append(tmp);
+            delete acc;
             allFragmentsMap_[bb] = tmp;
             acc = tmp;
         }
@@ -310,13 +307,12 @@ private:
         auto exit = new CfgFunExitNode<T>(fnc);
         auto fncCfg = new FunctionCfg(fnc, entry, exit);
         current_fnc = fncCfg;
+        append(entry);
+        append(exit);
         auto ptr = single(entry);
         fncexit_ = single(exit);
         auto blockCfg = fromBB(CfgBuilder<T>::getBBs(fnc)[0].get());
-        FragmentCfg<T> * cfg;
-        cfg = ptr->concat(blockCfg);
-        append(entry);
-        append(exit);
+        FragmentCfg<T> * cfg = ptr->concat(blockCfg)->concat(fncexit_);
         append(cfg);
 //        for (auto & e: allNodes) {
 //            fncCfg->addNode(e.release());
@@ -326,6 +322,7 @@ private:
 //            assert(e == nullptr);
 //        }allFragments.clear();
         current_fnc = nullptr;
+        fncCfg->setCfg(cfg);
         return fncCfg;
     }
 
@@ -357,7 +354,7 @@ private:
         return single(makeStmtNode(ins));
     }
     template<class T>
-    ProgramCfg<T> ProgramCfg<T>::get(Program *program, std::unordered_set<FunctionCfg<T> *> &functionsCfg) {
+    ProgramCfg<T>* ProgramCfg<T>::get(Program *program, std::unordered_set<FunctionCfg<T> *> &functionsCfg) {
         std::unordered_set<CfgNode<T>*> setEntry;
         for(auto & e: functionsCfg ){
             setEntry.insert((CfgNode<T>*)e->entry());
@@ -373,7 +370,7 @@ private:
         for (const auto e: functionsCfg) {
             tmp.emplace_back(e);
         }
-        return ProgramCfg(program, std::move(setEntry) ,std::move(setExit) , std::move(tmp) );
+        return new ProgramCfg(program, std::move(setEntry) ,std::move(setExit) , std::move(tmp) );
     }
 
 //    template<class T>

@@ -17,13 +17,14 @@ namespace tvlm{
 
     template<class Info>
     class LivenessAnalysis : public BackwardAnalysis<LiveVars<Info>, Info>{
+
     //    using Declaration = tvlm::Instruction;
         using NodeState = std::unordered_set<Declaration*>;
     //    using Declarations = MAP< ILInstruction *, Declaration*>;
 
         NodeState join(const CfgNode<Info> * node, LiveVars<Info> & state);
 
-        LivenessAnalysis( ProgramCfg<Info> && cfg, const Declarations & declarations);
+        LivenessAnalysis( ProgramCfg<Info> * cfg, const Declarations & declarations);
 
         std::unordered_set<Declaration*> getSubtree(const CfgNode<Info> *pNode);
 
@@ -33,6 +34,9 @@ namespace tvlm{
         NodeState funOne(const CfgNode<Info> * node, LiveVars<Info> & state);
     public:
 //        static LivenessAnalysis<Info> * create(Program * p);
+        virtual ~LivenessAnalysis(){
+            delete cfg_;
+        }
         explicit LivenessAnalysis(Program * p);
         LiveVars<Info> analyze() override;
 
@@ -44,7 +48,7 @@ namespace tvlm{
         NodeState allVars_;
         PowersetLattice<Declaration*> nodeLattice_;
         MapLattice<const CfgNode<Info> *, NodeState> lattice_;
-        ProgramCfg<Info> cfg_;
+        ProgramCfg<Info> * cfg_;
 
     };
 //************************************************************************************************************
@@ -130,27 +134,13 @@ namespace tvlm{
     }
 
 
-    template<typename Info>
-    LivenessAnalysis<Info>::LivenessAnalysis(ProgramCfg<Info> &&cfg, const Declarations &declarations):
-            allVars_([&](){
-                std::unordered_set<Declaration*> tmp;
-                for ( auto & n : cfg.nodes()){
-                    tmp.emplace(n->il());
-                }
-                return tmp;
-            }())
-            ,
-            nodeLattice_(PowersetLattice<Declaration*>(allVars_)),
-            lattice_(MapLattice<const CfgNode<Info>*, std::unordered_set<Declaration*>>(cfg.nodes(), &nodeLattice_)),
-    cfg_(std::move(cfg)){
 
-    }
 
     template<class Info>
     LiveVars<Info> LivenessAnalysis<Info>::analyze() {
         LiveVars<Info> X = lattice_.bot();
         std::unordered_set<const CfgNode<Info>*> W;
-        for( auto & n : cfg_.nodes()){
+        for( auto & n : cfg_->nodes()){
             W.emplace(n);
         }
 
@@ -192,5 +182,19 @@ namespace tvlm{
         return acc;
     }
 
+    template<typename Info>
+    LivenessAnalysis<Info>::LivenessAnalysis(ProgramCfg<Info> * cfg, const Declarations &declarations):
+            allVars_([&](){
+                std::unordered_set< Declaration*> tmp;
+                for ( auto & n : cfg->nodes()){
+                    tmp.emplace(n->il());
+                }
+                return tmp;
+            }())
+            ,
+            nodeLattice_(PowersetLattice<Declaration*>(allVars_)),
+            lattice_(MapLattice<const CfgNode<Info>*, std::unordered_set<Declaration*>>(cfg->nodes(), &nodeLattice_)),
+    cfg_(cfg){
 
+    }
 } //namespace tvlm

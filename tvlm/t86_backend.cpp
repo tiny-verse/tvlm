@@ -3,6 +3,7 @@
 #include <memory>
 #include "t86/instruction.h"
 #include "analysis/liveness_analysis.h"
+#include "tvlm/tvlm/codeGeneration/InstructionSelection/NaiveIS.h"
 
 namespace tvlm{
 
@@ -586,7 +587,7 @@ namespace tvlm{
     }
 } //namespace tvlm
 
-#include "tvlm/tvlm/InstructionSelection/Tiling/rewriting_rules.h"
+#include "tvlm/tvlm/codeGeneration/InstructionSelection/Tiling/rewriting_rules.h"
 #include "tvlm/analysis/next_use_analysis.h"
 
 

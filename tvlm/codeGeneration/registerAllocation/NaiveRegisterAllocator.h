@@ -4,7 +4,7 @@
 #include "t86/instruction.h"
 #include "t86/t86_target"
 #include "t86/program.h"
-#include "../InstructionSelection/ProgramBuilder.h"
+#include "tvlm/tvlm/codeGeneration/ProgramBuilder.h"
 
 namespace tvlm{
 
@@ -37,7 +37,7 @@ namespace tvlm{
 
         void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins) override;
 
-        void allocateStructArg(Type * type,const Instruction * ins) override;
+        void allocateStructArg(const Type * type,const Instruction * ins) override;
 
         void resetAllocSize() override;
 
@@ -68,7 +68,7 @@ namespace tvlm{
         bool spillFloatReg(const FRegister & reg, const Instruction * ins);
 
 
-        void copyStruct(Register aRegister, Type *pType, Register aRegister1, const Instruction * ins);
+        void copyStruct(Register aRegister,const Type *pType, Register aRegister1, const Instruction * ins);
 
         template<typename T>
         void replace(size_t label,const T & instruction){

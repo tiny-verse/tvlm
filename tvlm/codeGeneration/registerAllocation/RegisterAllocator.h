@@ -2,7 +2,7 @@
 
 #include "t86/program/helpers.h"
 #include "tvlm/tvlm/il/il.h"
-#include "tvlm/InstructionSelection/ProgramBuilder.h"
+#include "tvlm/tvlm/codeGeneration/ProgramBuilder.h"
 
 namespace tvlm{
     using Register = tiny::t86::Register;
@@ -73,7 +73,7 @@ namespace tvlm{
         virtual void prepareReturnValue(size_t size, const ILInstruction * ret) = 0;
         virtual void makeLocalAllocation(size_t size, const Register & reg, const ILInstruction * ins) = 0;
 
-        virtual void allocateStructArg(Type * type, const ILInstruction * ins) = 0;
+        virtual void allocateStructArg(const Type * type, const ILInstruction * ins) = 0;
 
         virtual void resetAllocSize() = 0;
 

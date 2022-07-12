@@ -136,10 +136,10 @@ namespace tvlm {
         return tiny::t86::FReg(fcounter++);
     }
 
-    void NaiveRegisterAllocator::copyStruct(Register from, Type *type, Register to,const ILInstruction *ins) {
+    void NaiveRegisterAllocator::copyStruct(Register from,const Type *type, Register to,const ILInstruction *ins) {
 
         auto tmpReg = RegisterAllocator::fillIntRegister();
-        Type::Struct *strct = dynamic_cast<Type::Struct *>(type);
+        const Type::Struct *strct = dynamic_cast<const Type::Struct *>(type);
         for (int i = 0; i < strct->size(); ++i) {
             pb_->add(tiny::t86::MOV(tmpReg, tiny::t86::Mem(from + i)), ins);
             pb_->add(tiny::t86::MOV(tiny::t86::Mem(to + i), tmpReg), ins);
@@ -149,7 +149,7 @@ namespace tvlm {
         tmpReg = -15654;
     }
 
-    void NaiveRegisterAllocator::allocateStructArg(Type *type, const ILInstruction *ins) {
+    void NaiveRegisterAllocator::allocateStructArg(const Type *type, const ILInstruction *ins) {
         functionLocalAllocSize += type->size();
         auto reg = NaiveRegisterAllocator::getReg(ins); // // reg with a structure
         auto regTmp = RegisterAllocator::fillIntRegister(); // Working reg

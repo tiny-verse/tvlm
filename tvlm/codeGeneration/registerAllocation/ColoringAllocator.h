@@ -5,7 +5,7 @@
 #include "t86/t86_target"
 #include "t86/program.h"
 #include "t86/program/programbuilder.h"
-#include "tvlm/InstructionSelection/ProgramBuilder.h"
+#include "tvlm/codeGeneration/ProgramBuilder.h"
 
 #include "tvlm/analysis/liveness_analysis.h"
 
@@ -111,7 +111,7 @@ namespace tvlm{
 
         void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins) override;
 
-        void allocateStructArg(Type *type, const Instruction *ins) override;
+        void allocateStructArg(const Type *type, const Instruction *ins) override;
 
         void resetAllocSize() override;
 

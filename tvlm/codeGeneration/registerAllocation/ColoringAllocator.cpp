@@ -89,7 +89,7 @@ namespace tvlm {
 
     }
 
-    void ColoringAllocator::allocateStructArg(Type *type, const Instruction *ins) {
+    void ColoringAllocator::allocateStructArg(const Type *type, const Instruction *ins) {
 
     }
 

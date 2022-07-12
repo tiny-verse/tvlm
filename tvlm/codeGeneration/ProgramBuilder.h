@@ -86,8 +86,9 @@ namespace tvlm {
             for (auto & i: instructions_) {
                 tmp.emplace_back(i.first);
             }
+            instructions_.clear();
 
-            return TProgram(tmp, std::move(data_));
+            return TProgram(std::move(tmp), std::move(data_));
         }
 
         template<typename T>

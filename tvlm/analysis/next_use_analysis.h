@@ -27,7 +27,7 @@ namespace tvlm{
 
         NodeState join(const CfgNode<I> * node, NextUse<I> & state);
 
-        NextUseAnalysis( ProgramCfg<I> && cfg, const Declarations & declarations);
+        NextUseAnalysis( ProgramCfg<I> * cfg, const Declarations & declarations);
 
         std::unordered_set<Declaration*> getSubtree(const CfgNode<I> *pNode);
 
@@ -36,6 +36,9 @@ namespace tvlm{
 
         NodeState funOne(const CfgNode<I> * node, NextUse<I> & state);
     public:
+        virtual ~NextUseAnalysis() {
+            delete cfg_;
+        }
         static NextUseAnalysis<I> * create(Program * p);
         NextUseAnalysis(Program * p);
         NextUse<I> analyze() override;
@@ -45,7 +48,7 @@ namespace tvlm{
     //    MapLattice<Declaration , FlatElem<const Declaration>*> nodeLattice_;
         NextUseLattice nodeLattice_;
         MapLattice<const CfgNode<I> *, NodeState> lattice_;
-        ProgramCfg<I> cfg_;
+        ProgramCfg<I> * cfg_;
     //    std::unordered_set<Declaration> allVars_;
     //    MapLattice<const CfgNode*, Declaration> nodeLattice_;
     //    MapLattice<const CfgNode *, NodeState> lattice_;
@@ -165,7 +168,7 @@ namespace tvlm{
     NextUse<I> NextUseAnalysis<I>::analyze() {
         NextUse<I> X = lattice_.bot();
         std::unordered_set<const CfgNode<I>*> W;
-        for( auto & n : cfg_.nodes()){
+        for( auto & n : cfg_->nodes()){
             W.emplace(n);
         }
 
@@ -200,10 +203,10 @@ namespace tvlm{
     }
 
     template<class I>
-    NextUseAnalysis<I>::NextUseAnalysis(ProgramCfg<I> &&cfg, const Declarations &declarations) :
+    NextUseAnalysis<I>::NextUseAnalysis(ProgramCfg<I> *cfg, const Declarations &declarations) :
             allVars_([&](){
                 std::unordered_set<Declaration*> tmp;
-                for ( auto & n : cfg.nodes()){
+                for ( auto & n : cfg->nodes()){
                     tmp.emplace(n->il());
                 }
                 return tmp;
@@ -211,8 +214,8 @@ namespace tvlm{
             ,
             sublattice(FlatLattice<const Declaration *>()),
             nodeLattice_(NextUseLattice(allVars_, &sublattice )),
-            lattice_(MapLattice<const CfgNode<I>*, NodeState>(cfg.nodes(), &nodeLattice_)),
-    cfg_(std::move(cfg)){
+            lattice_(MapLattice<const CfgNode<I>*, NodeState>(cfg->nodes(), &nodeLattice_)),
+    cfg_(cfg){
 
     }
 
