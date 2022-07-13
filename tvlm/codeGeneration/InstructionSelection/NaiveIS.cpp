@@ -244,6 +244,7 @@ namespace tvlm{
                     add(tiny::t86::MOV(lhsreg, tiny::t86::Flags()), ins);
                     add(tiny::t86::AND(lhsreg, SignFlag), ins);//SignFlag
                     add(tiny::t86::NOT(lhsreg), ins);
+                    add(tiny::t86::AND(lhsreg, 1), ins);
                     break;
                 case BinOpType::LT:
                     add(tiny::t86::SUB(lhsreg, rhsreg), ins);
@@ -260,6 +261,7 @@ namespace tvlm{
                     add(tiny::t86::MOV(lhsreg, tiny::t86::Flags()), ins);
                     add(tiny::t86::AND(lhsreg, SignFlag), ins);//SignFlag
                     add(tiny::t86::NOT(lhsreg), ins);
+                    add(tiny::t86::AND(lhsreg, 1), ins);
                     break;
             };
 
@@ -310,6 +312,7 @@ namespace tvlm{
                         add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()), ins);
                         add(tiny::t86::AND(tmpreg, SignFlag), ins);//SignFlag
                         add(tiny::t86::NOT(tmpreg), ins);
+                        add(tiny::t86::AND(tmpreg, 1), ins);
 
                         //clearFloatReg(ins->rhs());
                         //clearFloatReg(ins->lhs());
@@ -344,6 +347,7 @@ namespace tvlm{
                     add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()), ins);
                     add(tiny::t86::AND(tmpreg, SignFlag), ins);//SignFlag
                     add(tiny::t86::NOT(tmpreg), ins);
+                    add(tiny::t86::AND(tmpreg, 1), ins);
 
                     //clearFloatReg(ins->rhs());
                     //clearFloatReg(ins->lhs());
