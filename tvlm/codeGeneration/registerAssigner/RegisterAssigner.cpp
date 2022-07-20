@@ -76,4 +76,17 @@ namespace tvlm{
         functionLocalAllocSize = 0;
     }
 
+    void RegisterAssigner::exportAlloc(Function * fnc){
+        targetProgram_->funcLocalAlloc_[fnc] = functionLocalAllocSize;
+    }
+
+    RegisterAssigner::RegisterAssigner(ProgramBuilder *pb, TargetProgram * program):
+    pb_(pb)
+    ,targetProgram_(program)
+    ,functionLocalAllocSize(0)
+    ,regIntCounter_(1)
+    ,regFloatCounter_(1) {
+
+    }
+
 }

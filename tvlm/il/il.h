@@ -627,7 +627,7 @@ namespace tvlm{
         // void accept(ILVisitor * v) override;
 
         BinaryOperator(Opcode op, BinOpType oper, Instruction * lhs, Instruction * rhs, ASTBase const * ast, const std::string & instrName):
-            Instruction{GetResultType(lhs, rhs), ast, instrName, op},
+            Instruction{GetResultType(lhs, rhs, oper), ast, instrName, op},
             op_{op},
             operator_{oper},
             lhs_{lhs},
@@ -636,10 +636,27 @@ namespace tvlm{
             lhs->registerUsage(this);
             rhs->registerUsage(this);
         }
+        static bool convertsToBool(const BinOpType & op) {
+            switch (op){
+                case BinOpType::LT:
+                case BinOpType::LTE:
+                case BinOpType::GT:
+                case BinOpType::GTE:
+                case BinOpType::EQ:
+                case BinOpType::NEQ:
+                case BinOpType::AND:
+                case BinOpType::OR:
+                return true;
+            default:
+                return false;
+            }
+        }
 
-        static ResultType GetResultType(Instruction * lhs, Instruction * rhs) {
+        static ResultType GetResultType(Instruction * lhs, Instruction * rhs, const BinOpType & op) {
             assert(lhs->resultType() != ResultType::Void && rhs->resultType() != ResultType::Void);
-            if (lhs->resultType() == ResultType::Double || rhs->resultType() == ResultType::Double)
+            if(lhs->resultType() == rhs->resultType() && lhs->resultType() == ResultType::Double && convertsToBool(op)){
+
+            }else if (lhs->resultType() == ResultType::Double || rhs->resultType() == ResultType::Double)
                 return ResultType::Double;
             else
                 return ResultType::Integer;

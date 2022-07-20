@@ -652,7 +652,6 @@ namespace tvlm{
     void NaiveIS::visit(ILBuilder & irb) {
 
         //===================================GLOBALS=====================================
-        BasicBlock functionGlobals;
 //        makeGlobalTable(irb->globals_.get());
         auto globs = getProgramsGlobals(irb);
         makeGlobalTable(globs);
@@ -710,7 +709,6 @@ namespace tvlm{
     void NaiveIS::visit(Program * prog) {
 
         //===================================GLOBALS=====================================
-        BasicBlock functionGlobals;
 //        makeGlobalTable(irb->globals_.get());
         auto globs = getProgramsGlobals(prog);
         makeGlobalTable(globs);

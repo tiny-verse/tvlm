@@ -4,6 +4,7 @@
 #include "t86/instruction.h"
 #include "analysis/liveness_analysis.h"
 #include "tvlm/tvlm/codeGeneration/InstructionSelection/NaiveIS.h"
+#include "tvlm/codeGeneration/InstructionSelection/SuperNaiveIS.h"
 
 namespace tvlm{
 
@@ -470,7 +471,7 @@ namespace tvlm{
 //    }
     t86_Backend::PB t86_Backend::compileToTarget(t86_Backend::IL &&il) {
         //auto codeGenerator = CodeGenerator (il);
-
+        auto selected =  SuperNaiveIS::translate(il);
 //            return tvlm::ILTiler::translate(il);
         return NaiveIS::translate(il);
 //        tiny::t86::ProgramBuilder pb;

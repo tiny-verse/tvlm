@@ -17,6 +17,8 @@ namespace tvlm{
         virtual ~RegisterAssigner() = default;
 
         explicit RegisterAssigner(ProgramBuilder * pb);
+        explicit RegisterAssigner(ProgramBuilder * pb, TargetProgram * targetProg);
+
         Register getReg(const Instruction * ins){
             auto it = assignedIntRegisters_.find(ins);
             if(it != assignedIntRegisters_.end()){
@@ -82,12 +84,14 @@ namespace tvlm{
         void registerPhi(const Phi *phi);
         virtual void prepareReturnValue(size_t size, const ILInstruction * ret);
         virtual void resetAllocSize();
+        void exportAlloc(Function * fnc);
 
     private:
 
         void copyStruct(Register aRegister,const Type *pType, Register aRegister1, const Instruction * ins);
 
         ProgramBuilder *  pb_;
+        TargetProgram * targetProgram_;
         size_t functionLocalAllocSize;
         std::map<const Instruction *, Register> assignedIntRegisters_;
         std::map<const Instruction *, FRegister> assignedFloatRegisters_;

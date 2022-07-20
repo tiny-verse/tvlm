@@ -177,10 +177,10 @@ namespace tvlm{
             regAssigner->getFReg(ins);
         }
         Register getFreeIntRegister() {
-            return {regIntCounter_++};
+            return regAssigner->getFreeIntRegister();
         }
         FRegister getFreeFloatRegister() {
-            return {regFloatCounter_++};
+            return regAssigner->getFreeFloatRegister();
         }
 
         void replaceIntReg(const Instruction * ins, const Instruction * with){

@@ -1,5 +1,6 @@
 #pragma once
 #include "t86/program/helpers.h"
+#include "tvlm/codeGeneration/ProgramBuilder.h"
 
 #include <queue>
 
@@ -52,15 +53,54 @@ namespace tvlm{
 
     class SuperNaiveRegisterAllocator {
         using Register = tiny::t86::Register;
+        using VirtualRegister = tiny::t86::Register;
+        using TargetProgramBuilder = tvlm::ProgramBuilder;
 
     public:
         virtual ~SuperNaiveRegisterAllocator() = default;
-        SuperNaiveRegisterAllocator(){}
+        SuperNaiveRegisterAllocator(TargetProgramBuilder && pb):
+                currentWorkingReg_(-1),
+                pb_(std::move(pb))
+        {
+            size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
+            for(size_t i = 0 ; i < regSize ; i++){
+                freeReg_.push_back(Register(i));
+            }
 
+
+        }
+
+
+        TargetProgramBuilder run(){
+            //implement logic of passing through the program;
+
+
+        }
 
 
     private:
-        Register getRegister(const Register & reg){
+        void visit( Label & label){ // helper for run()
+            if(auto instr = pb_.instructions_.at(label).first){
+                if(auto jump = dynamic_cast<tiny::t86::JMP * >(instr)){
+//                    bbsToCompile_.push(jump->d);
+
+                }else if (auto condJump = dynamic_cast<tiny::t86::ConditionalJumpInstruction * >(instr)){
+                }
+
+
+
+
+
+
+
+            }
+        }
+
+        std::queue<Label> functions_;
+        std::queue<Label> bbsToCompile_;
+
+        Register getRegister(const VirtualRegister & reg){
+            currentWorkingReg_ = reg;
             auto it = regMapping_.find(reg);
             if(it != regMapping_.end()){
                 switch (it->second.loc()){
@@ -93,11 +133,70 @@ namespace tvlm{
             return res;
         }
 
-        void spill(const Register & reg) {
+        bool spill(const VirtualRegister & reg) {
+            int stackOffset;
+            VirtualRegister virtualRegister = reg;
+            auto accomodategReg = regMapping_.find(reg);
+            if(accomodategReg == regMapping_.end() && accomodategReg->second.loc() != Location::Register){
+                return false;
+            }
+            Register regToSPill = Register(accomodategReg->second.regIndex());
+            auto it = spillMapping_.find(reg);
+            if(it != spillMapping_.end()){
+                switch (it->second.loc()){
+                case Location::Register:{
 
+                    throw "spilling from register to register not implemented";
+                    break;
+                }
+                case Location::Stack:{
+
+                    int stackOffset = it->second.stackOffset();
+                    tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Sp() + stackOffset), reg); // TODO insert code
+
+                    //update structures
+
+                    regMapping_.erase(virtualRegister);
+                    spillMapping_.emplace(virtualRegister, LocationEntry(Location::Stack, stackOffset));
+
+                    break;
+                }
+                case Location::Memory:{
+
+                    int memAddress = it->second.memAddress();
+                    tiny::t86::MOV(tiny::t86::Mem(memAddress), reg); // TODO insert code
+
+
+                    //update structures
+
+                    regMapping_.erase(virtualRegister);
+                    spillMapping_.emplace(virtualRegister, LocationEntry(Location::Memory, memAddress));
+                        throw "spilling to memory not implemented";
+                    break;
+                }
+                }
+            }else{
+                if (0 /*determine if it has its address == variable, or it is tmp*/){
+                    //variable
+//                    tiny::t86::MOV(tiny::t86::Mem(address), reg); // TODO insert code
+                }else{
+                    //tmp
+                    //stackOffset = getNewStackOffset() //allocate next tmp local
+                    tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Sp() + stackOffset), reg); // TODO insert code
+                }
+
+            }
+
+
+            //update structures
+
+            regMapping_.erase(virtualRegister);
+            spillMapping_.emplace(virtualRegister, LocationEntry(Location::Stack, stackOffset));
+
+            return true;
         }
 
-        void restore(const Register & whereTo, const LocationEntry & from){
+        void restore(const VirtualRegister & whereTo, const LocationEntry & from){
 
         }
 
@@ -115,11 +214,11 @@ namespace tvlm{
         }
 
         std::queue<Register>regQueue_;
-
-        //TargetProgramBuilder pb_;
+        VirtualRegister currentWorkingReg_;
+        TargetProgramBuilder pb_;
         std::list<Register> freeReg_;
-        std::map<Register, LocationEntry> regMapping_;
-        std::map<Register, LocationEntry> spillMapping_;
+        std::map<VirtualRegister, LocationEntry> regMapping_;
+        std::map<VirtualRegister, LocationEntry> spillMapping_;
     };
 
 
