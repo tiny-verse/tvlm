@@ -20,6 +20,11 @@ namespace tvlm{
         pb_->add(tiny::t86::SUB(reg, (int64_t) functionLocalAllocSize), ins);
     }
 
+    void RegisterAssigner::makeGlobalAllocation(size_t size, const Register &reg, const ILInstruction *ins) {
+        pb_->add(tiny::t86::MOV(reg, (int64_t) globalAllocSize), ins);
+        globalAllocSize += size;
+    }
+
     void RegisterAssigner::copyStruct(Register from,const Type *type, Register to,const ILInstruction *ins) {
 
         auto tmpReg = getFreeIntRegister();

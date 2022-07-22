@@ -10,7 +10,7 @@ namespace tvlm {
     pb_(ProgramBuilder())
     , lastIns_(Label::empty())
     , program_(TargetProgram())
-    , globalTable_()
+//    , globalTable_()
     , unpatchedCalls_()
 //                        , regAllocator(new NaiveRegisterAllocator(&pb_))
     , regAssigner(new RegisterAssigner(&pb_, &program_))
@@ -401,8 +401,8 @@ namespace tvlm {
             return;
         }else if (ins->type()->registerType() == ResultType::Integer){
 
-            auto it = globalTable_.find(ins->address());
-            if(it != globalTable_.end()){
+            auto it = program_.globalFind(ins->address());
+            if(it != program_.globalEnd()){
                 add(tiny::t86::MOV(getReg(ins), (int64_t)it->second), ins);
                 lastIns_ = ret; //return ret;
                 return;
@@ -537,15 +537,15 @@ namespace tvlm {
 
         for(const auto *ins : getBBsInstructions(globals)){
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
-                globalTable_.emplace(ins, i->valueInt());
+                program_.globalEmplace(ins, i->valueInt());
             }else if(const auto * alloc = dynamic_cast< const AllocG *>(ins)){
                 if(alloc->resultType() == ResultType::Double){
                     tiny::t86::DataLabel label = pb_.addData(0);
-                    globalTable_.emplace(alloc, label);
+                    program_.globalEmplace(alloc, label);
                     throw "global Double compilation not implemented ";
                 }else if(alloc->resultType() == ResultType::Integer){
                     tiny::t86::DataLabel label = pb_.addData(0);
-                    globalTable_.emplace(alloc, label);
+                    program_.globalEmplace(alloc, label);
 
                 } else if (alloc->resultType() == ResultType::StructAddress){
                     throw "global Struct compilation not implemented ";
@@ -555,11 +555,11 @@ namespace tvlm {
                     throw tiny::ParserError("invalid type of global allocation", ins->ast()->location());
                 }
             }else if( const auto  * store = dynamic_cast<const Store *>(ins)){
-                auto val = globalTable_.find(store->value());
-                if(val == globalTable_.end()){
+                auto val = program_.globalFind(store->value());
+                if(val == program_.globalEnd()){
                     throw "uninitialized Global?";
                 }
-                globalTable_.emplace(store->address(),  val->second);
+                program_.globalEmplace(store->address(),  val->second);
             }else{
                 throw "unknown global instruction - make";
             }
@@ -573,10 +573,22 @@ namespace tvlm {
 
         for(const auto *ins : getBBsInstructions(globals)){
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
+                if(i->resultType() == ResultType::Integer){
+                    add(tiny::t86::MOV( getReg(ins), i->valueInt()), ins);
+                }else if (i->resultType() == ResultType::Double){
+                    add(tiny::t86::MOV( getFReg(ins), i->valueFloat()), ins);
+                }else{
+                    throw "load imm with Res Type Structure or Void not implemented";
+                }
             }else if(const auto * alloc = dynamic_cast< const AllocG *>(ins)){
+                if(alloc->amount()){
+                    throw "allocG with array not implemented"; //TODO global array
+                }else{
+                    regAssigner->makeGlobalAllocation(alloc->size(), getReg(alloc), alloc);
+                }
             }else if( const auto  * store = dynamic_cast<const Store *>(ins)){
-                uint64_t value = globalTable_.find(store->value())->second;
-                uint64_t address = globalTable_.find(store->address())->second;
+                uint64_t value = program_.globalFind(store->value())->second;
+                uint64_t address = program_.globalFind(store->address())->second;
                 add(tiny::t86::MOV( tiny::t86::Reg(0), (int64_t)address), ins);
                 add(tiny::t86::MOV(Mem(tiny::t86::Reg(0)), (int64_t)value), ins);
             }else{

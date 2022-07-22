@@ -51,16 +51,16 @@ namespace tvlm{
 
 
 
-    class SuperNaiveRegisterAllocator {
+    class SuperNaiveRegisterAllocator :public ILVisitor{
         using Register = tiny::t86::Register;
         using VirtualRegister = tiny::t86::Register;
         using TargetProgramBuilder = tvlm::ProgramBuilder;
 
     public:
         virtual ~SuperNaiveRegisterAllocator() = default;
-        SuperNaiveRegisterAllocator(TargetProgramBuilder && pb):
+        SuperNaiveRegisterAllocator( TargetProgram & tp):
                 currentWorkingReg_(-1),
-                pb_(std::move(pb))
+                targetProgram_(tp)
         {
             size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
             for(size_t i = 0 ; i < regSize ; i++){
@@ -71,29 +71,28 @@ namespace tvlm{
         }
 
 
-        TargetProgramBuilder run(){
+        TargetProgram run(){
             //implement logic of passing through the program;
-
-
+            return targetProgram_; // TODO
         }
 
 
     private:
         void visit( Label & label){ // helper for run()
-            if(auto instr = pb_.instructions_.at(label).first){
-                if(auto jump = dynamic_cast<tiny::t86::JMP * >(instr)){
-//                    bbsToCompile_.push(jump->d);
-
-                }else if (auto condJump = dynamic_cast<tiny::t86::ConditionalJumpInstruction * >(instr)){
-                }
-
-
-
-
-
-
-
-            }
+//            if(auto instr = pb_.instructions_.at(label).first){
+//                if(auto jump = dynamic_cast<tiny::t86::JMP * >(instr)){
+////                    bbsToCompile_.push(jump->d);
+//
+//                }else if (auto condJump = dynamic_cast<tiny::t86::ConditionalJumpInstruction * >(instr)){
+//                }
+//
+//
+//
+//
+//
+//
+//
+//            }
         }
 
         std::queue<Label> functions_;
@@ -213,9 +212,51 @@ namespace tvlm{
                 return res;
         }
 
+    protected:
+        void visit(Instruction *ins) override;
+        void visit(Jump *ins) override;
+        void visit(CondJump *ins) override;
+        void visit(Return *ins) override;
+        void visit(CallStatic *ins) override;
+        void visit(Call *ins) override;
+        void visit(Copy *ins) override;
+        void visit(Extend *ins) override;
+        void visit(Truncate *ins) override;
+        void visit(BinOp *ins) override;
+        void visit(UnOp *ins) override;
+        void visit(LoadImm *ins) override;
+        void visit(AllocL *ins) override;
+        void visit(AllocG *ins) override;
+        void visit(ArgAddr *ins) override;
+        void visit(PutChar *ins) override;
+        void visit(GetChar *ins) override;
+        void visit(Load *ins) override;
+        void visit(Store *ins) override;
+        void visit(Phi *ins) override;
+        void visit(ElemAddrOffset *ins) override;
+        void visit(ElemAddrIndex *ins) override;
+        void visit(Halt *ins) override;
+        void visit(StructAssign *ins) override;
+        void visit(BasicBlock *bb) override;
+        void visit(Function *fce) override;
+        void visit(Program *p) override;
+        void enterNewBB(BasicBlock * bb){
+
+        }
+        void exitBB(){
+
+        }
+        void enterNewFce(BasicBlock * bb){
+
+        }
+        void exitFce(){
+
+        }
+    private:
         std::queue<Register>regQueue_;
         VirtualRegister currentWorkingReg_;
-        TargetProgramBuilder pb_;
+//        TargetProgramBuilder pb_;
+        TargetProgram targetProgram_;
         std::list<Register> freeReg_;
         std::map<VirtualRegister, LocationEntry> regMapping_;
         std::map<VirtualRegister, LocationEntry> spillMapping_;

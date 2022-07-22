@@ -30,7 +30,7 @@ namespace  tvlm{
         Label lastIns_;
         TargetProgram program_;
 //        std::unordered_map<tiny::Symbol, const Function * > functionTable_; // already in Program
-        std::unordered_map<const Instruction*, uint64_t> globalTable_;
+//        std::unordered_map<const Instruction*, uint64_t> globalTable_;
 //        std::vector<std::pair<Label, const BasicBlock*>> future_patch_;
         std::vector<std::pair<Label, Symbol>> unpatchedCalls_;
 
@@ -111,13 +111,16 @@ namespace  tvlm{
         }
 
         Register getReg(const Instruction * ins){
-            regAssigner->getReg(ins);
+            return regAssigner->getReg(ins);
         }
         FRegister getFReg(const Instruction * ins){
-            regAssigner->getFReg(ins);
+            return regAssigner->getFReg(ins);
         }
         void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins){
             regAssigner->makeLocalAllocation(size, reg, ins);
+        }
+        void makeGlobalAllocation(size_t size, const Register &reg, const Instruction * ins){
+            regAssigner->makeGlobalAllocation(size, reg, ins);
         }
         void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
 

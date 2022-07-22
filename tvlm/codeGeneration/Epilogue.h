@@ -20,7 +20,31 @@ public:
 
     }
 
-    virtual TProgram translate( SProgram && program) = 0;
+     virtual TProgram translate( SProgram & program) = 0;
+
+    Program * getProgramprogram (SProgram & program){
+        return program.program_;
+    }
+    std::map<const Function * ,size_t> & getFuncLocalAlloc(SProgram & program){
+        return program.funcLocalAlloc_;
+    }
+
+    std::map<const ILInstruction*, std::vector<TInstruction*>> & getSelectedInstrs(SProgram & program){
+        return program.selectedInstrs_;
+    }
+
+    std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> & getJump_patches(SProgram & program){
+        return program.jump_patches_;
+    }
+
+
+    std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> & getCall_patches(SProgram & program){
+        return program.call_patches_;
+    }
+
+    auto & getGlobalTable(SProgram & program){
+        return program.globalTable_;
+    }
 
 protected:
 
@@ -29,10 +53,52 @@ protected:
 
 class NaiveEpilogue : public Epilogue, public ILVisitor{
 public:
-    TProgram translate(SProgram &&program) override;
+    TProgram translate(SProgram & program) override;
+    TProgram translate() {
+        return translate(program_);
+    }
 
     ~NaiveEpilogue() override = default;
+    NaiveEpilogue(SProgram & program):program_(program), lastIns_(Label::empty()){}
+protected:
+    void visitInstrHelper(Instruction *ins);
+    Label add(const Instruction * ins);
+    Label compiledGlobalTable(BasicBlock *globals);
+    Label resolveInstruction(const std::pair<const Instruction *, Label> & pos)const {
+        auto it = compiledInsns_.find(pos);
+        if(it == compiledInsns_.end()){
+            throw "instruction could not be found";
+            return Label::empty();
+        }else{
+            return (it->second );
+        }
+//        auto it = compiledInsns_.find(pos.first);
+//        if(it == compiledInsns_.end()){
+//            throw "instruction could not be found";
+//            return Label::empty();
+//        }else{
+//            return (it->second + pos.second);
+//        }
+    }
+    int64_t getFuncAlloc(Function * fnc){
+        auto alloc = getFuncLocalAlloc(program_);
+        auto it = alloc.find(fnc);
+        if(it == alloc.end()){
+            throw "function not found in localAlloc";
+            return -1;
+        }else{
+            return (int64_t)it->second;
+        }
+    }
+
 private:
+    ProgramBuilder pb_;
+    SProgram & program_;
+    Label lastIns_;
+    std::unordered_map<tiny::Symbol, Label> functionTable_;
+    std::unordered_map<const BasicBlock *, Label> compiledBB_;
+    std::map<std::pair<const Instruction *, Label>, Label> compiledInsns_;
+//    std::map<const Instruction *, Label> compiledInsns_;
 public:
     void visit(Instruction *ins) override;
     void visit(Jump *ins) override;
@@ -61,6 +127,7 @@ public:
     void visit(BasicBlock *bb) override;
     void visit(Function *fce) override;
     void visit(Program *p) override;
-};
+
+    };
 
 }

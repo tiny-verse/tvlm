@@ -135,10 +135,10 @@ namespace tvlm{
 //        }
 
         void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
-        int getTrueMemSize(Type * type) const {
-
-
-        }
+//        int getTrueMemSize(Type * type) const {
+//
+//
+//        }
 
 
         tvlm::ProgramBuilder pb_;
@@ -171,10 +171,10 @@ namespace tvlm{
 
 
         Register getReg(const Instruction * ins){
-            regAssigner->getReg(ins);
+            return regAssigner->getReg(ins);
         }
         FRegister getFReg(const Instruction * ins){
-            regAssigner->getFReg(ins);
+            return regAssigner->getFReg(ins);
         }
         Register getFreeIntRegister() {
             return regAssigner->getFreeIntRegister();

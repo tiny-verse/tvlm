@@ -19,6 +19,8 @@ namespace tvlm {
     class TargetProgram{
     public:
         friend class RegisterAssigner;
+        friend class Epilogue;
+        friend class RegisterAllocator;
         virtual ~TargetProgram() = default;
         TargetProgram():
         program_(nullptr){
@@ -28,13 +30,15 @@ namespace tvlm {
         program_(prog.program_)
         , funcLocalAlloc_(prog.funcLocalAlloc_)
         , selectedInstrs_(prog.selectedInstrs_)
-        ,jump_patches_(prog.jump_patches_){
+        ,jump_patches_(prog.jump_patches_)
+        ,globalTable_(prog.globalTable_){
 
         }
 
         void setProgram(Program * program){
             program_ = program;
         }
+
 
         template<typename T>
         Label add(const T& instruction, const ILInstruction * ins){
@@ -45,11 +49,27 @@ namespace tvlm {
         void patchJump(const Instruction * ins, const Label & label, const BasicBlock * dest){
             jump_patches_.emplace_back(std::make_pair(ins, label), dest);
         }
+        void patchCall(const Instruction * ins, const Label & label, Symbol & dest){
+            call_patches_.emplace_back(std::make_pair(ins, label), dest);
+        }
+
+        auto globalFind(const Instruction * ins)const{
+            return globalTable_.find(ins);
+        }
+        auto globalEnd() const{
+            return globalTable_.end();
+        }
+
+        void globalEmplace(const Instruction * ins, uint64_t val ){
+            globalTable_.emplace(std::make_pair(ins, val));
+        }
     private:
         Program * program_;
         std::map<const Function * ,size_t> funcLocalAlloc_;
         std::map<const ILInstruction*, std::vector<TInstruction*>> selectedInstrs_;
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> jump_patches_;
+        std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> call_patches_;
+        std::map<const Instruction*, uint64_t> globalTable_;
 //        std::vector<std::pair<const ILInstruction *, const BasicBlock*>> jumpPatches_;
 
     };
@@ -65,11 +85,26 @@ namespace tvlm {
 //                  data_(program.data()),
 //                  release_(release) {}
 
+        Label add(std::vector<tiny::t86::Instruction*>& instructions, const ILInstruction * ilIns) {
+            Label tmp = instructions_.size();
+            for (auto i : instructions) {
+                i->validate();
+                instructions_.emplace_back(i, ilIns );
+            }
+            return tmp;
+        }
         template<typename T>
         Label add(const T& instruction, const ILInstruction * ilIns) {
             instruction.validate();
 //            instructions_.emplace_back(std::make_pair<TInstruction*, const ILInstruction*>(new T(instruction), ilIns ));
             instructions_.emplace_back(new T(instruction), ilIns );
+            return Label(instructions_.size() - 1);
+        }
+
+        Label add(tiny::t86::Instruction * instruction, const ILInstruction * ilIns) {
+            instruction->validate();
+//            instructions_.emplace_back(std::make_pair<TInstruction*, const ILInstruction*>(new T(instruction), ilIns ));
+            instructions_.emplace_back(instruction, ilIns );
             return Label(instructions_.size() - 1);
         }
 

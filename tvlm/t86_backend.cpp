@@ -5,6 +5,8 @@
 #include "analysis/liveness_analysis.h"
 #include "tvlm/tvlm/codeGeneration/InstructionSelection/NaiveIS.h"
 #include "tvlm/codeGeneration/InstructionSelection/SuperNaiveIS.h"
+#include "tvlm/codeGeneration/registerAllocation/SuperNaiveRegisterAllocator.h"
+#include "tvlm/codeGeneration/Epilogue.h"
 
 namespace tvlm{
 
@@ -472,6 +474,9 @@ namespace tvlm{
     t86_Backend::PB t86_Backend::compileToTarget(t86_Backend::IL &&il) {
         //auto codeGenerator = CodeGenerator (il);
         auto selected =  SuperNaiveIS::translate(il);
+        auto raSelected = SuperNaiveRegisterAllocator(selected).run();
+        auto epiloged = NaiveEpilogue(raSelected).translate();
+        return epiloged;
 //            return tvlm::ILTiler::translate(il);
         return NaiveIS::translate(il);
 //        tiny::t86::ProgramBuilder pb;
