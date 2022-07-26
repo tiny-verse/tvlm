@@ -110,11 +110,25 @@ namespace  tvlm{
             return program_.add(instruction, ins);
         }
 
-        Register getReg(const Instruction * ins){
-            return regAssigner->getReg(ins);
+        Label addF(const TFInstruction & instruction, const ILInstruction * ins){
+            return program_.addF(instruction, ins);
         }
-        FRegister getFReg(const Instruction * ins){
-            return regAssigner->getFReg(ins);
+
+        size_t getReg(const Instruction * ins){
+            auto reg = regAssigner->getReg(ins);
+            auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
+            return program_.registerAdd(ins, virt);
+        }
+        size_t getExtraIntReg(const ILInstruction * ins){
+            auto reg = regAssigner->getFreeIntRegister();
+            auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
+            return program_.registerAdd( ins, virt);
+        }
+
+        size_t getFReg(const Instruction * ins){
+            auto reg = regAssigner->getFReg(ins);
+            auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
+            return program_.registerAdd(ins, virt);
         }
         void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins){
             regAssigner->makeLocalAllocation(size, reg, ins);
@@ -122,7 +136,8 @@ namespace  tvlm{
         void makeGlobalAllocation(size_t size, const Register &reg, const Instruction * ins){
             regAssigner->makeGlobalAllocation(size, reg, ins);
         }
-        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
+//        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
+        void copyStruct(size_t from, Type * type,size_t to, const ILInstruction * ins );
 
         void makeGlobalTable(BasicBlock *globals);
 

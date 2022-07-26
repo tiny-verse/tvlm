@@ -4,6 +4,13 @@
 #define ZeroFlag 0x02
 #define SignFlag 0x01
 
+#define LMB [&](const std::vector<VirtualRegisterPlaceholder> & regs)
+#define LMBS [&](const std::vector<VirtualRegisterPlaceholder> & regs){ return new
+#define LMBE ;}
+#define LMBJUMP [&](const std::vector<VirtualRegisterPlaceholder> & regs){return new tiny::t86::JMP(tiny::t86::Label::empty());}
+#define vR(REG) Register(regs[REG].getNumber())
+#define vFR(REG) FRegister(regs[REG].getNumber())
+
 namespace tvlm {
 
     SuperNaiveIS::SuperNaiveIS():
@@ -19,7 +26,7 @@ namespace tvlm {
     SuperNaiveIS::~SuperNaiveIS() =  default;
 
     void SuperNaiveIS::visit(Jump *ins) {
-        tiny::t86::Label jmp = add(tiny::t86::JMP( tiny::t86::Label::empty()), ins);
+        tiny::t86::Label jmp = addF(LMBJUMP, ins  );
 //        future_patch_.emplace_back(jmp, ins->getTarget(1));
 //        jump_patches_.emplace_back(std::make_pair(ins, jmp), ins->getTarget(1) );
         program_.patchJump(ins, jmp, ins->getTarget(1));
@@ -29,11 +36,12 @@ namespace tvlm {
 
     void SuperNaiveIS::visit(CondJump *ins) {
         auto ret = pb_.currentLabel();
-
-        add(tiny::t86::CMP(getReg(ins->condition()), 0), ins);
+        auto condReg = getReg(ins->condition());
+//        add(tiny::t86::CMP(condReg, 0), ins);
+        addF(LMB { return new tiny::t86::CMP(vR(condReg), 0);} , ins);
 //        clearIntReg(ins->condition());
-        tiny::t86::Label condJump = add(tiny::t86::JZ(tiny::t86::Label::empty()) ,ins);
-        tiny::t86::Label jumpToTrue = add(tiny::t86::JMP(tiny::t86::Label::empty()), ins);
+        tiny::t86::Label condJump = addF(LMB {return new tiny::t86::JZ(tiny::t86::Label::empty());} ,ins);
+        tiny::t86::Label jumpToTrue = addF(LMBJUMP, ins);
 //        future_patch_.emplace_back(jumpToTrue, ins->getTarget(1));
 //        jump_patches_.emplace_back(std::make_pair(ins, jumpToTrue), ins->getTarget(1) );
         program_.patchJump(ins, jumpToTrue, ins->getTarget(1)  );
@@ -56,22 +64,66 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(Copy *ins) {
-        auto ret = pb_.currentLabel();
-        add(tiny::t86::MOV(getReg(ins), getReg(ins->src()) ), ins);
+        switch (ins->resultType()) {
+            case ResultType::Integer:{
 
-        lastIns_ = ret;//        return ret;
+                auto ret = pb_.currentLabel();
+                auto lhs = getReg(ins);
+                auto rhs = getReg(ins->src());
+
+                addF(LMB {
+                    return new tiny::t86::MOV(
+                            vR(lhs),
+                            vR(rhs));
+                }, ins);
+
+                lastIns_ = ret;//        return ret;
+                break;
+            }
+            case ResultType::Double:{
+
+
+                auto ret = pb_.currentLabel();
+                auto lhs = getFReg(ins);
+                auto rhs = getFReg(ins->src());
+
+                addF(LMB{
+                    return new tiny::t86::MOV(
+                            vFR(lhs),
+                            vFR(rhs) );
+                } , ins);
+
+                lastIns_ = ret;//        return ret;
+                break;
+            }
+            case ResultType::Void:
+                throw "copy on Void not implemented";
+                break;
+            case ResultType::StructAddress:
+                throw "copy on StructAddress not implemented";
+                break;
+        }
     }
 
     void SuperNaiveIS::visit(Extend *ins) {
         auto ret = pb_.currentLabel();
-        add(tiny::t86::EXT(getFReg(ins), getReg(ins->src()) ), ins);
+        auto lhs = getFReg(ins);
+        auto rhs = getReg(ins->src());
+//        add(tiny::t86::EXT(lhs , rhs ), ins);
+        addF(LMB { return new tiny::t86::EXT(
+                vFR(lhs) ,
+                vR(rhs));
+            }, ins);
         //clearReg(ins->src());
         lastIns_ = ret;//        return ret;
     }
 
     void SuperNaiveIS::visit(Truncate *ins) {
         auto ret = pb_.currentLabel();
-        add(tiny::t86::NRW(getReg(ins), getFReg(ins->src()) ), ins);
+        auto lhs = getReg(ins);
+        auto rhs = getFReg(ins->src());
+//        add(tiny::t86::NRW(lhs, getFReg(ins->src()) ), ins);
+        addF(LMB { return new tiny::t86::NRW(vR(lhs), vFR(rhs) );}, ins);
         //clearReg(ins->src());
         lastIns_ = ret;//        return ret;
     }
@@ -87,69 +139,69 @@ namespace tvlm {
                 auto rhsreg = getReg(ins->rhs());
                 switch (ins->opType()) {
                     case BinOpType::ADD:
-                        add(tiny::t86::ADD(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::ADD(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::SUB:
-                        add(tiny::t86::SUB(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::SUB(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::MOD:
-                        add(tiny::t86::MOD(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::MOD(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::MUL:
-                        add(tiny::t86::MUL(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::MUL(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::DIV:
-                        add(tiny::t86::DIV(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::DIV(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
 
                     case BinOpType::AND:
-                        add(tiny::t86::AND(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::OR:
-                        add(tiny::t86::OR(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::OR(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::XOR:
-                        add(tiny::t86::XOR(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::XOR(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
 
                     case BinOpType::LSH:
-                        add(tiny::t86::LSH(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::LSH(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::RSH:
-                        add(tiny::t86::RSH(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::RSH(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
 
                     case BinOpType::NEQ:
-                        add(tiny::t86::SUB(lhsreg,rhsreg), ins);
+                        addF(LMBS tiny::t86::SUB(vR(lhsreg), vR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::EQ:
-                        add(tiny::t86::SUB(lhsreg,rhsreg), ins);
-                        add(tiny::t86::MOV(lhsreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(lhsreg, ZeroFlag), ins);//ZeroFlag
+                        addF(LMBS tiny::t86::SUB(vR(lhsreg), vR(rhsreg)) LMBE, ins);
+                        addF(LMBS tiny::t86::MOV(vR(lhsreg), tiny::t86::Flags()) LMBE, ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), ZeroFlag) LMBE, ins);//ZeroFlag
                         break;
                     case BinOpType::LTE:
-                        add(tiny::t86::SUB(rhsreg, lhsreg), ins);
-                        add(tiny::t86::MOV(lhsreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(lhsreg, SignFlag), ins);//SignFlag
-                        add(tiny::t86::NOT(lhsreg), ins);
-                        add(tiny::t86::AND(lhsreg, 1), ins);
+                        addF(LMBS tiny::t86::SUB(vR(rhsreg), vR(lhsreg))  LMBE, ins);
+                        addF(LMBS tiny::t86::MOV(vR(lhsreg), tiny::t86::Flags())  LMBE, ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), SignFlag)  LMBE, ins);//SignFlag
+                        addF(LMBS tiny::t86::NOT(vR(lhsreg))  LMBE, ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), 1)  LMBE, ins);
                         break;
                     case BinOpType::LT:
-                        add(tiny::t86::SUB(lhsreg, rhsreg), ins);
-                        add(tiny::t86::MOV(lhsreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(lhsreg, SignFlag), ins);//SignFlag
+                        addF(LMBS tiny::t86::SUB(vR(lhsreg), vR(rhsreg)) LMBE, ins);
+                        addF(LMBS tiny::t86::MOV(vR(lhsreg), tiny::t86::Flags()) LMBE, ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), SignFlag) LMBE, ins);//SignFlag
                         break;
                     case BinOpType::GT:
-                        add(tiny::t86::SUB(rhsreg, lhsreg), ins);
-                        add(tiny::t86::MOV(lhsreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(lhsreg, SignFlag), ins);//SignFlag
+                        addF(LMBS tiny::t86::SUB(vR(rhsreg), vR(lhsreg)) LMBE, ins);
+                        addF(LMBS tiny::t86::MOV(vR(lhsreg), tiny::t86::Flags())LMBE, ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), SignFlag) LMBE, ins);//SignFlag
                         break;
                     case BinOpType::GTE:
-                        add(tiny::t86::SUB(lhsreg, rhsreg), ins);
-                        add(tiny::t86::MOV(lhsreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(lhsreg, SignFlag), ins);//SignFlag
-                        add(tiny::t86::NOT(lhsreg), ins);
-                        add(tiny::t86::AND(lhsreg, 1), ins);
+                        addF(LMBS tiny::t86::SUB(vR(lhsreg), vR(rhsreg)) LMBE, ins);
+                        addF(LMBS tiny::t86::MOV(vR(lhsreg), tiny::t86::Flags()) LMBE, ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), SignFlag) LMBE , ins);//SignFlag
+                        addF(LMBS tiny::t86::NOT(vR(lhsreg)) LMBE, ins);
+                        addF(LMBS tiny::t86::AND(vR(lhsreg), 1) LMBE, ins);
                         break;
                 };
 
@@ -164,44 +216,44 @@ namespace tvlm {
 
                 switch (ins->opType()) {
                     case BinOpType::ADD:
-                        add(tiny::t86::FADD(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::FADD(vFR(lhsreg), vFR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::SUB:
-                        add(tiny::t86::FSUB(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::FSUB(vFR(lhsreg), vFR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::MUL:
-                        add(tiny::t86::FMUL(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::FMUL(vFR(lhsreg), vFR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::DIV:
-                        add(tiny::t86::FDIV(lhsreg, rhsreg), ins);
+                        addF(LMBS tiny::t86::FDIV(vFR(lhsreg), vFR(rhsreg)) LMBE, ins);
                         break;
                     case BinOpType::NEQ:{
-                        add(tiny::t86::FSUB(lhsreg,rhsreg), ins);
-                        auto freeReg =regAssigner->getReg(ins);
-                        add(tiny::t86::NRW(freeReg, lhsreg), ins);
+                        addF(LMBS tiny::t86::FSUB(vFR(lhsreg),vFR(rhsreg)) LMBE, ins);
+                        auto freeReg  = getReg(ins);
+                        addF( LMBS tiny::t86::NRW(vR(freeReg), vFR(lhsreg)) LMBE, ins);
                         //clearFloatReg(ins->lhs());
                         //clearFloatReg(ins->rhs());
                         lastIns_ = ret;//        return ret;
                         return;
                     }
                     case BinOpType::EQ:{
-                        Register tmpreg = getReg(ins);
-                        add(tiny::t86::FSUB(lhsreg,rhsreg), ins);
-                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(tmpreg, ZeroFlag), ins);//ZeroFlag
+                        auto tmpreg = getReg(ins);
+                        addF( LMBS tiny::t86::FSUB(vFR(lhsreg),vFR(rhsreg)) LMBE, ins);
+                        addF( LMBS tiny::t86::MOV(vR(tmpreg), tiny::t86::Flags()) LMBE, ins);
+                        addF( LMBS tiny::t86::AND(vR(tmpreg), ZeroFlag) LMBE, ins);//ZeroFlag
                         //clearFloatReg(ins->rhs());
                         //clearFloatReg(ins->lhs());
                         lastIns_ = ret;//        return ret;
                         return;
                     }
                     case BinOpType::LTE:{
-                        Register tmpreg = getReg(ins);
+                        auto tmpreg = getReg(ins);
 
-                        add(tiny::t86::FSUB(rhsreg, lhsreg), ins);
-                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(tmpreg, SignFlag), ins);//SignFlag
-                        add(tiny::t86::NOT(tmpreg), ins);
-                        add(tiny::t86::AND(tmpreg, 1), ins);
+                        addF( LMBS tiny::t86::FSUB(vFR(rhsreg), vFR(lhsreg)) LMBE, ins);
+                        addF( LMBS tiny::t86::MOV(vR(tmpreg), tiny::t86::Flags()) LMBE, ins);
+                        addF( LMBS tiny::t86::AND(vR(tmpreg), SignFlag) LMBE,  ins);//SignFlag
+                        addF( LMBS tiny::t86::NOT(vR(tmpreg)) LMBE, ins);
+                        addF( LMBS tiny::t86::AND(vR(tmpreg), 1) LMBE, ins);
 
                         //clearFloatReg(ins->rhs());
                         //clearFloatReg(ins->lhs());
@@ -209,10 +261,10 @@ namespace tvlm {
                         return;
                     }
                     case BinOpType::LT:{
-                        Register tmpreg = getReg(ins);
-                        add(tiny::t86::FSUB(lhsreg, rhsreg), ins);
-                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(tmpreg, SignFlag), ins);//SignFlag
+                        auto tmpreg = getReg(ins);
+                        addF( LMBS tiny::t86::FSUB(vFR(lhsreg), vFR(rhsreg)) LMBE, ins);
+                        addF( LMBS tiny::t86::MOV(vR(tmpreg), tiny::t86::Flags()) LMBE, ins);
+                        addF( LMBS tiny::t86::AND(vR(tmpreg), SignFlag) LMBE, ins);//SignFlag
 
                         //clearFloatReg(ins->rhs());
                         //clearFloatReg(ins->lhs());
@@ -220,10 +272,10 @@ namespace tvlm {
                         return;
                     }
                     case BinOpType::GT:{
-                        Register tmpreg = getReg(ins);
-                        add(tiny::t86::FSUB(rhsreg, lhsreg), ins);
-                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(tmpreg, SignFlag), ins);//SignFlag
+                        auto tmpreg = getReg(ins);
+                        addF( LMBS tiny::t86::FSUB(vFR(rhsreg), vFR(lhsreg)) LMBE, ins);
+                        addF( LMBS tiny::t86::MOV(vR(tmpreg), tiny::t86::Flags()) LMBE, ins);
+                        addF( LMBS tiny::t86::AND(vR(tmpreg), SignFlag) LMBE,  ins);//SignFlag
 
                         //clearFloatReg(ins->rhs());
                         //clearFloatReg(ins->lhs());
@@ -231,12 +283,12 @@ namespace tvlm {
                         return;
                     }
                     case BinOpType::GTE:{
-                        Register tmpreg = getReg(ins);
-                        add(tiny::t86::FSUB(lhsreg, rhsreg), ins);
-                        add(tiny::t86::MOV(tmpreg, tiny::t86::Flags()), ins);
-                        add(tiny::t86::AND(tmpreg, SignFlag), ins);//SignFlag
-                        add(tiny::t86::NOT(tmpreg), ins);
-                        add(tiny::t86::AND(tmpreg, 1), ins);
+                        auto tmpreg = getReg(ins);
+                        addF( LMBS tiny::t86::FSUB(vFR(lhsreg), vFR(rhsreg)) LMBE , ins);
+                        addF( LMBS tiny::t86::MOV(vR(tmpreg), tiny::t86::Flags()) LMBE , ins);
+                        addF( LMBS tiny::t86::AND(vR(tmpreg), SignFlag) LMBE, ins );//SignFlag
+                        addF( LMBS tiny::t86::NOT(vR(tmpreg)) LMBE , ins);
+                        addF( LMBS tiny::t86::AND(vR(tmpreg), 1) LMBE , ins);
 
                         //clearFloatReg(ins->rhs());
                         //clearFloatReg(ins->lhs());
@@ -253,22 +305,13 @@ namespace tvlm {
                 lastIns_ = ret;//        return ret;
                 return;
 
-                break;
             }
             case ResultType::Void:
                 throw "not implemented";
                 break;
         }
 
-        add(tiny::t86::SUB(getReg(ins->lhs()), getReg(ins->rhs())), ins);
-
-        add(tiny::t86::MOV(getReg(ins->rhs()), tiny::t86::Flags()), ins);
-        add(tiny::t86::AND(getReg(ins->rhs()), SignFlag), ins);//SignFlag
-
-//        regAllocator->replaceInt(ins->rhs(), ins);
-        regAssigner->replaceIntReg(ins->rhs(), ins);
-        //clearIntReg(ins->rhs());
-        lastIns_ = ret;//        return ret;
+        throw "ERROR escaped Bin Op Switch";
     }
 
     void SuperNaiveIS::visit(UnOp *ins) {
@@ -282,16 +325,16 @@ namespace tvlm {
                         getReg(ins->operand());
                 switch (ins->opType()) {
                     case UnOpType::NOT:
-                        add(tiny::t86::NOT(reg), ins);
+                        addF( LMBS tiny::t86::NOT(vR(reg)) LMBE, ins);
                         break;
                     case UnOpType::UNSUB:
-                        add(tiny::t86::SUB(0 , reg), ins);
+                        addF( LMBS tiny::t86::SUB(0 , vR(reg)) LMBE, ins);
                         break;
                     case UnOpType::INC:
-                        add(tiny::t86::INC( reg), ins);
+                        addF(LMBS tiny::t86::INC( vR(reg)) LMBE, ins);
                         break;
                     case UnOpType::DEC:
-                        add(tiny::t86::DEC( reg), ins);
+                        addF( LMBS tiny::t86::DEC( vR(reg)) LMBE, ins);
                         break;
                 }
 //                regAllocator->replaceInt(ins->operand(), ins);
@@ -304,13 +347,13 @@ namespace tvlm {
                 auto reg = getFReg(ins->operand());
                 switch (ins->opType()) {
                     case UnOpType::UNSUB:
-                        add(tiny::t86::FSUB(0 , reg), ins);
+                        addF( LMBS tiny::t86::FSUB(0 , vFR(reg)) LMBE, ins);
                         break;
                     case UnOpType::INC:
-                        add(tiny::t86::FADD( reg, 1), ins);
+                        addF( LMBS tiny::t86::FADD( vFR(reg), 1) LMBE, ins);
                         break;
                     case UnOpType::DEC:
-                        add(tiny::t86::FSUB( reg, 1), ins);
+                        addF( LMBS tiny::t86::FSUB( vFR(reg), 1) LMBE, ins);
                         break;
                     default:
                         throw "not implemented";
@@ -330,7 +373,6 @@ namespace tvlm {
         auto ret = pb_.currentLabel();
 
         switch (ins->resultType()) {
-            case ResultType::StructAddress:
             case ResultType::Integer:{
 
                 int64_t value = ins->valueInt();
@@ -341,13 +383,20 @@ namespace tvlm {
 //                        value = newIns->valueInt();
 //                    }
 //                }
-                add(tiny::t86::MOV(getReg(ins), value ), ins);
+                auto reg = getReg(ins);
+                addF(LMBS tiny::t86::MOV(vR(reg), value ) LMBE , ins);
                 break;
             }
-            case ResultType::Double:
-                add(tiny::t86::MOV(getFReg(ins), ins->valueFloat() ), ins);
+            case ResultType::Double:{
+                auto freg = getFReg(ins);
+                addF( LMBS tiny::t86::MOV( vFR(freg), ins->valueFloat() ) LMBE , ins);
+                break;
+            }
+            case ResultType::StructAddress:
+                throw "ERROR cant load StructAddress as value";
                 break;
             case ResultType::Void:
+                throw "ERROR cant load void as value";
                 break;
         }
 
@@ -357,9 +406,9 @@ namespace tvlm {
 
     void SuperNaiveIS::visit(AllocL *ins) {
         Label ret = pb_.currentLabel();
-        Register reg = getReg(ins);
+        auto reg = getReg(ins);
 //        regAllocator->makeLocalAllocation(ins->size(), reg, ins);
-        makeLocalAllocation(ins->size(), reg, ins);
+        makeLocalAllocation(ins->size(), reg, ins); //TODO !!!! TODO TODO TODO functional local Allocation
         lastIns_ = ret;
     }
 
@@ -372,46 +421,55 @@ namespace tvlm {
         auto reg = getReg(ins);
 //        size_t offset = countArgOffset(ins->args(), ins->index());
         size_t offset =  ins->index();
-        add(tiny::t86::MOV(reg, tiny::t86::Bp() ), ins);
-        add(tiny::t86::ADD(reg, offset  + 3), ins);
+        addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp() ) LMBE, ins);
+        addF( LMBS tiny::t86::ADD(vR(reg), offset  + 3) LMBE, ins);
         if( ins->type()->registerType() == ResultType::StructAddress){
-            add(tiny::t86::MOV(reg, tiny::t86::Mem(reg)), ins);
+            addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(vR(reg))) LMBE, ins);
         }
 
         lastIns_ = ret;//        return ret;
     }
     void SuperNaiveIS::visit(PutChar *ins) {
         auto ret = pb_.currentLabel();
-        add(tiny::t86::PUTCHAR(getReg(ins->src()) ), ins);
+        auto reg = getReg(ins->src());
+        addF( LMBS tiny::t86::PUTCHAR( vR(reg)) LMBE,  ins);
         //clearIntReg(ins->src());
         lastIns_ = ret;
     }
 
     void SuperNaiveIS::visit(GetChar *ins) {
         auto ret = pb_.currentLabel();
-        add(tiny::t86::GETCHAR(getReg(ins) ), ins);
+        auto reg = getReg(ins);
+        addF( LMBS tiny::t86::GETCHAR( vR(reg)) LMBE, ins);
         lastIns_ = ret;
     }
 
     void SuperNaiveIS::visit(Load *ins) {
         auto ret = pb_.currentLabel();
         if(ins->type()->registerType() == ResultType::Double){
-            add(tiny::t86::MOV(getFReg(ins), tiny::t86::Mem(getReg(ins->address()))), ins);
+            auto freg =getFReg(ins);
+            auto regAddr = getReg(ins->address());
+            addF( LMBS tiny::t86::MOV( vFR(freg), tiny::t86::Mem( vR(regAddr))) LMBE, ins);
             lastIns_ = ret; //return ret;
             return;
         }else if (ins->type()->registerType() == ResultType::Integer){
 
             auto it = program_.globalFind(ins->address());
             if(it != program_.globalEnd()){
-                add(tiny::t86::MOV(getReg(ins), (int64_t)it->second), ins);
+                auto reg = getReg(ins);
+                addF( LMBS tiny::t86::MOV(vR(reg), (int64_t)it->second) LMBE, ins);
                 lastIns_ = ret; //return ret;
                 return;
             }
             if(dynamic_cast<Type::Array *>(ins->type())){
-                add(tiny::t86::MOV(getReg(ins), getReg(ins->address())), ins);
+                auto reg = getReg(ins);
+                auto regAddr = getReg(ins->address());
+                addF( LMBS tiny::t86::MOV( vR(reg), vR(regAddr)) LMBE, ins);
 
             }else{
-                add(tiny::t86::MOV(getReg(ins), tiny::t86::Mem(getReg(ins->address()))), ins);
+                auto reg = getReg(ins);
+                auto regAddr = getReg(ins->address());
+                addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(vR(regAddr))) LMBE, ins);
             }
             lastIns_ = ret; //return ret;
             return;
@@ -422,20 +480,32 @@ namespace tvlm {
             return;
 
         }
-        throw "ouch?";
+        throw "ERROR[IS] failed load";
     }
 
     void SuperNaiveIS::visit(Store *ins) {
         auto ret = pb_.currentLabel();
-        if(ins->value()->resultType() == ResultType::Double){
-            add(tiny::t86::MOV(Mem(getReg(ins->address())), getFReg(ins->value())), ins);
-            //clearFloatReg(ins->value());
-
-        }else{
-            add(tiny::t86::MOV(Mem(getReg(ins->address())), getReg(ins->value())), ins);
-            //clearIntReg(ins->value());
+        switch (ins->value()->resultType()) {
+            case ResultType::Double:{
+                auto regAddr = getReg(ins->address());
+                auto regValue = getFReg(ins->value());
+                addF( LMBS tiny::t86::MOV(Mem(vR(regAddr)), vFR(regValue)) LMBE, ins);
+                lastIns_ = ret;
+                return;
+            }
+            case ResultType::StructAddress:
+            case ResultType::Integer:{
+                auto regAddr = getReg(ins->address());
+                auto regValue = getReg(ins->value());
+                addF( LMBS tiny::t86::MOV(Mem(vR(regAddr)), vR(regValue)) LMBE, ins);
+                lastIns_ = ret;
+                return;
+            }
+            case ResultType::Void:{
+                throw "ERROR[IS] Store: failed to store void value";
+            }
         }
-        lastIns_ = ret;//        return ret;
+        throw "ERROR[IS] Store: failed to resolve value type";
     }
 
     void SuperNaiveIS::visit(Phi *ins) {
@@ -445,11 +515,13 @@ namespace tvlm {
     void SuperNaiveIS::visit(ElemAddrOffset *ins) {
         auto ret = pb_.currentLabel();
 
-
-        add(tiny::t86::MOV(getReg(ins),
-                           getReg(ins->base())), ins);
-        add(tiny::t86::ADD(getReg(ins),
-                           getReg(ins->offset())), ins);
+        auto reg = getReg(ins);
+        auto regBase = getReg(ins->base());
+        auto regOffset =
+        addF( LMBS tiny::t86::MOV(vR(reg),
+                          vR(regBase) ) LMBE, ins);
+        addF( LMBS tiny::t86::ADD(vR(reg),
+                           vR(regOffset)) LMBE, ins);
 
         //clearIntReg(ins->offset());
         lastIns_ = ret;//        return ret;
@@ -458,29 +530,34 @@ namespace tvlm {
     void SuperNaiveIS::visit(ElemAddrIndex *ins) {
         auto ret = pb_.currentLabel();
 
-        add(tiny::t86::MOV(getReg(ins),
-                           getReg(ins->base())), ins);
-        add(tiny::t86::MOV(getReg(ins),
-                           tiny::t86::Mem(getReg(ins->base()))), ins);
+        auto reg= getReg(ins);
+        auto regBase = getReg(ins->base());
+        auto regIndex = getReg(ins->index());
+        addF( LMBS tiny::t86::MOV( vR(reg),
+                           vR(regBase)) LMBE, ins);
+        addF( LMBS tiny::t86::MOV(vR(reg),
+                           tiny::t86::Mem(vR(regBase))) LMBE, ins);
         //clearIntReg(ins->offset());
-        add(tiny::t86::ADD(getReg(ins),
-                           getReg(ins->index())), ins);
+        addF( LMBS tiny::t86::ADD(vR(reg),
+                           vR(regIndex)) LMBE, ins);
         //clearIntReg(ins->index());
         lastIns_ = ret;//        return ret;
     }
 
     void SuperNaiveIS::visit(Halt *ins) {
-        lastIns_ = add(tiny::t86::HALT(), ins);
+        lastIns_ = addF( LMBS tiny::t86::HALT() LMBE, ins);
     }
 
 
-    void SuperNaiveIS::copyStruct(const Register &from, Type *type, const Register &to, const Instruction * ins) {
+    void SuperNaiveIS::copyStruct(size_t from, Type *type, size_t to, const Instruction * ins) {
 
-        auto tmpReg = regAssigner->getFreeIntRegister();
+//        auto tmpReg = regAssigner->getFreeIntRegister();
+        auto tmpReg = getExtraIntReg(ins);
+
         Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
         for (int i = 0; i < strct->size(); ++i) {
-            add(tiny::t86::MOV(tmpReg, tiny::t86::Mem(from + i )), ins);
-            add(tiny::t86::MOV(tiny::t86::Mem(to + i), tmpReg), ins);
+            addF( LMBS tiny::t86::MOV( vR(tmpReg), tiny::t86::Mem( vR(from) + i )) LMBE, ins);
+            addF( LMBS tiny::t86::MOV(tiny::t86::Mem(vR(to) + i), tmpReg) LMBE, ins);
         }
 
 //        clearTmpIntRegister(tmpReg); tmpReg = -15654;
@@ -574,9 +651,11 @@ namespace tvlm {
         for(const auto *ins : getBBsInstructions(globals)){
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 if(i->resultType() == ResultType::Integer){
-                    add(tiny::t86::MOV( getReg(ins), i->valueInt()), ins);
+                    auto reg = getReg(ins);
+                    addF( LMBS tiny::t86::MOV( vR(reg), i->valueInt()) LMBE, ins);
                 }else if (i->resultType() == ResultType::Double){
-                    add(tiny::t86::MOV( getFReg(ins), i->valueFloat()), ins);
+                    auto freg=getFReg(ins);
+                    addF( LMBS tiny::t86::MOV( vFR(freg), i->valueFloat()) LMBE, ins);
                 }else{
                     throw "load imm with Res Type Structure or Void not implemented";
                 }
@@ -589,8 +668,9 @@ namespace tvlm {
             }else if( const auto  * store = dynamic_cast<const Store *>(ins)){
                 uint64_t value = program_.globalFind(store->value())->second;
                 uint64_t address = program_.globalFind(store->address())->second;
-                add(tiny::t86::MOV( tiny::t86::Reg(0), (int64_t)address), ins);
-                add(tiny::t86::MOV(Mem(tiny::t86::Reg(0)), (int64_t)value), ins);
+                auto reg = getReg(ins);
+                addF(LMBS tiny::t86::MOV( vR(reg), (int64_t)address)LMBE , ins);
+                addF(LMBS tiny::t86::MOV(Mem(vR(reg)), (int64_t)value) LMBE, ins);
             }else{
                 throw tiny::ParserError("unknown global instruction", ins->ast()->location());
             }

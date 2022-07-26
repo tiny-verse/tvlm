@@ -21,7 +21,7 @@ namespace tvlm{
     }
 
     void RegisterAssigner::makeGlobalAllocation(size_t size, const Register &reg, const ILInstruction *ins) {
-        pb_->add(tiny::t86::MOV(reg, (int64_t) globalAllocSize), ins);
+        pb_->add(tiny::t86::MOV(reg, (int64_t) globalAllocSize), ins); //TODO TODO TODO make funtional
         globalAllocSize += size;
     }
 

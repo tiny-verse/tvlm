@@ -14,6 +14,7 @@
 namespace tvlm {
 
     using TInstruction =tiny::t86::Instruction;
+    using TFInstruction =std::function<TInstruction * (std::vector<VirtualRegisterPlaceholder>)>;
     using ILInstruction =::tvlm::Instruction;
     using Label = tiny::t86::Label;
     using DataLabel = tiny::t86::DataLabel;
@@ -61,6 +62,12 @@ namespace tvlm {
         }
 
 
+
+        Label addF(const TFInstruction & instruction, const ILInstruction * ins){
+//            selectedInstrs_[ins].push_back(new T(instruction));
+            selectedFInstrs_[ins].push_back(instruction);
+            return selectedInstrs_[ins].size() -1;
+        }
         template<typename T>
         Label add(const T& instruction, const ILInstruction * ins){
             selectedInstrs_[ins].push_back(new T(instruction));
@@ -84,10 +91,30 @@ namespace tvlm {
         void globalEmplace(const Instruction * ins, uint64_t val ){
             globalTable_.emplace(std::make_pair(ins, val));
         }
+
+        size_t registerAdd(const ILInstruction * instr, const VirtualRegisterPlaceholder & virt){
+            auto it = alocatedRegisters_.find(instr);
+            if(it == alocatedRegisters_.end()){
+                std::vector<VirtualRegisterPlaceholder>tmp = {virt};
+                alocatedRegisters_.emplace(instr, std::move(tmp));
+                return 0;
+            }else{
+                it->second.push_back(virt);
+                return it->second.size() -1;
+            }
+        }
+//        size_t registerTMPAdd( const VirtualRegisterPlaceholder & virt){
+//            alocatedTMPRegisters_.push_back(virt);
+//            return alocatedTMPRegisters_.size() - 1;
+//        }
+
     private:
         Program * program_;
         std::map<const Function * ,size_t> funcLocalAlloc_;
         std::map<const ILInstruction*, std::vector<TInstruction*>> selectedInstrs_;
+        std::map<const ILInstruction*, std::vector<TFInstruction>> selectedFInstrs_;
+        std::map<const ILInstruction*, std::vector<VirtualRegisterPlaceholder>> alocatedRegisters_;
+        std::vector<VirtualRegisterPlaceholder> alocatedTMPRegisters_;
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> jump_patches_;
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> call_patches_;
         std::map<const Instruction*, uint64_t> globalTable_;
