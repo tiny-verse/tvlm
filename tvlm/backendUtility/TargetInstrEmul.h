@@ -12,9 +12,9 @@ namespace tvlm {
     public:
         using FCreate = std::function<tiny::t86::Instruction * (const std::vector<VirtualRegisterPlaceholder> &)> ;
         virtual ~TargetInstrEmul() = default;
-        TargetInstrEmul(const FCreate & create, const std::vector<VirtualRegisterPlaceholder> & registers ):
+        TargetInstrEmul(const FCreate & create, std::vector<VirtualRegisterPlaceholder> && registers ):
                 create_(create)
-                ,registers_(registers){
+                ,registers_(std::move(registers)){
 
         }
     private:

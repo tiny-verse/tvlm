@@ -14,7 +14,7 @@ namespace tvlm{
 
     public:
         virtual ~RegisterAllocator() = default;
-        explicit RegisterAllocator(ProgramBuilder * pb);
+        explicit RegisterAllocator(ProgramBuilderOLD * pb);
 
         /**
          * getReg : Code generator uses getReg function to determine the status of available registers
@@ -93,7 +93,7 @@ namespace tvlm{
         std::set<Register> tmpIntRegs_;
         std::set<FRegister> tmpFloatRegs_;
 
-        ProgramBuilder * pb_;
+        ProgramBuilderOLD * pb_;
 
 
     };

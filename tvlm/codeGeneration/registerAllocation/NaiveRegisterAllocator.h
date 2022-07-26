@@ -12,7 +12,7 @@ namespace tvlm{
     class NaiveRegisterAllocator :public RegisterAllocator{
 
     public:
-        NaiveRegisterAllocator(ProgramBuilder * pb):
+        NaiveRegisterAllocator(ProgramBuilderOLD * pb):
                 RegisterAllocator(pb){}
 
         Register getReg(const Instruction *ins) override;
@@ -84,7 +84,7 @@ namespace tvlm{
 //            instrs[label] = new T(instruction);
 //
 //            auto resProg = tiny::t86::Program(instrs, p.data());
-//            *pb_ = ProgramBuilder(std::move(resProg));
+//            *pb_ = ProgramBuilderOLD(std::move(resProg));
         }
     };
 

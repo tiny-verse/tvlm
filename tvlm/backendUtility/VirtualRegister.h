@@ -18,12 +18,12 @@ namespace tvlm{
         ,number_(number)
         {}
 
-        VirtualRegisterPlaceholder(const VirtualRegisterPlaceholder & other):
-        regType_(other.regType_)
-        ,number_(other.number_)
+        VirtualRegisterPlaceholder(VirtualRegisterPlaceholder && other):
+        regType_(std::move(other.regType_))
+        ,number_(std::move(other.number_))
         {}
 
-        void CHangeNumber(size_t number){
+        void setNumber(size_t number){
             number_ = number;
         }
 
@@ -33,6 +33,9 @@ namespace tvlm{
 
         size_t getNumber()const {
             return number_;
+        }
+        bool operator<(const VirtualRegisterPlaceholder & rhs) const{
+            return (this->regType_ < rhs.regType_ ) ? true :  this->regType_ == rhs.regType_ && this->number_ < rhs.number_ ;
         }
     private:
         size_t number_;

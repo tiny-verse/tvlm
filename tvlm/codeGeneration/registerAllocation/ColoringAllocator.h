@@ -78,14 +78,14 @@ namespace tvlm{
 
     class ColoringAllocator : public RegisterAllocator{
     public:
-        void ReassignRegisters(ILBuilder & ilb /*or ProgramBuilder and res of analysis*/){
+        void ReassignRegisters(ILBuilder & ilb /*or ProgramBuilderOLD and res of analysis*/){
             auto prog = ilb.finish();
-            auto la = new LivenessAnalysis<ColorInfo>(&prog); // Integrate ILBuilder and ProgramBuilder
+            auto la = new LivenessAnalysis<ColorInfo>(&prog); // Integrate ILBuilder and ProgramBuilderOLD
             analysisResult_ = la->analyze();
 //            analysis_mapping_ = la->analysis_mapping()
         }
-        void ReassignRegisters(Program * prog /*or ProgramBuilder and res of analysis*/){
-            auto la = new LivenessAnalysis<ColorInfo>( prog); // Integrate ILBuilder and ProgramBuilder
+        void ReassignRegisters(Program * prog /*or ProgramBuilderOLD and res of analysis*/){
+            auto la = new LivenessAnalysis<ColorInfo>( prog); // Integrate ILBuilder and ProgramBuilderOLD
             analysisResult_ = la->analyze();
 
         }

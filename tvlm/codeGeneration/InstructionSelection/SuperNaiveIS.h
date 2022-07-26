@@ -20,14 +20,14 @@ namespace  tvlm{
     using FRegister = tiny::t86::FloatRegister;
     private:
 
-        tvlm::ProgramBuilder pb_;
+//        tvlm::ProgramBuilderOLD pb_;
         /*
      bool hardDBG_ = true;
       /*/
         bool hardDBG_ = false;/**/
 
 
-        Label lastIns_;
+//        Label lastIns_;
         TargetProgram program_;
 //        std::unordered_map<tiny::Symbol, const Function * > functionTable_; // already in Program
 //        std::unordered_map<const Instruction*, uint64_t> globalTable_;
@@ -77,7 +77,6 @@ namespace  tvlm{
 
         Label visitChild(IL * il) {
             ILVisitor::visitChild(il);
-            return lastIns_;
         }
 
         template<typename T>
@@ -105,10 +104,10 @@ namespace  tvlm{
 //            return ret;
 //        }
 
-        template<typename T>
-        Label add(const T& instruction, const ILInstruction * ins){
-            return program_.add(instruction, ins);
-        }
+//        template<typename T>
+//        Label add(const T& instruction, const ILInstruction * ins){
+//            return program_.add(instruction, ins);
+//        }
 
         Label addF(const TFInstruction & instruction, const ILInstruction * ins){
             return program_.addF(instruction, ins);
@@ -117,23 +116,23 @@ namespace  tvlm{
         size_t getReg(const Instruction * ins){
             auto reg = regAssigner->getReg(ins);
             auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
-            return program_.registerAdd(ins, virt);
+            return program_.registerAdd(ins, std::move(virt));
         }
         size_t getExtraIntReg(const ILInstruction * ins){
             auto reg = regAssigner->getFreeIntRegister();
             auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
-            return program_.registerAdd( ins, virt);
+            return program_.registerAdd( ins, std::move(virt));
         }
 
         size_t getFReg(const Instruction * ins){
             auto reg = regAssigner->getFReg(ins);
             auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
-            return program_.registerAdd(ins, virt);
+            return program_.registerAdd(ins, std::move(virt));
         }
-        void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins){
+        void makeLocalAllocation(size_t size, size_t reg, const Instruction * ins){
             regAssigner->makeLocalAllocation(size, reg, ins);
         }
-        void makeGlobalAllocation(size_t size, const Register &reg, const Instruction * ins){
+        void makeGlobalAllocation(size_t size, size_t reg, const Instruction * ins){
             regAssigner->makeGlobalAllocation(size, reg, ins);
         }
 //        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );

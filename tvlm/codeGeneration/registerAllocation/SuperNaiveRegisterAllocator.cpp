@@ -1,5 +1,7 @@
 #include "SuperNaiveRegisterAllocator.h"
 
+#include "tvlm/tvlm/codeGeneration/FunctionalMacro.h"
+
 namespace tvlm {
 
 
@@ -7,7 +9,8 @@ namespace tvlm {
 
     }
 
-    void SuperNaiveRegisterAllocator::visit(Jump *ins) { }
+    void SuperNaiveRegisterAllocator::visit(Jump *ins) {
+    }
 
     void SuperNaiveRegisterAllocator::visit(CondJump *ins) {
 
@@ -45,7 +48,10 @@ namespace tvlm {
         switch (ins->resultType()) {
             case ResultType::Integer:
             case ResultType::StructAddress:{
-                auto insReg = getSelected(ins);
+                auto insReg = getSelectedRegisters(ins);
+                for (auto & virtReg: insReg) {
+
+                }
                 break;
             }
             case ResultType::Double:
@@ -117,11 +123,11 @@ namespace tvlm {
     }
 
     void SuperNaiveRegisterAllocator::visit(Function *fce) {
-
+        enterNewFce(fce);
         for (BasicBlock * bb : getFunctionBBs(fce)){
             visitChild(bb);
         }
-
+        exitFce();
 
     }
 
@@ -140,21 +146,22 @@ namespace tvlm {
     }
 
     SuperNaiveRegisterAllocator::SuperNaiveRegisterAllocator(TargetProgram &tp):
-            currentWorkingReg_(-1),
+            mtWorkingReg__(RegisterType::INTEGER, -1),
+            currentWorkingReg_( &mtWorkingReg__),
             targetProgram_(tp)
     {
         size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
         for(size_t i = 0 ; i < regSize ; i++){
-            freeReg_.push_back(Register(i));
+            freeReg_.emplace_back(Register(i));
         }
 
 
     }
 
     SuperNaiveRegisterAllocator::Register
-    SuperNaiveRegisterAllocator::getRegister(const SuperNaiveRegisterAllocator::VirtualRegister &reg) {
-        currentWorkingReg_ = reg;
-        auto it = regMapping_.find(reg);
+    SuperNaiveRegisterAllocator::getRegister(SuperNaiveRegisterAllocator::VirtualRegister &reg) {
+        currentWorkingReg_ = &reg;
+        auto it = regMapping_.find(&reg);
         if(it != regMapping_.end()){
             switch (it->second.loc()){
                 case Location::Register:
@@ -167,14 +174,14 @@ namespace tvlm {
                     auto free = getFreeRegister();
                     restore( free, it->second);
                     regMapping_.erase(it);
-                    regMapping_.emplace(reg, LocationEntry(Location::Register, free.index()));
+                    regMapping_.emplace( &reg, LocationEntry(Location::Register, free.index()));
                     return free;
                     break;
             }
         }else{
             //notFound --> Allocate new
             Register newReg = getFreeRegister();
-            regMapping_.emplace(reg, LocationEntry(Location::Register, newReg.index()));
+            regMapping_.emplace(&reg, LocationEntry(Location::Register, newReg.index()));
             return newReg;
         }
     }
@@ -185,10 +192,10 @@ namespace tvlm {
         return res;
     }
 
-    bool SuperNaiveRegisterAllocator::spill(const SuperNaiveRegisterAllocator::VirtualRegister &reg) {
+    bool SuperNaiveRegisterAllocator::spill( SuperNaiveRegisterAllocator::VirtualRegister &reg) {
         int stackOffset;
-        VirtualRegister virtualRegister = reg;
-        auto accomodategReg = regMapping_.find(reg);
+        VirtualRegister & virtualRegister = reg;
+        auto accomodategReg = regMapping_.find(&reg);
         if(accomodategReg == regMapping_.end() && accomodategReg->second.loc() != Location::Register){
             return false;
         }
@@ -204,7 +211,8 @@ namespace tvlm {
                 case Location::Stack:{
 
                     int stackOffset = it->second.stackOffset();
-                    tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Sp() + stackOffset), reg); // TODO insert code
+                    LMBS tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Sp() + stackOffset),
+                                        Register(reg.getNumber())) LMBE ; // TODO insert code
 
                     //update structures
 
@@ -248,7 +256,7 @@ namespace tvlm {
         return true;
     }
 
-    void SuperNaiveRegisterAllocator::restore(const SuperNaiveRegisterAllocator::VirtualRegister &whereTo,
+    void SuperNaiveRegisterAllocator::restore(const SuperNaiveRegisterAllocator::Register &whereTo,
                                               const LocationEntry &from) {
         //TODO implement restore
 
@@ -271,7 +279,7 @@ namespace tvlm {
 
     }
 
-    void SuperNaiveRegisterAllocator::enterNewFce(BasicBlock *bb) {
+    void SuperNaiveRegisterAllocator::enterNewFce(Function *bb) {
 
     }
 
@@ -283,9 +291,19 @@ namespace tvlm {
 
     }
 
-    std::vector<tiny::t86::Instruction *> SuperNaiveRegisterAllocator::getSelected(const Instruction * ins) const {
-        auto it = targetProgram_.selectedInstrs_.find(ins);
-        if(it == targetProgram_.selectedInstrs_.end()){
+    std::vector<TFInstruction> SuperNaiveRegisterAllocator::getSelectedInstr(const Instruction * ins) const {
+        auto it = targetProgram_.selectedFInstrs_.find(ins);
+        if(it == targetProgram_.selectedFInstrs_.end()){
+            throw "finding instruction which is not compiled";
+        }
+
+        return it->second;
+    }
+
+    std::vector<VirtualRegisterPlaceholder>
+    SuperNaiveRegisterAllocator::getSelectedRegisters(const Instruction * ins) const {
+        auto it = targetProgram_.alocatedRegisters_.find(ins);
+        if(it == targetProgram_.alocatedRegisters_.end()){
             throw "finding instruction which is not compiled";
         }
 

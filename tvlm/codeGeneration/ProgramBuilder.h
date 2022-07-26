@@ -52,8 +52,13 @@ namespace tvlm {
         program_(prog.program_)
         , funcLocalAlloc_(prog.funcLocalAlloc_)
         , selectedInstrs_(prog.selectedInstrs_)
+        , selectedFInstrs_(prog.selectedFInstrs_)
+        ,alocatedRegisters_(prog.alocatedRegisters_)
         ,jump_patches_(prog.jump_patches_)
-        ,globalTable_(prog.globalTable_){
+        ,call_patches_(prog.call_patches_)
+        ,globalTable_(prog.globalTable_)
+        ,data_(prog.data_)
+        {
 
         }
 
@@ -66,7 +71,7 @@ namespace tvlm {
         Label addF(const TFInstruction & instruction, const ILInstruction * ins){
 //            selectedInstrs_[ins].push_back(new T(instruction));
             selectedFInstrs_[ins].push_back(instruction);
-            return selectedInstrs_[ins].size() -1;
+            return selectedFInstrs_[ins].size() -1;
         }
         template<typename T>
         Label add(const T& instruction, const ILInstruction * ins){
@@ -74,9 +79,35 @@ namespace tvlm {
             return selectedInstrs_[ins].size() -1;
         }
 
-        void patchJump(const Instruction * ins, const Label & label, const BasicBlock * dest){
-            jump_patches_.emplace_back(std::make_pair(ins, label), dest);
+
+        DataLabel addData(int64_t data) {
+            data_.push_back(data);
+            return data_.size() - 1;
         }
+
+        // Add data of specified size to data segment with specified value(s)
+        DataLabel addData(int64_t value, std::size_t size) {
+            DataLabel label = data_.size();
+            data_.reserve(size);
+            for (std::size_t i = 0; i < size; ++i) {
+                data_.push_back(value);
+            }
+            return label;
+        }
+
+        DataLabel addData(const std::string& str) {
+            DataLabel label = data_.size();
+            for (char c : str) {
+                addData(c);
+            }
+            addData('\0');
+            return label;
+        }
+
+        void patchJump(const Instruction * ins, const Label & label, const BasicBlock * dest){
+            jump_patches_.emplace_back(std::make_pair(ins,label), dest);
+        }
+
         void patchCall(const Instruction * ins, const Label & label, Symbol & dest){
             call_patches_.emplace_back(std::make_pair(ins, label), dest);
         }
@@ -92,14 +123,15 @@ namespace tvlm {
             globalTable_.emplace(std::make_pair(ins, val));
         }
 
-        size_t registerAdd(const ILInstruction * instr, const VirtualRegisterPlaceholder & virt){
+        size_t registerAdd(const ILInstruction * instr, VirtualRegisterPlaceholder && virt){
             auto it = alocatedRegisters_.find(instr);
             if(it == alocatedRegisters_.end()){
-                std::vector<VirtualRegisterPlaceholder>tmp = {virt};
+                std::vector<VirtualRegisterPlaceholder>tmp;
+                tmp.emplace_back(std::move(virt));
                 alocatedRegisters_.emplace(instr, std::move(tmp));
                 return 0;
             }else{
-                it->second.push_back(virt);
+                it->second.emplace_back(std::move(virt));
                 return it->second.size() -1;
             }
         }
@@ -120,7 +152,9 @@ namespace tvlm {
         std::map<const Instruction*, uint64_t> globalTable_;
 //        std::vector<std::pair<const ILInstruction *, const BasicBlock*>> jumpPatches_;
 
+        std::vector<int64_t> data_;
     };
+
 
 
     class ProgramBuilder {
@@ -129,6 +163,116 @@ namespace tvlm {
         ProgramBuilder(bool release = false) : release_(release) {}
 
 //        ProgramBuilder(tiny::t86::Program program, bool release = false)
+//                : instructions_(program.moveInstructions()),
+//                  data_(program.data()),
+//                  release_(release) {}
+
+        Label add(std::vector<tiny::t86::Instruction*>& instructions, const ILInstruction * ilIns) {
+            Label tmp = instructions_.size();
+            for (auto i : instructions) {
+                i->validate();
+                instructions_.emplace_back(i, ilIns );
+            }
+            return tmp;
+        }
+        template<typename T>
+        Label add(const T& instruction, const ILInstruction * ilIns) {
+            instruction.validate();
+//            instructions_.emplace_back(std::make_pair<TInstruction*, const ILInstruction*>(new T(instruction), ilIns ));
+            instructions_.emplace_back(new T(instruction), ilIns );
+            return Label(instructions_.size() - 1);
+        }
+
+        Label add(tiny::t86::Instruction * instruction, const ILInstruction * ilIns) {
+            instruction->validate();
+//            instructions_.emplace_back(std::make_pair<TInstruction*, const ILInstruction*>(new T(instruction), ilIns ));
+            instructions_.emplace_back(instruction, ilIns );
+            return Label(instructions_.size() - 1);
+        }
+
+        Label add(const tiny::t86::DBG& instruction) {
+            if (!release_) {
+                instructions_.emplace_back(new tiny::t86::DBG(instruction), nullptr);
+                return instructions_.size() - 1;
+            }
+            // This returns the next added instruction
+            // if the DBG was last, you will get into a infinite NOP loop
+            // but you would get there with DBG as last anyways
+            return instructions_.size();
+        }
+
+        // This returns current Label, this label will point to next added instruction
+        Label currentLabel() const {
+            return instructions_.size();
+        }
+
+        DataLabel addData(int64_t data) {
+            data_.push_back(data);
+            return data_.size() - 1;
+        }
+
+        // Add data of specified size to data segment with specified value(s)
+        DataLabel addData(int64_t value, std::size_t size) {
+            DataLabel label = data_.size();
+            data_.reserve(size);
+            for (std::size_t i = 0; i < size; ++i) {
+                data_.push_back(value);
+            }
+            return label;
+        }
+
+        DataLabel addData(const std::string& str) {
+            DataLabel label = data_.size();
+            for (char c : str) {
+                addData(c);
+            }
+            addData('\0');
+            return label;
+        }
+
+        void patch(Label instruction, Label destination) {
+            TInstruction* ins = instructions_.at(instruction).first;
+            auto* jmpInstruction = dynamic_cast<tiny::t86::PatchableJumpInstruction*>(ins);
+            assert(jmpInstruction && "You can patch only jump instructions");
+            jmpInstruction->setDestination(destination);
+        }
+
+        TProgram program() {
+            std::vector<TInstruction *> tmp;
+            for (auto & i: instructions_) {
+                tmp.emplace_back(i.first);
+            }
+            instructions_.clear();
+
+            return TProgram(std::move(tmp), std::move(data_));
+        }
+
+        template<typename T>
+        void replace(Label label, const T & instruction) {
+            delete instructions_[label].first;
+            instructions_[label].first = new T(instruction);
+        }
+
+        void setProgram(Program * prog){
+            program_ = prog;
+        }
+
+    private:
+        std::vector<std::pair<TInstruction*, const ILInstruction*>> instructions_;
+
+        std::vector<int64_t> data_;
+
+        Program * program_;
+        bool release_;
+    };
+
+
+    class ProgramBuilderOLD {
+        friend class SuperNaiveRegisterAllocator;
+    public:
+        ProgramBuilderOLD(bool release = false) : release_(release) {}
+
+//        ProgramBuilderOLD(tiny::t86::Program program, bool release = false)
 //                : instructions_(program.moveInstructions()),
 //                  data_(program.data()),
 //                  release_(release) {}

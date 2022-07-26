@@ -53,8 +53,8 @@ namespace tvlm{
 
     class SuperNaiveRegisterAllocator :public ILVisitor{
         using Register = tiny::t86::Register;
-        using VirtualRegister = tiny::t86::Register;
-        using TargetProgramBuilder = tvlm::ProgramBuilder;
+        using VirtualRegister = VirtualRegisterPlaceholder;
+        using TargetProgramBuilder = tvlm::ProgramBuilderOLD;
 
     public:
         virtual ~SuperNaiveRegisterAllocator() = default;
@@ -63,8 +63,12 @@ namespace tvlm{
 
         TargetProgram run(){
             //implement logic of passing through the program;
+            visit(targetProgram_.program_);
+
             return targetProgram_; // TODO
         }
+
+
 
 
     private:
@@ -80,16 +84,17 @@ namespace tvlm{
         std::queue<Label> functions_;
         std::queue<Label> bbsToCompile_;
 
-        Register getRegister(const VirtualRegister & reg);
+        Register getRegister(VirtualRegister & reg);
 
         Register getRegToSpill();
 
-        bool spill(const VirtualRegister & reg);
-        void restore(const VirtualRegister & whereTo, const LocationEntry & from);
+        bool spill(VirtualRegister & reg);
+        void restore(const Register & whereTo, const LocationEntry & from);
 
         Register getFreeRegister();
     protected:
-        std::vector<tiny::t86::Instruction *> getSelected(const Instruction * ins) const;
+        std::vector<TFInstruction> getSelectedInstr(const Instruction * ins) const;
+        std::vector<VirtualRegisterPlaceholder> getSelectedRegisters(const Instruction * ins) const;
 
         void visit(Instruction *ins) override;
         void visit(Jump *ins) override;
@@ -120,16 +125,18 @@ namespace tvlm{
         void visit(Program *p) override;
         void enterNewBB(BasicBlock * bb);
         void exitBB();
-        void enterNewFce(BasicBlock * bb);
+        void enterNewFce(Function * fce);
         void exitFce();
     private:
         std::queue<Register>regQueue_;
-        VirtualRegister currentWorkingReg_;
+
+        VirtualRegister  mtWorkingReg__;
+        VirtualRegister * currentWorkingReg_;
 //        TargetProgramBuilder pb_;
         TargetProgram targetProgram_;
         std::list<Register> freeReg_;
-        std::map<VirtualRegister, LocationEntry> regMapping_;
-        std::map<VirtualRegister, LocationEntry> spillMapping_;
+        std::map<VirtualRegister*, LocationEntry> regMapping_;
+        std::map<VirtualRegister*, LocationEntry> spillMapping_;
     };
 
 

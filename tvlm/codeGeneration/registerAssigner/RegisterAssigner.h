@@ -16,8 +16,8 @@ namespace tvlm{
 
         virtual ~RegisterAssigner() = default;
 
-        explicit RegisterAssigner(ProgramBuilder * pb);
-        explicit RegisterAssigner(ProgramBuilder * pb, TargetProgram * targetProg);
+//        explicit RegisterAssigner(ProgramBuilderOLD * pb);
+        explicit RegisterAssigner( TargetProgram * targetProg);
 
         Register getReg(const Instruction * ins){
             auto it = assignedIntRegisters_.find(ins);
@@ -77,21 +77,21 @@ namespace tvlm{
 //            }
         }
 
-        void makeLocalAllocation(size_t size, const Register &reg, const Instruction * ins);
-        void makeGlobalAllocation(size_t size, const Register &reg, const Instruction * ins);
-        void allocateStructArg(const Type * type,const Instruction * ins);
-        void correctStackAlloc(size_t patch);
+        void makeLocalAllocation(size_t size, size_t reg, const Instruction * ins);
+        void makeGlobalAllocation(size_t size, size_t reg, const Instruction * ins);
+//        void allocateStructArg(const Type * type,const Instruction * ins);
+//        void correctStackAlloc(size_t patch);
 
         void registerPhi(const Phi *phi);
-        virtual void prepareReturnValue(size_t size, const ILInstruction * ret);
+//        virtual void prepareReturnValue(size_t size, const ILInstruction * ret);
         virtual void resetAllocSize();
         void exportAlloc(Function * fnc);
 
     private:
 
-        void copyStruct(Register aRegister,const Type *pType, Register aRegister1, const Instruction * ins);
+//        void copyStruct(Register aRegister,const Type *pType, Register aRegister1, const Instruction * ins);
 
-        ProgramBuilder *  pb_;
+//        ProgramBuilderOLD *  pb_;
         TargetProgram * targetProgram_;
         size_t functionLocalAllocSize;
         size_t globalAllocSize;

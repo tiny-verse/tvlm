@@ -92,7 +92,7 @@ protected:
     }
 
 private:
-    ProgramBuilder pb_;
+    ProgramBuilderOLD pb_;
     SProgram & program_;
     Label lastIns_;
     std::unordered_map<tiny::Symbol, Label> functionTable_;
