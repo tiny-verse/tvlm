@@ -4,6 +4,9 @@
 #include "t86/program.h"
 #include "t86/instruction.h"
 #include "t86/program/label.h"
+#include "tvlm/tvlm/backendUtility/VirtualRegister.h"
+#include "tvlm/tvlm/backendUtility/TargetInstrEmul.h"
+
 
 #include <cassert>
 #include <vector>
@@ -16,11 +19,29 @@ namespace tvlm {
     using DataLabel = tiny::t86::DataLabel;
     using TProgram = tiny::t86::Program;
 
+//class VirtualReg {
+//    public:
+//        virtual ~VirtualReg() = default;
+//        VirtualReg(size_t number):number_(number){
+//
+//        }
+//        VirtualReg(const VirtualReg & other):
+//        number_(other.number_){
+//
+//        }
+//        void changeNumber(size_t newNumber){
+//            number_ = newNumber;
+//        }
+//    private:
+//        size_t number_;
+//    };
+
     class TargetProgram{
     public:
         friend class RegisterAssigner;
         friend class Epilogue;
-        friend class RegisterAllocator;
+//        friend class RegisterAllocator;
+        friend class SuperNaiveRegisterAllocator;
         virtual ~TargetProgram() = default;
         TargetProgram():
         program_(nullptr){
