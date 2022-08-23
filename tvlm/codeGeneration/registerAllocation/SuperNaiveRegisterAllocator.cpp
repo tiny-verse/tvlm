@@ -7,6 +7,7 @@ namespace tvlm {
 
     void SuperNaiveRegisterAllocator::visit(Instruction *ins) {
 
+
     }
 
     void SuperNaiveRegisterAllocator::visit(Jump *ins) {
@@ -48,7 +49,7 @@ namespace tvlm {
         switch (ins->resultType()) {
             case ResultType::Integer:
             case ResultType::StructAddress:{
-                auto insReg = getSelectedRegisters(ins);
+                auto & insReg = getSelectedRegisters(ins);
                 for (auto & virtReg: insReg) {
 
                 }
@@ -133,11 +134,11 @@ namespace tvlm {
 
     void SuperNaiveRegisterAllocator::visit(Program *p) {
         auto globals = getProgramsGlobals(p);
+        enterNewBB(globals);
         for (auto * gl : getBBsInstructions(globals)) {
-            enterNewBB(globals);
             visitChild(gl);
-            exitBB();
         }
+        exitBB();
 
         for(auto & f : getProgramsFunctions(p)){
             visitChild(f.second);
@@ -146,8 +147,8 @@ namespace tvlm {
     }
 
     SuperNaiveRegisterAllocator::SuperNaiveRegisterAllocator(TargetProgram &tp):
-            mtWorkingReg__(RegisterType::INTEGER, -1),
-            currentWorkingReg_( &mtWorkingReg__),
+            _mtWorkingReg_(RegisterType::INTEGER, -1),
+            currentWorkingReg_( &_mtWorkingReg_),
             targetProgram_(tp)
     {
         size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
@@ -184,6 +185,7 @@ namespace tvlm {
             regMapping_.emplace(&reg, LocationEntry(Location::Register, newReg.index()));
             return newReg;
         }
+        throw "error this shouldn't happen 123";
     }
 
     SuperNaiveRegisterAllocator::Register SuperNaiveRegisterAllocator::getRegToSpill() {
@@ -200,7 +202,7 @@ namespace tvlm {
             return false;
         }
         Register regToSPill = Register(accomodategReg->second.regIndex());
-        auto it = spillMapping_.find(reg);
+        auto it = spillMapping_.find(&reg);
         if(it != spillMapping_.end()){
             switch (it->second.loc()){
                 case Location::Register:{
@@ -216,21 +218,21 @@ namespace tvlm {
 
                     //update structures
 
-                    regMapping_.erase(virtualRegister);
-                    spillMapping_.emplace(virtualRegister, LocationEntry(Location::Stack, stackOffset));
+                    regMapping_.erase(&virtualRegister);
+                    spillMapping_.emplace(&virtualRegister, LocationEntry(Location::Stack, stackOffset));
 
                     break;
                 }
                 case Location::Memory:{
 
                     int memAddress = it->second.memAddress();
-                    tiny::t86::MOV(tiny::t86::Mem(memAddress), reg); // TODO insert code
+                    tiny::t86::MOV(tiny::t86::Mem(memAddress), Register(reg.getNumber())); // TODO insert code
 
 
                     //update structures
 
-                    regMapping_.erase(virtualRegister);
-                    spillMapping_.emplace(virtualRegister, LocationEntry(Location::Memory, memAddress));
+                    regMapping_.erase(&virtualRegister);
+                    spillMapping_.emplace(&virtualRegister, LocationEntry(Location::Memory, memAddress));
                     throw "spilling to memory not implemented";
                     break;
                 }
@@ -242,7 +244,7 @@ namespace tvlm {
             }else{
                 //tmp
                 //stackOffset = getNewStackOffset() //allocate next tmp local
-                tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Sp() + stackOffset), reg); // TODO insert code
+                tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Sp() + stackOffset), Register(reg.getNumber())); // TODO insert code
             }
 
         }
@@ -250,8 +252,8 @@ namespace tvlm {
 
         //update structures
 
-        regMapping_.erase(virtualRegister);
-        spillMapping_.emplace(virtualRegister, LocationEntry(Location::Stack, stackOffset));
+        regMapping_.erase(&virtualRegister);
+        spillMapping_.emplace(&virtualRegister, LocationEntry(Location::Stack, stackOffset));
 
         return true;
     }
@@ -264,14 +266,17 @@ namespace tvlm {
 
     SuperNaiveRegisterAllocator::Register SuperNaiveRegisterAllocator::getFreeRegister() {
         Register res = Register(0);
-        if(freeReg_.empty()){
+        if(!freeReg_.empty()){
             res = freeReg_.front();
             freeReg_.erase(freeReg_.begin());
+
+//            regQueue_.push(res);//TODO
         }else {
-            res = getRegToSpill();
-            spill(res);
+            VirtualRegisterPlaceholder ress = VirtualRegisterPlaceholder (RegisterType::INTEGER, getRegToSpill().index());
+            spill( ress);
+            res = ress.getNumber();
+            regQueue_.push(res);
         }
-        regQueue_.push(res);
         return res;
     }
 
@@ -300,8 +305,8 @@ namespace tvlm {
         return it->second;
     }
 
-    std::vector<VirtualRegisterPlaceholder>
-    SuperNaiveRegisterAllocator::getSelectedRegisters(const Instruction * ins) const {
+    std::vector<VirtualRegisterPlaceholder> &
+    SuperNaiveRegisterAllocator::getSelectedRegisters(const Instruction * ins) {
         auto it = targetProgram_.alocatedRegisters_.find(ins);
         if(it == targetProgram_.alocatedRegisters_.end()){
             throw "finding instruction which is not compiled";

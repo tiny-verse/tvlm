@@ -92,6 +92,7 @@ namespace tvlm{
 //    ,
     targetProgram_(program)
     ,functionLocalAllocSize(0)
+    ,globalAllocSize(0)
     ,regIntCounter_(1)
     ,regFloatCounter_(1) {
 

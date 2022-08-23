@@ -30,6 +30,35 @@ namespace tvlm{
     }
 
     void NaiveEpilogue::visitInstrHelper(Instruction * ins){
+        auto registers = program_.alocatedRegisters_.find(ins);
+        if(registers == program_.alocatedRegisters_.end()){
+            throw "instruction failed to compile -> no registers allocated";
+            return;
+        }
+        auto & regs = registers->second;
+
+        auto finstruction = program_.selectedFInstrs_.find(ins);
+        if(finstruction == program_.selectedFInstrs_.end()){
+            throw "instruction failed to compile -> no selectedInstruction";
+            return;
+        }
+
+        auto & finsns = finstruction->second;
+
+        for ( size_t i = 0; finsns.size(); i++){
+            TInstruction * compiled = finsns[i](regs);
+//            auto selected = program_.selectedInstrs_.find(ins);
+//            if(selected == program_.selectedInstrs_.end()){
+//                program_.selectedInstrs_[ins] = std::vector<TInstruction *>();
+//            }
+            program_.selectedInstrs_[ins].emplace_back(compiled);
+        }
+        lastIns_ = add(ins);
+        for(int c = 0; c < finsns.size();c++){
+            compiledInsns_.emplace(std::make_pair(ins, c), lastIns_ + c);
+        }
+        return;
+//--------------------------------------------------
         auto selected = getSelectedInstrs(program_);
         auto it = selected.find(ins);
         if(it != selected.end()){

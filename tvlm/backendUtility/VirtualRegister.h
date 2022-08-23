@@ -18,9 +18,9 @@ namespace tvlm{
         ,number_(number)
         {}
 
-        VirtualRegisterPlaceholder(VirtualRegisterPlaceholder && other):
-        regType_(std::move(other.regType_))
-        ,number_(std::move(other.number_))
+        VirtualRegisterPlaceholder(const VirtualRegisterPlaceholder & other):
+                regType_(other.regType_)
+                ,number_(other.number_)
         {}
 
         void setNumber(size_t number){

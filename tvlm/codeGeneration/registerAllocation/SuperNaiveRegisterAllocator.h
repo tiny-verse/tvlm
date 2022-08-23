@@ -65,7 +65,7 @@ namespace tvlm{
             //implement logic of passing through the program;
             visit(targetProgram_.program_);
 
-            return targetProgram_; // TODO
+            return targetProgram_; // TODO pick registers and fill selectedInstrs with correct registers
         }
 
 
@@ -94,7 +94,7 @@ namespace tvlm{
         Register getFreeRegister();
     protected:
         std::vector<TFInstruction> getSelectedInstr(const Instruction * ins) const;
-        std::vector<VirtualRegisterPlaceholder> getSelectedRegisters(const Instruction * ins) const;
+        std::vector<VirtualRegisterPlaceholder>& getSelectedRegisters(const Instruction * ins);
 
         void visit(Instruction *ins) override;
         void visit(Jump *ins) override;
@@ -130,10 +130,10 @@ namespace tvlm{
     private:
         std::queue<Register>regQueue_;
 
-        VirtualRegister  mtWorkingReg__;
+        VirtualRegister  _mtWorkingReg_;
         VirtualRegister * currentWorkingReg_;
 //        TargetProgramBuilder pb_;
-        TargetProgram targetProgram_;
+        TargetProgram & targetProgram_;
         std::list<Register> freeReg_;
         std::map<VirtualRegister*, LocationEntry> regMapping_;
         std::map<VirtualRegister*, LocationEntry> spillMapping_;

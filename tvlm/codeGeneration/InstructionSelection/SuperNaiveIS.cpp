@@ -628,12 +628,21 @@ namespace tvlm {
         Program *  prog = new Program(ilb.finish());
         is.program_.setProgram(prog );
         is.visit(prog);
+        return is.finalize();
 //TODO
         return TargetProgram(is.program_);
     }
 
     void SuperNaiveIS::visit(Instruction *ins) {
 
+    }
+
+    TargetProgram SuperNaiveIS::finalize() {
+        auto res = TargetProgram(program_);
+
+        //registers are in allocated registers
+
+        return res;
     }
 
 }

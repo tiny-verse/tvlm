@@ -14,7 +14,7 @@
 namespace tvlm {
 
     using TInstruction =tiny::t86::Instruction;
-    using TFInstruction =std::function<TInstruction * (std::vector<VirtualRegisterPlaceholder>)>;
+    using TFInstruction =std::function<TInstruction * (std::vector<VirtualRegisterPlaceholder>&)>;
     using ILInstruction =::tvlm::Instruction;
     using Label = tiny::t86::Label;
     using DataLabel = tiny::t86::DataLabel;
@@ -39,13 +39,26 @@ namespace tvlm {
 
     class TargetProgram{
     public:
+        using Register = tiny::t86::Register;
+        using FRegister = tiny::t86::FloatRegister;
         friend class RegisterAssigner;
         friend class Epilogue;
+        friend class NaiveEpilogue;
 //        friend class RegisterAllocator;
         friend class SuperNaiveRegisterAllocator;
         virtual ~TargetProgram() = default;
         TargetProgram():
-        program_(nullptr){
+        program_(nullptr)
+        , funcLocalAlloc_()
+        , selectedInstrs_()
+        , selectedFInstrs_()
+//        , assignedIntRegisters_()
+//        , assignedFloatRegisters_()
+        ,alocatedRegisters_()
+        ,jump_patches_()
+        ,call_patches_()
+        ,globalTable_()
+        ,data_(){
 
         }
         TargetProgram(const TargetProgram & prog):
@@ -53,7 +66,10 @@ namespace tvlm {
         , funcLocalAlloc_(prog.funcLocalAlloc_)
         , selectedInstrs_(prog.selectedInstrs_)
         , selectedFInstrs_(prog.selectedFInstrs_)
+//        , assignedIntRegisters_(prog.assignedIntRegisters_)
+//        , assignedFloatRegisters_(prog.assignedFloatRegisters_)
         ,alocatedRegisters_(prog.alocatedRegisters_)
+        ,alocatedTMPRegisters_(prog.alocatedTMPRegisters_)
         ,jump_patches_(prog.jump_patches_)
         ,call_patches_(prog.call_patches_)
         ,globalTable_(prog.globalTable_)
@@ -73,11 +89,11 @@ namespace tvlm {
             selectedFInstrs_[ins].push_back(instruction);
             return selectedFInstrs_[ins].size() -1;
         }
-        template<typename T>
-        Label add(const T& instruction, const ILInstruction * ins){
-            selectedInstrs_[ins].push_back(new T(instruction));
-            return selectedInstrs_[ins].size() -1;
-        }
+//        template<typename T>
+//        Label add(const T& instruction, const ILInstruction * ins){
+//            selectedInstrs_[ins].push_back(new T(instruction));
+//            return selectedInstrs_[ins].size() -1;
+//        }
 
 
         DataLabel addData(int64_t data) {
@@ -145,6 +161,9 @@ namespace tvlm {
         std::map<const Function * ,size_t> funcLocalAlloc_;
         std::map<const ILInstruction*, std::vector<TInstruction*>> selectedInstrs_;
         std::map<const ILInstruction*, std::vector<TFInstruction>> selectedFInstrs_;
+//        std::map<const Instruction *, Register> assignedIntRegisters_;
+//        std::map<const Instruction *, FRegister> assignedFloatRegisters_;
+
         std::map<const ILInstruction*, std::vector<VirtualRegisterPlaceholder>> alocatedRegisters_;
         std::vector<VirtualRegisterPlaceholder> alocatedTMPRegisters_;
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> jump_patches_;

@@ -39,6 +39,7 @@ namespace  tvlm{
         ~SuperNaiveIS() override;
         SuperNaiveIS();
     static TargetProgram translate(ILBuilder &ilb) ;
+        TargetProgram finalize();
     protected:
         void visit(Instruction *ins) override;
         void visit(Jump *ins) override;
