@@ -76,12 +76,12 @@ namespace  tvlm{
 //        }
 
 
-        Label visitChild(IL * il) {
+        void visitChild(IL * il) {
             ILVisitor::visitChild(il);
         }
 
         template<typename T>
-        Label visitChild(std::unique_ptr<T> const &ptr) {
+        void visitChild(std::unique_ptr<T> const &ptr) {
             return visitChild(ptr.get());
         }
 
@@ -114,10 +114,11 @@ namespace  tvlm{
             return program_.addF(instruction, ins);
         }
 
-        size_t getReg(const Instruction * ins){
+        size_t getReg(const Instruction * ins, const Instruction * me){
+        //    return regAssigner->getReg(ins);
             auto reg = regAssigner->getReg(ins);
             auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
-            return program_.registerAdd(ins, std::move(virt));
+            return program_.registerAdd(me, std::move(virt));
         }
         size_t getExtraIntReg(const ILInstruction * ins){
             auto reg = regAssigner->getFreeIntRegister();
@@ -125,10 +126,10 @@ namespace  tvlm{
             return program_.registerAdd( ins, std::move(virt));
         }
 
-        size_t getFReg(const Instruction * ins){
+        size_t getFReg(const Instruction * ins, const Instruction * me){
             auto reg = regAssigner->getFReg(ins);
             auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
-            return program_.registerAdd(ins, std::move(virt));
+            return program_.registerAdd(me, std::move(virt));
         }
         void makeLocalAllocation(size_t size, size_t reg, const Instruction * ins){
             regAssigner->makeLocalAllocation(size, reg, ins);

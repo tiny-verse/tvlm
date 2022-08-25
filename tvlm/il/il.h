@@ -655,7 +655,7 @@ namespace tvlm{
         static ResultType GetResultType(Instruction * lhs, Instruction * rhs, const BinOpType & op) {
             assert(lhs->resultType() != ResultType::Void && rhs->resultType() != ResultType::Void);
             if(lhs->resultType() == rhs->resultType() && lhs->resultType() == ResultType::Double && convertsToBool(op)){
-
+                return ResultType::Integer;
             }else if (lhs->resultType() == ResultType::Double || rhs->resultType() == ResultType::Double)
                 return ResultType::Double;
             else

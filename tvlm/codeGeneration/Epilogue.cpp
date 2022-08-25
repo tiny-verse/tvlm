@@ -9,6 +9,36 @@ namespace tvlm{
 
 
 
+    void NaiveEpilogue::visit(Return *ins) {
+//        visitInstrHelper(ins);
+        auto registers = program_.alocatedRegisters_.find(ins);
+        std::vector<VirtualRegisterPlaceholder> regs;
+        if(registers == program_.alocatedRegisters_.end()){
+            regs = std::vector<VirtualRegisterPlaceholder>();
+//            throw "ERROR[Epilogue]NaiveEpilogue -> Ret";
+        }else{
+            regs = registers->second;
+        }
+
+        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()) );
+        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::POP(tiny::t86::Bp()) );
+        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::RET() );
+
+        lastIns_ = add(ins);
+        for(int c = 0; c < 3;c++){
+            compiledInsns_.emplace(std::make_pair(ins, c), lastIns_ + c);
+        }
+    }
+
+
+    void NaiveEpilogue::visit(CallStatic *ins) {
+        // TODO // visitInstrHelper(ins);
+    }
+
+    void NaiveEpilogue::visit(Call *ins) {
+        visitInstrHelper(ins);
+    }
+
 
 
 
@@ -31,11 +61,14 @@ namespace tvlm{
 
     void NaiveEpilogue::visitInstrHelper(Instruction * ins){
         auto registers = program_.alocatedRegisters_.find(ins);
+        std::vector<VirtualRegisterPlaceholder> regs;
         if(registers == program_.alocatedRegisters_.end()){
-            throw "instruction failed to compile -> no registers allocated";
-            return;
+ //           return;
+//            throw "instruction failed to compile -> no registers allocated"; // Jump will never have
+            regs = std::vector<VirtualRegisterPlaceholder>();
+        }else{
+            regs = registers->second;
         }
-        auto & regs = registers->second;
 
         auto finstruction = program_.selectedFInstrs_.find(ins);
         if(finstruction == program_.selectedFInstrs_.end()){
@@ -45,7 +78,7 @@ namespace tvlm{
 
         auto & finsns = finstruction->second;
 
-        for ( size_t i = 0; finsns.size(); i++){
+        for ( size_t i = 0; i < finsns.size(); i++){
             TInstruction * compiled = finsns[i](regs);
 //            auto selected = program_.selectedInstrs_.find(ins);
 //            if(selected == program_.selectedInstrs_.end()){
@@ -81,18 +114,6 @@ namespace tvlm{
     }
 
     void NaiveEpilogue::visit(CondJump *ins) {
-        visitInstrHelper(ins);
-    }
-
-    void NaiveEpilogue::visit(Return *ins) {
-        visitInstrHelper(ins);
-    }
-
-    void NaiveEpilogue::visit(CallStatic *ins) {
-        visitInstrHelper(ins);
-    }
-
-    void NaiveEpilogue::visit(Call *ins) {
         visitInstrHelper(ins);
     }
 

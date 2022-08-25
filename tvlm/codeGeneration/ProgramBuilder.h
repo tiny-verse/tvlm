@@ -147,8 +147,9 @@ namespace tvlm {
                 alocatedRegisters_.emplace(instr, std::move(tmp));
                 return 0;
             }else{
-                it->second.emplace_back(std::move(virt));
-                return it->second.size() -1;
+                auto & regs = it->second;
+                regs.emplace_back(std::move(virt));
+                return  regs.size() -1;
             }
         }
 //        size_t registerTMPAdd( const VirtualRegisterPlaceholder & virt){

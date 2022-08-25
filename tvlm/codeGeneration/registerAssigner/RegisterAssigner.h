@@ -20,8 +20,14 @@ namespace tvlm{
         explicit RegisterAssigner( TargetProgram * targetProg);
 
         Register getReg(const Instruction * ins){
+//        size_t getReg(const Instruction * ins){
             auto it = assignedIntRegisters_.find(ins);
             if(it != assignedIntRegisters_.end()){
+//                auto allocReg = targetProgram_->alocatedRegisters_.find(ins);
+//                if(allocReg == targetProgram_->alocatedRegisters_.end()){
+//                    throw "RegAssigner: this shouldn't happen";
+//                }
+//                allocReg.
                 return it->second;
             }else{
                 auto reg = getFreeIntRegister();
