@@ -110,6 +110,10 @@ namespace  tvlm{
 //            return program_.add(instruction, ins);
 //        }
 
+        void prepareReturnValue(size_t size, const Instruction * ins){
+            regAssigner->prepareReturnValue(size, ins);
+        }
+
         Label addF(const TFInstruction & instruction, const ILInstruction * ins){
             return program_.addF(instruction, ins);
         }

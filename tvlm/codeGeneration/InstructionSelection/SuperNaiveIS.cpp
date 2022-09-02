@@ -50,6 +50,60 @@ namespace tvlm {
 
     void SuperNaiveIS::visit(CallStatic *ins) {
 
+//    auto ret = pb_.currentLabel();
+//        //spill everything
+////        regAllocator->spillAllReg();
+
+//        //args /*-> prepare values
+        for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
+            if((*it).second->registerType() == ResultType::StructAddress) {
+//                allocateStructArg(it->second, it->first);
+            }else if((*it).second->registerType() == ResultType::Integer){
+                auto argReg = getReg(it->first, ins);
+                addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
+//                clearIntReg(it->first);
+            }else if ((*it).second->registerType() == ResultType::Double){
+                auto argFReg = getFReg(it->first, ins);
+                addF(LMBS tiny::t86::FPUSH(vFR(argFReg)) LMBE, ins);
+//                clearFloatReg(it->first);
+            }
+        }
+//
+//        //prepare return Value //*-> preparation in RA -- memory and register in RA
+        ins->f()->getType()->registerType() == ResultType::StructAddress ?
+            prepareReturnValue(ins->f()->getType()->size(), ins):
+            prepareReturnValue(0, ins);
+//
+////        regAllocator->spillCallReg();
+//        //call
+//        tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()}, ins);
+        tiny::t86::Label callLabel = addF(
+                LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
+                , ins );
+        if(ins->resultType() == ResultType::Double){
+            auto freg = getFReg(ins, ins);
+            addF( LMBS tiny::t86::MOV( vFR(freg), tiny::t86::FReg(0)) LMBE, ins);
+        }else if (ins->resultType() == ResultType::Integer){
+            auto reg = getReg(ins, ins);
+            addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Reg(0)) LMBE, ins);
+        } else if(ins->resultType() == ResultType::Void){
+
+        }
+//
+        //CountArgSize;
+        int argSize  = 0;
+        for (auto & a :ins->args()) {
+            if(a.second->registerType() == ResultType:: Double){
+                argSize +=1;
+            }else{
+                argSize ++;
+            }
+        }
+
+        addF( LMBS tiny::t86::ADD(tiny::t86::Sp(), argSize) LMBE, ins);
+//
+        program_.registerCall(ins, callLabel, ins->f()->name());
+//        lastIns_ = ret; //return ret;
     }
 
     void SuperNaiveIS::visit(Call *ins) {
@@ -468,7 +522,7 @@ namespace tvlm {
 
         auto reg = getReg(ins, ins);
         auto regBase = getReg(ins->base(), ins);
-        auto regOffset =
+        auto regOffset = getReg(ins->offset(), ins);
         addF( LMBS tiny::t86::MOV(vR(reg),
                           vR(regBase) ) LMBE, ins);
         addF( LMBS tiny::t86::ADD(vR(reg),

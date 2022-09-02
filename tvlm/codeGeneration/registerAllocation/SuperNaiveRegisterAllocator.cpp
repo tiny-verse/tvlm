@@ -23,6 +23,48 @@ namespace tvlm {
 
     void SuperNaiveRegisterAllocator::visit(CallStatic *ins) {
 
+//    auto ret = pb_.currentLabel();
+//        //spill everything
+//        regAllocator->spillAllReg();
+
+//        //args /*-> prepare values
+
+
+////        //prepare return Value //*-> preparation in RA -- memory and register in RA
+//        ins->f()->getType()->registerType() == ResultType::StructAddress ?
+//            prepareReturnValue(ins->f()->getType()->size(), ins):
+//            prepareReturnValue(0, ins);
+
+//        regAllocator->spillCallReg();
+
+
+//        //call
+
+//// move/collect result
+//        if(ins->resultType() == ResultType::Double){
+//            add(tiny::t86::MOV(getFReg(ins), tiny::t86::FReg(0)), ins);
+//        }else if (ins->resultType() == ResultType::Integer){
+//            add(tiny::t86::MOV(getReg(ins), tiny::t86::Reg(0)), ins);
+//        } else if(ins->resultType() == ResultType::Void){
+//
+//        }
+
+////      CountArgSize;
+//        int argSize  = 0;
+//        for (auto & a :ins->args()) {
+//            if(a.second->registerType() == ResultType:: Double){
+//                argSize +=1;
+//            }else{
+//                argSize ++;
+//            }
+//        }
+//
+//        add(tiny::t86::ADD(tiny::t86::Sp(), argSize), ins);
+
+
+
+//        program_.registerCall(ins, callLabel, ins->f()->name());
+//        lastIns_ = ret; //return ret;
     }
 
     void SuperNaiveRegisterAllocator::visit(Call *ins) {

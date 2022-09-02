@@ -88,6 +88,9 @@ namespace tvlm{
 //        void allocateStructArg(const Type * type,const Instruction * ins);
 //        void correctStackAlloc(size_t patch);
 
+        void prepareReturnValue(size_t size,const Instruction * ret);
+
+
         void registerPhi(const Phi *phi);
 //        virtual void prepareReturnValue(size_t size, const ILInstruction * ret);
         virtual void resetAllocSize();

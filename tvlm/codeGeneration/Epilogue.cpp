@@ -33,6 +33,55 @@ namespace tvlm{
 
     void NaiveEpilogue::visit(CallStatic *ins) {
         // TODO // visitInstrHelper(ins);
+
+//        auto ret = pb_.currentLabel();
+//        //spill everything
+////        regAllocator->spillAllReg();
+//        //args //*-> already in RA
+//        for( auto it = ins->args().crbegin() ; it != ins->args().crend();it++){
+//            if((*it).second->registerType() == ResultType::StructAddress) {
+//                allocateStructArg(it->second, it->first);
+//            }else if((*it).second->registerType() == ResultType::Integer){
+//                add(tiny::t86::PUSH(getReg(it->first)), ins);
+////                clearIntReg(it->first);
+//            }else if ((*it).second->registerType() == ResultType::Double){
+//                add(tiny::t86::FPUSH(getFReg(it->first)), ins);
+////                clearFloatReg(it->first);
+//            }
+//        }
+//
+//        //prepare return Value//*-> already in RA
+//        ins->f()->getType()->registerType() == ResultType::StructAddress ?
+//            prepareReturnValue(ins->f()->getType()->size(), ins):
+//            prepareReturnValue(0, ins);
+//
+////        regAllocator->spillCallReg();
+//        //call
+//        tiny::t86::Label callLabel =
+//            add( tiny::t86::CALL{tiny::t86::Label::empty()}, ins);
+//        if(ins->resultType() == ResultType::Double){
+//            add(tiny::t86::MOV(getFReg(ins), tiny::t86::FReg(0)), ins);
+//        }else if (ins->resultType() == ResultType::Integer){
+//            add(tiny::t86::MOV(getReg(ins), tiny::t86::Reg(0)), ins);
+//        } else if(ins->resultType() == ResultType::Void){
+//
+//        }
+//
+//        //CountArgSize //*-> wok for RA (-> stack);
+//        int argSize  = 0;
+//        for (auto & a :ins->args()) {
+//            if(a.second->registerType() == ResultType:: Double){
+//                argSize +=1;
+//            }else{
+//                argSize ++;
+//            }
+//        }
+//
+//        add(tiny::t86::ADD(tiny::t86::Sp(), argSize), ins);
+//
+//        unpatchedCalls_.emplace_back(callLabel, ins->f()->name());
+//        lastIns_ = ret; //return ret;
+
     }
 
     void NaiveEpilogue::visit(Call *ins) {

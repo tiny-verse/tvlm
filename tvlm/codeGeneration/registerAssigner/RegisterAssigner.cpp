@@ -98,4 +98,19 @@ namespace tvlm{
 
     }
 
+    void RegisterAssigner::prepareReturnValue(size_t size, const Instruction *ret) {
+        if(size == 0){
+            auto regTmp  = getReg(ret);  // tmpAddress prepared for return Value
+            targetProgram_->addF( LMBS tiny::t86::PUSH(regTmp) LMBE,ret );
+//            clearIntRegister(regTmp);
+        }else{
+            functionLocalAllocSize += size;
+            auto regTmp  = getReg(ret);  // tmpAddress prepared for return Value
+            targetProgram_->addF( LMBS tiny::t86::MOV(regTmp ,tiny::t86::Bp()) LMBE, ret);
+            targetProgram_->addF( LMBS tiny::t86::SUB(regTmp, (int64_t)functionLocalAllocSize) LMBE, ret);
+            targetProgram_->addF( LMBS tiny::t86::PUSH(regTmp) LMBE, ret);
+//            clearIntRegister(regTmp);
+        }
+    }
+
 }

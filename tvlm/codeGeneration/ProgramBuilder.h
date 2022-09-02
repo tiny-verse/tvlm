@@ -157,6 +157,9 @@ namespace tvlm {
 //            return alocatedTMPRegisters_.size() - 1;
 //        }
 
+        void registerCall(const Instruction * call, Label & label,const Symbol & fncName){
+            unpatchedFCalls_.emplace_back(std::make_pair(call, label), fncName );
+        }
     private:
         Program * program_;
         std::map<const Function * ,size_t> funcLocalAlloc_;
@@ -171,6 +174,7 @@ namespace tvlm {
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> call_patches_;
         std::map<const Instruction*, uint64_t> globalTable_;
 //        std::vector<std::pair<const ILInstruction *, const BasicBlock*>> jumpPatches_;
+        std::vector<std::pair<std::pair<const Instruction *, Label>, Symbol>> unpatchedFCalls_;
 
         std::vector<int64_t> data_;
     };
