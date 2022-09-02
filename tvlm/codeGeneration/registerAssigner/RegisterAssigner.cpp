@@ -15,15 +15,17 @@ namespace tvlm{
 
 
     void RegisterAssigner::makeLocalAllocation(size_t size, size_t reg, const ILInstruction *ins) {
+        auto cpy = functionLocalAllocSize; // make cpy for lambda capture
         functionLocalAllocSize += size;
         // already allocated, now just find addr for this allocation
         targetProgram_->addF(LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp()) LMBE, ins);
-        targetProgram_->addF(LMBS tiny::t86::SUB( vR(reg), (int64_t) functionLocalAllocSize) LMBE , ins);
+        targetProgram_->addF(LMBS tiny::t86::SUB( vR(reg), (int64_t) cpy) LMBE , ins);
     }
 
     void RegisterAssigner::makeGlobalAllocation(size_t size, const size_t reg, const ILInstruction *ins) {
-        targetProgram_->addF( LMBS tiny::t86::MOV(vR(reg), (int64_t) globalAllocSize) LMBE, ins);
+        auto cpy = globalAllocSize; //make cpy for lambda capture
         globalAllocSize += size;
+        targetProgram_->addF( LMBS tiny::t86::MOV(vR(reg), (int64_t) cpy) LMBE, ins);
     }
 
 //    void RegisterAssigner::copyStruct(Register from,const Type *type, Register to,const ILInstruction *ins) {
