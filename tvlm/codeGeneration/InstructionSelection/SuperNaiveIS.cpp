@@ -355,9 +355,12 @@ namespace tvlm {
                     case UnOpType::NOT:
                         addF( LMBS tiny::t86::NOT(vR(reg)) LMBE, ins);
                         break;
-                    case UnOpType::UNSUB:
-                        addF( LMBS tiny::t86::SUB(0 , vR(reg)) LMBE, ins);
-                        break;
+                    case UnOpType::UNSUB:{
+                        auto tmpReg = getReg(ins, ins);
+                        addF( LMBS tiny::t86::MOV( vR(tmpReg) , (int64_t) 0 ) LMBE, ins);
+                        addF( LMBS tiny::t86::SUB( vR(tmpReg) , vR(reg)) LMBE, ins);
+                        return;
+                    }
                     case UnOpType::INC:
                         addF(LMBS tiny::t86::INC( vR(reg)) LMBE, ins);
                         break;
