@@ -31,9 +31,9 @@ namespace tvlm {
     void SuperNaiveIS::visit(CondJump *ins) {
         auto condReg = getReg(ins->condition(), ins);
 //        add(tiny::t86::CMP(condReg, 0), ins);
-        addF(LMB { return new tiny::t86::CMP(vR(condReg), 0);} , ins);
+        addFsilent(LMB { return new tiny::t86::CMP(vR(condReg), 0);} , ins);
 //        clearIntReg(ins->condition());
-        tiny::t86::Label condJump = addF(LMB {return new tiny::t86::JZ(tiny::t86::Label::empty());} ,ins);
+        tiny::t86::Label condJump = addFsilent(LMB {return new tiny::t86::JZ(tiny::t86::Label::empty());} ,ins);
         tiny::t86::Label jumpToTrue = addF(LMBJUMP, ins);
 //        future_patch_.emplace_back(jumpToTrue, ins->getTarget(1));
 //        jump_patches_.emplace_back(std::make_pair(ins, jumpToTrue), ins->getTarget(1) );
@@ -44,8 +44,31 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(Return *ins) {
-        auto returnReg = getReg(ins->returnValue(), ins);
 
+        if(ins->returnType()->registerType() == ResultType::StructAddress){
+//            auto reg = getReg(ins);
+            auto returnReg = getReg(ins->returnValue(), ins);
+            addF( LMBS tiny::t86::MOV( vR(returnReg),tiny::t86::Bp() ) LMBE , ins);
+            addF( LMBS tiny::t86::ADD( vR(returnReg), 1 ) LMBE , ins);
+          copyStruct(returnReg, ins->returnType(), tiny::t86::Reg(0) , ins);
+            // TODO fail to get info which is passing register Reg0 or stackplace or else
+
+        }else if (ins->returnType()->registerType() == ResultType::Double){
+            auto retFReg = getFReg(ins->returnValue(), ins);
+            addF( LMBS tiny::t86::MOV(tiny::t86::FReg(0 /*or Somwhere on stack*/  ), vFR(retFReg) ) LMBE , ins);
+
+        }else if (ins->returnType()->registerType() == ResultType::Integer){
+
+            auto returnReg = getReg(ins->returnValue(), ins);
+            addF( LMBS tiny::t86::MOV(tiny::t86::Reg(0 /*or Somwhere on stack*/  ), vR(returnReg)) LMBE , ins);
+
+        }else{ // void
+
+        }
+            addF( LMBS tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()) LMBE , ins);
+            addF( LMBS tiny::t86::POP(tiny::t86::Bp()) LMBE , ins);
+            addF( LMBS tiny::t86::RET() LMBE , ins);
+//        regAllocator->clearAllReg();
     }
 
     void SuperNaiveIS::visit(CallStatic *ins) {
@@ -70,22 +93,32 @@ namespace tvlm {
         }
 //
 //        //prepare return Value //*-> preparation in RA -- memory and register in RA
-        ins->f()->getType()->registerType() == ResultType::StructAddress ?
-            prepareReturnValue(ins->f()->getType()->size(), ins):
-            prepareReturnValue(0, ins);
-//
+
+        size_t returnValueRegister = 0;
+        if(ins->f()->getType()->registerType() == ResultType::StructAddress){
+            prepareReturnValue(ins->f()->getType()->size(), ins);
+        } else if (ins->resultType() == ResultType::Double){
+            returnValueRegister = getFReg(ins, ins);
+        }else if (ins->resultType() == ResultType::Integer) {
+            returnValueRegister = getReg(ins, ins);
+
+        }else{//void
+
+        }
 ////        regAllocator->spillCallReg();
 //        //call
 //        tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()}, ins);
         tiny::t86::Label callLabel = addF(
                 LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
                 , ins );
+
+        // -** manage return Value
         if(ins->resultType() == ResultType::Double){
-            auto freg = getFReg(ins, ins);
-            addF( LMBS tiny::t86::MOV( vFR(freg), tiny::t86::FReg(0)) LMBE, ins);
+//            auto freg = getFReg(ins, ins);
+            addF( LMBS tiny::t86::MOV( vFR(returnValueRegister), tiny::t86::FReg(0)) LMBE, ins);
         }else if (ins->resultType() == ResultType::Integer){
-            auto reg = getReg(ins, ins);
-            addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Reg(0)) LMBE, ins);
+//            auto reg = getReg(ins, ins);
+            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
         } else if(ins->resultType() == ResultType::Void){
 
         }
@@ -100,14 +133,14 @@ namespace tvlm {
             }
         }
 
-        addF( LMBS tiny::t86::ADD(tiny::t86::Sp(), argSize) LMBE, ins);
+        addF( LMBS tiny::t86::ADD(tiny::t86::Sp(), argSize) LMBE, ins); // instead of popping function args
 //
         program_.registerCall(ins, callLabel, ins->f()->name());
 //        lastIns_ = ret; //return ret;
     }
 
     void SuperNaiveIS::visit(Call *ins) {
-
+        throw("call implementation");
     }
 
     void SuperNaiveIS::visit(Copy *ins) {
@@ -444,7 +477,7 @@ namespace tvlm {
 //        size_t offset = countArgOffset(ins->args(), ins->index());
         size_t offset =  ins->index();
         addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp() ) LMBE, ins);
-        addF( LMBS tiny::t86::ADD(vR(reg), offset  + 3) LMBE, ins);
+        addF( LMBS tiny::t86::ADD(vR(reg), offset  + 2) LMBE, ins);
         if( ins->type()->registerType() == ResultType::StructAddress){
             addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(vR(reg))) LMBE, ins);
         }
@@ -563,6 +596,19 @@ namespace tvlm {
         for (int i = 0; i < strct->size(); ++i) {
             addF( LMBS tiny::t86::MOV( vR(tmpReg), tiny::t86::Mem( vR(from) + i )) LMBE, ins);
             addF( LMBS tiny::t86::MOV(tiny::t86::Mem(vR(to) + i), tmpReg) LMBE, ins);
+        }
+
+//        clearTmpIntRegister(tmpReg); tmpReg = -15654;
+    }
+    void SuperNaiveIS::copyStruct(size_t from, Type *type, Register to, const Instruction * ins) {
+
+//        auto tmpReg = regAssigner->getFreeIntRegister();
+        auto tmpReg = getExtraIntReg(ins);
+
+        Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
+        for (int i = 0; i < strct->size(); ++i) {
+            addF( LMBS tiny::t86::MOV( vR(tmpReg), tiny::t86::Mem( vR(from) + i )) LMBE, ins);
+            addF( LMBS tiny::t86::MOV(tiny::t86::Mem(to + i), tmpReg) LMBE, ins);
         }
 
 //        clearTmpIntRegister(tmpReg); tmpReg = -15654;

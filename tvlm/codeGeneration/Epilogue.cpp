@@ -10,29 +10,36 @@ namespace tvlm{
 
 
     void NaiveEpilogue::visit(Return *ins) {
-//        visitInstrHelper(ins);
-        auto registers = program_.alocatedRegisters_.find(ins);
-        std::vector<VirtualRegisterPlaceholder> regs;
-        if(registers == program_.alocatedRegisters_.end()){
-            regs = std::vector<VirtualRegisterPlaceholder>();
-//            throw "ERROR[Epilogue]NaiveEpilogue -> Ret";
-        }else{
-            regs = registers->second;
-        }
+        visitInstrHelper(ins);
+        // prepare return Value
+        // move return Value to correct place
+        // do stack work
+        // do ret
 
-        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()) );
-        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::POP(tiny::t86::Bp()) );
-        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::RET() );
-
-        lastIns_ = add(ins);
-        for(int c = 0; c < 3;c++){
-            compiledInsns_.emplace(std::make_pair(ins, c), lastIns_ + c);
-        }
+//
+//        auto registers = program_.alocatedRegisters_.find(ins);
+//        std::vector<VirtualRegisterPlaceholder> regs;
+//        if(registers == program_.alocatedRegisters_.end()){
+//            regs = std::vector<VirtualRegisterPlaceholder>();
+////            throw "ERROR[Epilogue]NaiveEpilogue -> Ret";
+//        }else{
+//            regs = registers->second;
+//        }
+//
+//        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()) );
+//        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::POP(tiny::t86::Bp()) );
+//        program_.selectedInstrs_[ins].emplace_back(new tiny::t86::RET() );
+////
+////        lastIns_ = add(ins);
+////        for(int c = 0; c < 3;c++){
+////            compiledInsns_.emplace(std::make_pair(ins, c), lastIns_ + c);
+////        }
     }
 
 
     void NaiveEpilogue::visit(CallStatic *ins) {
         // TODO // visitInstrHelper(ins);
+        visitInstrHelper(ins);
 
 //        auto ret = pb_.currentLabel();
 //        //spill everything
@@ -303,6 +310,14 @@ namespace tvlm{
         }
         pb_.add(tiny::t86::CALL(it->second.address()), nullptr) ;
 
+        pb_.add(
+                tiny::t86::DBG(
+                        [](tiny::t86::Cpu & cpu){
+                            printAllRegisters(cpu,std::cerr);
+                            std::cin.get();
+                        }
+                ), nullptr
+                );
         pb_.add(tiny::t86::HALT(), nullptr);
         pb_.patch(start, prolog);
 
@@ -317,13 +332,17 @@ namespace tvlm{
         }
 
         //===================================PATCHING Calls=====================================
-        for( auto & toPatch : getCall_patches(program_)){
+        auto & tmp = getCall_patches(program_);
+        std::cout << "call patches size: " << tmp.size() << std::endl;
+        for( auto & toPatch : tmp ){
             auto it = functionTable_.find(toPatch.second);
             if(it == functionTable_.end()){
                 throw "WTF failed patching calls - function name not found";
             }
             pb_.patch(resolveInstruction(toPatch.first),it->second);
-            std::cerr << "patching call at " << resolveInstruction(toPatch.first) << " with " << it->second << std::endl;
+            //std::cerr
+            std::cout
+            << "patching call at " << resolveInstruction(toPatch.first) << " with " << it->second << std::endl;
         }
 
     }

@@ -7,6 +7,8 @@
 #include "tvlm/codeGeneration/registerAssigner/RegisterAssigner.h"
 #include "t86/program/helpers.h"
 
+#include "tvlm/codeGeneration/FunctionalMacro.h"
+
 namespace  tvlm{
 
 
@@ -21,9 +23,9 @@ namespace  tvlm{
     private:
 
 //        tvlm::ProgramBuilderOLD pb_;
-        /*
-     bool hardDBG_ = true;
-      /*/
+     /*
+        bool hardDBG_ = true;
+    /*/
         bool hardDBG_ = false;/**/
 
 
@@ -115,7 +117,21 @@ namespace  tvlm{
         }
 
         Label addF(const TFInstruction & instruction, const ILInstruction * ins){
-            return program_.addF(instruction, ins);
+            auto ret = addFsilent(instruction, ins);
+            if(hardDBG_){
+                program_.addF( LMBS tiny::t86::DBG(
+                        [](tiny::t86::Cpu & cpu){
+                            printAllRegisters(cpu,std::cerr);
+                            std::cin.get();
+                        }
+                ) LMBE, ins);
+            }
+            return ret;
+        }
+        Label addFsilent(const TFInstruction & instruction, const ILInstruction * ins){
+            auto ret = program_.addF(instruction, ins);
+
+            return ret;
         }
 
         size_t getReg(const Instruction * ins, const Instruction * me){
@@ -143,6 +159,7 @@ namespace  tvlm{
         }
 //        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
         void copyStruct(size_t from, Type * type,size_t to, const ILInstruction * ins );
+        void copyStruct(size_t from, Type * type,Register to, const ILInstruction * ins );
 
         void makeGlobalTable(BasicBlock *globals);
 

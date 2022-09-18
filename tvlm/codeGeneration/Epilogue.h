@@ -39,7 +39,8 @@ public:
 
 
     std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> & getCall_patches(SProgram & program){
-        return program.call_patches_;
+//        return program.call_patches_;
+        return program.unpatchedFCalls_;
     }
 
     auto & getGlobalTable(SProgram & program){

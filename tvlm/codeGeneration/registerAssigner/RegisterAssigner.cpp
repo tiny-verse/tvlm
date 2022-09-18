@@ -15,11 +15,11 @@ namespace tvlm{
 
 
     void RegisterAssigner::makeLocalAllocation(size_t size, size_t reg, const ILInstruction *ins) {
-        auto cpy = functionLocalAllocSize; // make cpy for lambda capture
+        auto cpy = functionLocalAllocSize ; // make cpy for lambda capture
         functionLocalAllocSize += size;
         // already allocated, now just find addr for this allocation
         targetProgram_->addF(LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp()) LMBE, ins);
-        targetProgram_->addF(LMBS tiny::t86::SUB( vR(reg), (int64_t) cpy) LMBE , ins);
+        targetProgram_->addF(LMBS tiny::t86::SUB( vR(reg), (int64_t) cpy + 1 ) LMBE , ins);
     }
 
     void RegisterAssigner::makeGlobalAllocation(size_t size, const size_t reg, const ILInstruction *ins) {
@@ -103,7 +103,8 @@ namespace tvlm{
     void RegisterAssigner::prepareReturnValue(size_t size, const Instruction *ret) {
         if(size == 0){
             auto regTmp  = getReg(ret);  // tmpAddress prepared for return Value
-            targetProgram_->addF( LMBS tiny::t86::PUSH(regTmp) LMBE,ret );
+//            targetProgram_->addF( LMBS tiny::t86::PUSH(regTmp) LMBE,ret ); only imaginary  ... move stack pointer is enough ( we dont have value in tmpReg
+            targetProgram_->addF( LMBS tiny::t86::SUB(tiny::t86::Sp(), 1) LMBE,ret ); functionLocalAllocSize++; // Caller allocs place(on stack) for return value
 //            clearIntRegister(regTmp);
         }else{
             functionLocalAllocSize += size;

@@ -57,6 +57,7 @@ namespace tvlm {
         ,alocatedRegisters_()
         ,jump_patches_()
         ,call_patches_()
+        ,unpatchedFCalls_()
         ,globalTable_()
         ,data_(){
 
@@ -72,6 +73,7 @@ namespace tvlm {
         ,alocatedTMPRegisters_(prog.alocatedTMPRegisters_)
         ,jump_patches_(prog.jump_patches_)
         ,call_patches_(prog.call_patches_)
+        , unpatchedFCalls_(prog.unpatchedFCalls_)
         ,globalTable_(prog.globalTable_)
         ,data_(prog.data_)
         {
