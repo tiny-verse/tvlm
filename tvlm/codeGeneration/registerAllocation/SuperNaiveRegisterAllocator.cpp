@@ -15,9 +15,25 @@ namespace tvlm {
 
     void SuperNaiveRegisterAllocator::visit(CondJump *ins) {
 
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins, 0);
+
     }
 
     void SuperNaiveRegisterAllocator::visit(Return *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        if(ins->returnType()->registerType() == ResultType::StructAddress){
+
+        } else if (ins->returnType()->registerType() == ResultType::Double){
+
+        }else if (ins->returnType()->registerType() == ResultType::Integer){
+            setupRegister(&(virtRegs[0]), ins, 0);
+
+        }else{
+
+        }
+//execute calling conventions before return
+
 
     }
 
@@ -35,7 +51,8 @@ namespace tvlm {
 //            prepareReturnValue(ins->f()->getType()->size(), ins):
 //            prepareReturnValue(0, ins);
 
-//        regAllocator->spillCallReg();
+//        regAllocator->spillCallReg(); !!! TODO need
+// execute calling conventions beforeCall
 
 
 //        //call
@@ -73,31 +90,111 @@ namespace tvlm {
 
     void SuperNaiveRegisterAllocator::visit(Copy *ins) {
 
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        switch (ins->resultType()) {
+            case ResultType::Integer: {
+                setupRegister(&(virtRegs[0]), ins, 0);
+                setupRegister(&(virtRegs[1]), ins->src(), 1);
+                break;
+            }
+            case ResultType::Double: {
+
+                setupFRegister(&(virtRegs[0]), ins, 0);
+                setupFRegister(&(virtRegs[1]), ins->src(), 1);
+                break;
+            }
+            case ResultType::Void:
+                throw "copy on Void not implemented";
+                break;
+            case ResultType::StructAddress:
+                throw "copy on StructAddress not implemented";
+                break;
+        }
     }
 
     void SuperNaiveRegisterAllocator::visit(Extend *ins) {
 
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupFRegister(&(virtRegs[0]), ins, 0);
+        setupRegister(&(virtRegs[1]), ins->src(), 1);
     }
 
     void SuperNaiveRegisterAllocator::visit(Truncate *ins) {
 
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins, 0);
+        setupFRegister(&(virtRegs[1]), ins->src(), 1);
     }
 
     void SuperNaiveRegisterAllocator::visit(BinOp *ins) {
 
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        switch (ins->resultType()) {
+            case ResultType::StructAddress:
+            case ResultType::Integer: {
+                setupRegister(&(virtRegs[0]), ins->lhs(), 0);
+                setupRegister(&(virtRegs[1]), ins->rhs(), 1);
+                break;
+                }
+
+            case ResultType::Double: {
+                switch (ins->opType()) {
+                    case BinOpType::ADD:
+                    case BinOpType::SUB:
+                    case BinOpType::MOD:
+                    case BinOpType::MUL:
+                    case BinOpType::DIV:
+                    case BinOpType::AND:
+                    case BinOpType::OR:
+                    case BinOpType::XOR:
+                    case BinOpType::LSH:
+                    case BinOpType::RSH:
+                        setupFRegister(&(virtRegs[0]), ins->lhs(), 0);
+                        setupFRegister(&(virtRegs[1]), ins->rhs(), 1);
+                        replaceInRegisterDescriptor(ins->lhs(), ins);
+                        break;
+
+                    case BinOpType::NEQ:
+                    case BinOpType::EQ:
+                    case BinOpType::LTE:
+                    case BinOpType::LT:
+                    case BinOpType::GT:
+                    case BinOpType::GTE:
+                        setupFRegister(&(virtRegs[0]), ins->lhs(), 0);
+                        setupFRegister(&(virtRegs[1]), ins->rhs(), 1);
+                        setupRegister(&(virtRegs[2]), ins, 2);
+                        break;
+                }
+            }
+            case ResultType::Void:
+                throw "not implemented";
+                break;
+        }
     }
 
     void SuperNaiveRegisterAllocator::visit(UnOp *ins) {
+
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
         switch (ins->resultType()) {
             case ResultType::Integer:
             case ResultType::StructAddress:{
-                auto & insReg = getSelectedRegisters(ins);
-                for (auto & virtReg: insReg) {
+                switch (ins->opType()) {
+                    case UnOpType::UNSUB:{
+                        setupRegister(&(virtRegs[0]), ins->operand(), 0);
+                        setupRegister(&(virtRegs[1]), ins, 1);
+                        break;
+                    }
+                    case UnOpType::INC:
+                    case UnOpType::NOT:
+                    case UnOpType::DEC:
+                        setupRegister(&(virtRegs[0]), ins->operand(), 0);
+                        replaceInRegisterDescriptor(ins->operand(), ins);
 
+                        break;
                 }
-                break;
             }
             case ResultType::Double:
+                setupFRegister(&(virtRegs[0]), ins, 0);
 
                 break;
             case ResultType::Void:
@@ -107,10 +204,35 @@ namespace tvlm {
     }
 
     void SuperNaiveRegisterAllocator::visit(LoadImm *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+
+        switch (ins->resultType()) {
+            case ResultType::Integer:{
+
+                        setupRegister(&(virtRegs[0]), ins, 0);
+//                auto reg = getReg(ins, ins);
+                break;
+            }
+            case ResultType::Double:{
+                setupFRegister(&(virtRegs[0]), ins, 0);
+
+//                auto freg = getFReg(ins, ins);
+//TODO
+                break;
+            }
+            case ResultType::StructAddress:
+                throw "ERROR cant load StructAddress as value";
+                break;
+            case ResultType::Void:
+                throw "ERROR cant load void as value";
+                break;
+        }
 
     }
 
     void SuperNaiveRegisterAllocator::visit(AllocL *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins, 0);
 
     }
 
@@ -119,34 +241,91 @@ namespace tvlm {
     }
 
     void SuperNaiveRegisterAllocator::visit(ArgAddr *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins, 0);
 
     }
 
     void SuperNaiveRegisterAllocator::visit(PutChar *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins->src(), 0);
 
     }
 
     void SuperNaiveRegisterAllocator::visit(GetChar *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins, 0);
 
     }
 
     void SuperNaiveRegisterAllocator::visit(Load *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
 
+        if(ins->type()->registerType() == ResultType::Double){
+            setupFRegister(&(virtRegs[0]), ins, 0);
+            setupRegister(&(virtRegs[1]), ins->address(), 1);
+            return;
+        }else if (ins->type()->registerType() == ResultType::Integer){
+
+            auto it = targetProgram_.globalFind(ins->address());
+            if(it != targetProgram_.globalEnd()) {
+                setupRegister(&(virtRegs[0]), ins, 0);
+                return;
+            }
+//            if(dynamic_cast<Type::Array *>(ins->type())){
+//                setupRegister(&(virtRegs[0]), ins, 0);
+//                setupRegister(&(virtRegs[1]), ins->address(), 1);
+//            }else{
+                setupRegister(&(virtRegs[0]), ins, 0);
+                setupRegister(&(virtRegs[1]), ins->address(), 1);
+//            }
+            return;
+        }else if (ins->type()->registerType() == ResultType::StructAddress){
+            replaceInRegisterDescriptor(ins->address(), ins);
+            return;
+        }
+        throw "ERROR[RA] failed load";
     }
 
     void SuperNaiveRegisterAllocator::visit(Store *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins->address(), 0);
 
+        switch (ins->value()->resultType()) {
+            case ResultType::Double:{
+                setupFRegister(&(virtRegs[1]), ins->value(), 1);
+                return;
+            }
+            case ResultType::StructAddress:
+            case ResultType::Integer:{
+                setupRegister(&(virtRegs[1]), ins->value(), 1);
+                return;
+
+            }
+            case ResultType::Void:{
+                throw "ERROR[IS] Store: failed to store void value";
+            }
+        }
+        throw "ERROR[IS] Store: failed to resolve value type";
     }
 
     void SuperNaiveRegisterAllocator::visit(Phi *ins) {
-
+        //TODO
     }
 
     void SuperNaiveRegisterAllocator::visit(ElemAddrOffset *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins, 0);
+        setupRegister(&(virtRegs[1]), ins->base(), 1);
+        setupRegister(&(virtRegs[2]), ins->offset(), 2);
 
     }
 
     void SuperNaiveRegisterAllocator::visit(ElemAddrIndex *ins) {
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        setupRegister(&(virtRegs[0]), ins, 0);
+        setupRegister(&(virtRegs[1]), ins->base(), 1);
+        setupRegister(&(virtRegs[2]), ins->index(), 2);
 
     }
 
@@ -254,7 +433,7 @@ namespace tvlm {
                 }
                 case Location::Stack:{
 
-                    int stackOffset = it->second.stackOffset();
+                    stackOffset = it->second.stackOffset();
                     LMBS tiny::t86::MOV(tiny::t86::Mem(tiny::t86::Sp() + stackOffset),
                                         Register(reg.getNumber())) LMBE ; // TODO insert code
 
@@ -312,7 +491,7 @@ namespace tvlm {
             res = freeReg_.front();
             freeReg_.erase(freeReg_.begin());
 
-//            regQueue_.push(res);//TODO
+            regQueue_.push(res);//TODO
         }else {
             VirtualRegisterPlaceholder ress = VirtualRegisterPlaceholder (RegisterType::INTEGER, getRegToSpill().index());
             spill( ress);
@@ -338,7 +517,7 @@ namespace tvlm {
 
     }
 
-    std::vector<TFInstruction> SuperNaiveRegisterAllocator::getSelectedInstr(const Instruction * ins) const {
+    std::list<TFInstruction> SuperNaiveRegisterAllocator::getSelectedInstr(const Instruction * ins) const {
         auto it = targetProgram_.selectedFInstrs_.find(ins);
         if(it == targetProgram_.selectedFInstrs_.end()){
             throw "finding instruction which is not compiled";
@@ -356,6 +535,64 @@ namespace tvlm {
 
         return it->second;
     }
+
+    void SuperNaiveRegisterAllocator::setupRegister(VirtualRegisterPlaceholder *reg, const Instruction *ins, size_t pos) {
+        auto location = addressDescriptor_.find(ins);
+        if(location != addressDescriptor_.end()){
+            switch(location->second.loc()){
+                case Location::Register:
+                    reg->setNumber(location->second.regIndex());
+                    break;
+                case Location::Memory:{
+                    Register freeReg = getReg(ins);
+                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( freeReg, tiny::t86::Mem(location->second.memAddress())) LMBE, ins, pos++);
+                    break;
+                }
+                case Location::Stack:{
+
+                    Register freeReg = getReg(ins);
+
+
+                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( freeReg, tiny::t86::Bp()) LMBE, ins, pos++);
+                    targetProgram_.addF_insert(LMBS tiny::t86::SUB( freeReg, (int64_t) location->second.stackOffset() + 1 ) LMBE , ins, pos++);
+                    break;
+                }
+
+            }
+        }
+    }
+
+    void
+    SuperNaiveRegisterAllocator::setupFRegister(VirtualRegisterPlaceholder *reg, const Instruction *ins, size_t pos) {
+
+    }
+    void SuperNaiveRegisterAllocator::removeFromRegisterDescriptor(const Instruction *ins) {
+        auto address = addressDescriptor_.find(ins);
+        if(address != addressDescriptor_.end()){
+            if (address->second.loc() == Location::Register){
+                registerDescriptor_[address->second.regIndex()].erase(ins);
+            }
+        }
+
+    }
+    void SuperNaiveRegisterAllocator::replaceInRegisterDescriptor(const Instruction * replace, const Instruction * with) {
+        auto address = addressDescriptor_.find(replace);
+        if(address != addressDescriptor_.end()){
+            if (address->second.loc() == Location::Register){
+                registerDescriptor_[address->second.regIndex()].erase(replace);
+                registerDescriptor_[address->second.regIndex()].insert(with);
+                addressDescriptor_.insert(std::make_pair(with, addressDescriptor_.at(replace)));
+                //TODO what all should be in renaming changed?
+            }
+        }
+
+    }
+
+    SuperNaiveRegisterAllocator::Register SuperNaiveRegisterAllocator::getReg(const Instruction *ins) {
+
+        return getFreeRegister();
+    }
+
 
 
 }

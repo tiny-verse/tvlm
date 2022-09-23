@@ -133,9 +133,8 @@ namespace tvlm{
         }
 
         auto & finsns = finstruction->second;
-
-        for ( size_t i = 0; i < finsns.size(); i++){
-            TInstruction * compiled = finsns[i](regs);
+        for (auto & finsn : finsns){
+            TInstruction * compiled = finsn(regs);
 //            auto selected = program_.selectedInstrs_.find(ins);
 //            if(selected == program_.selectedInstrs_.end()){
 //                program_.selectedInstrs_[ins] = std::vector<TInstruction *>();
@@ -314,7 +313,6 @@ namespace tvlm{
                 tiny::t86::DBG(
                         [](tiny::t86::Cpu & cpu){
                             printAllRegisters(cpu,std::cerr);
-                            std::cin.get();
                         }
                 ), nullptr
                 );

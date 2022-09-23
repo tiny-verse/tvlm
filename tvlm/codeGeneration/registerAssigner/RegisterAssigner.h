@@ -89,7 +89,7 @@ namespace tvlm{
 //        void correctStackAlloc(size_t patch);
 
         void prepareReturnValue(size_t size,const Instruction * ret);
-
+        void spillCallReg();
 
         void registerPhi(const Phi *phi);
 //        virtual void prepareReturnValue(size_t size, const ILInstruction * ret);

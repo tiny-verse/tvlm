@@ -92,8 +92,23 @@ namespace tvlm{
         void restore(const Register & whereTo, const LocationEntry & from);
 
         Register getFreeRegister();
+
+        std::vector<VirtualRegisterPlaceholder> & getAllocatedVirtualRegisters(const Instruction * ins){
+//            return targetProgram_.alocatedRegisters_[ins];
+            auto it = targetProgram_.alocatedRegisters_.find(ins);
+            if ( it != targetProgram_.alocatedRegisters_.end()){
+                return it->second;
+            }else{
+                if(targetProgram_.selectedFInstrs_.find(ins) != targetProgram_.selectedFInstrs_.end()){
+                    return targetProgram_.alocatedRegisters_[ins];
+                }else{
+                    throw "trying to fing allocated registers for ins that was not compiled";
+                }
+            }
+        }
+
     protected:
-        std::vector<TFInstruction> getSelectedInstr(const Instruction * ins) const;
+        std::list<TFInstruction> getSelectedInstr(const Instruction * ins) const;
         std::vector<VirtualRegisterPlaceholder>& getSelectedRegisters(const Instruction * ins);
 
         void visit(Instruction *ins) override;
@@ -128,6 +143,12 @@ namespace tvlm{
         void enterNewFce(Function * fce);
         void exitFce();
     private:
+
+        void setupRegister(VirtualRegisterPlaceholder * reg, const Instruction * ins, size_t pos);
+        void setupFRegister(VirtualRegisterPlaceholder * reg, const Instruction * ins, size_t pos);
+        void removeFromRegisterDescriptor(const Instruction * ins);
+        void replaceInRegisterDescriptor(const Instruction * replace, const Instruction * with);
+        Register getReg(const Instruction * ins);
         std::queue<Register>regQueue_;
 
         VirtualRegister  _mtWorkingReg_;
@@ -136,6 +157,8 @@ namespace tvlm{
         TargetProgram & targetProgram_;
         std::list<Register> freeReg_;
         std::map<VirtualRegister*, LocationEntry> regMapping_;
+        std::map<const Instruction *, LocationEntry> addressDescriptor_;
+        std::map<Register, std::set<const Instruction*>> registerDescriptor_;
         std::map<VirtualRegister*, LocationEntry> spillMapping_;
     };
 

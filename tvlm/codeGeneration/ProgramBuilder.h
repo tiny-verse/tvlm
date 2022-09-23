@@ -91,6 +91,18 @@ namespace tvlm {
             selectedFInstrs_[ins].push_back(instruction);
             return selectedFInstrs_[ins].size() -1;
         }
+        Label addF_front(const TFInstruction & instruction, const ILInstruction * ins){
+            return addF_insert(instruction, ins, 0);
+        }
+        Label addF_insert(const TFInstruction & instruction, const ILInstruction * ins, size_t pos){
+//            selectedInstrs_[ins].push_back(new T(instruction));
+            auto it = selectedFInstrs_[ins].begin();
+            for(size_t i = 0; i < pos;i++, it++);
+            ;
+
+            selectedFInstrs_[ins].insert(it, instruction);
+            return pos;
+        }
 //        template<typename T>
 //        Label add(const T& instruction, const ILInstruction * ins){
 //            selectedInstrs_[ins].push_back(new T(instruction));
@@ -166,7 +178,7 @@ namespace tvlm {
         Program * program_;
         std::map<const Function * ,size_t> funcLocalAlloc_;
         std::map<const ILInstruction*, std::vector<TInstruction*>> selectedInstrs_;
-        std::map<const ILInstruction*, std::vector<TFInstruction>> selectedFInstrs_;
+        std::map<const ILInstruction*, std::list<TFInstruction>> selectedFInstrs_;
 //        std::map<const Instruction *, Register> assignedIntRegisters_;
 //        std::map<const Instruction *, FRegister> assignedFloatRegisters_;
 
