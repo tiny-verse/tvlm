@@ -615,7 +615,9 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(StructAssign *ins) {
-        copyStruct(getReg(ins->srcVal(), ins), ins->type(), getReg(ins->dstAddr(), ins), ins);
+        auto regVal = getReg(ins->srcVal(), ins);
+        auto dstVal = getReg(ins->dstAddr(), ins);
+        copyStruct(regVal, ins->type(),dstVal , ins);
     }
 
     void SuperNaiveIS::visit(BasicBlock *bb) {

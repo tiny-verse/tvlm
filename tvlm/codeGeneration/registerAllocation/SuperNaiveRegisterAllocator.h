@@ -16,7 +16,18 @@ namespace tvlm{
 
     class LocationEntry{
     public:
-        LocationEntry(Location location, int number) : loc_(location), num_(number){}
+        LocationEntry(Location location, size_t number, const Instruction * ins)
+        :
+        loc_(location),
+        num_(number),
+        register_(VirtualRegisterPlaceholder(RegisterType::FLOAT, 0)),
+        ins_(ins){ assert(location != Location::Register && "for register second constructor needs to be used");}
+
+
+        LocationEntry(Location location, const VirtualRegisterPlaceholder& reg, const Instruction * ins) : loc_(location), num_(0),
+                                                                                                    register_(reg), ins_(ins){
+            assert(location == Location::Register && "for non register first constructor needs to be used");
+        }
         Location loc() const {
             return loc_;
         }
@@ -27,11 +38,11 @@ namespace tvlm{
                 return INT32_MAX;
             }
         }
-        int regIndex() const {
+        VirtualRegisterPlaceholder regIndex() const {
             if(loc_ == Location::Register){
-                return num_;
+                return register_;
             }else{
-                return INT32_MIN;
+                throw "[Location Entry] called for regIndex with no reg info";
             }
         };
         int memAddress()const{
@@ -44,15 +55,21 @@ namespace tvlm{
         bool operator<(const LocationEntry & other) const {
             return loc_ < other.loc_ ||  (loc_ == other.loc_ && num_ < other.num_);
         }
+        const Instruction * ins() const{
+            return ins_;
+        }
     private:
         Location loc_;
         size_t num_;
+        VirtualRegisterPlaceholder register_;
+        const Instruction * ins_;
     };
 
 
 
     class SuperNaiveRegisterAllocator :public ILVisitor{
         using Register = tiny::t86::Register;
+        using FRegister = tiny::t86::FloatRegister;
         using VirtualRegister = VirtualRegisterPlaceholder;
         using TargetProgramBuilder = tvlm::ProgramBuilderOLD;
 
@@ -84,25 +101,26 @@ namespace tvlm{
         std::queue<Label> functions_;
         std::queue<Label> bbsToCompile_;
 
-        Register getRegister(VirtualRegister & reg);
+        VirtualRegister getRegister(VirtualRegister & reg, const Instruction * ins, const Instruction * currentIns);
 
-        Register getRegToSpill();
+        VirtualRegister getRegToSpill();
 
-        bool spill(VirtualRegister & reg);
-        void restore(const Register & whereTo, const LocationEntry & from);
+        bool spill(VirtualRegister & reg, const Instruction * currentIns);
+        void restore(const VirtualRegister & whereTo, const LocationEntry & from, const Instruction * currentIns);
 
-        Register getFreeRegister();
+        VirtualRegister getReg(const Instruction * currentIns);
+        VirtualRegister getFreeFRegister(const Instruction * currentIns);
 
-        std::vector<VirtualRegisterPlaceholder> & getAllocatedVirtualRegisters(const Instruction * ins){
+        std::vector<VirtualRegisterPlaceholder> * getAllocatedVirtualRegisters(const Instruction * ins){
 //            return targetProgram_.alocatedRegisters_[ins];
             auto it = targetProgram_.alocatedRegisters_.find(ins);
             if ( it != targetProgram_.alocatedRegisters_.end()){
-                return it->second;
+                return & (it->second);
             }else{
+                    throw "trying to find allocated registers for ins that was not compiled";
                 if(targetProgram_.selectedFInstrs_.find(ins) != targetProgram_.selectedFInstrs_.end()){
-                    return targetProgram_.alocatedRegisters_[ins];
+                    return & (targetProgram_.alocatedRegisters_[ins]);
                 }else{
-                    throw "trying to fing allocated registers for ins that was not compiled";
                 }
             }
         }
@@ -144,22 +162,35 @@ namespace tvlm{
         void exitFce();
     private:
 
-        void setupRegister(VirtualRegisterPlaceholder * reg, const Instruction * ins, size_t pos);
-        void setupFRegister(VirtualRegisterPlaceholder * reg, const Instruction * ins, size_t pos);
+        void setupRegister( VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);
+        void setupFRegister(VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);
         void removeFromRegisterDescriptor(const Instruction * ins);
-        void replaceInRegisterDescriptor(const Instruction * replace, const Instruction * with);
-        Register getReg(const Instruction * ins);
-        std::queue<Register>regQueue_;
+        void replaceInRegister(const Instruction * replace, const Instruction * with);
+
+        VirtualRegister getLastRegister(const Instruction * currentIns);
+        void releaseRegister(const VirtualRegister & reg);
+        void updateJumpPatchPositions(const Instruction *ins);
+        void updateCallPatchPositions(const Instruction *ins);
+
+
+        std::list<VirtualRegister>regQueue_;
 
         VirtualRegister  _mtWorkingReg_;
         VirtualRegister * currentWorkingReg_;
+        Function * currenFunction_;
 //        TargetProgramBuilder pb_;
         TargetProgram & targetProgram_;
-        std::list<Register> freeReg_;
-        std::map<VirtualRegister*, LocationEntry> regMapping_;
-        std::map<const Instruction *, LocationEntry> addressDescriptor_;
-        std::map<Register, std::set<const Instruction*>> registerDescriptor_;
-        std::map<VirtualRegister*, LocationEntry> spillMapping_;
+        std::queue<VirtualRegister> freeReg_;
+        std::queue<VirtualRegister> freeFReg_;
+//        std::map<VirtualRegister*, LocationEntry> regMapping_;
+//        std::map<VirtualRegister*, LocationEntry> spillMapping_;
+        std::map<const Instruction *, std::set<LocationEntry>> addressDescriptor_;
+        std::map<VirtualRegister, std::set<const Instruction*>> registerDescriptor_;
+
+        size_t writingPos_; //position for insertion of code (spill or load code)
+
+
+//        void setupRegister(VirtualRegisterPlaceholder &reg, const Instruction *ins, const Instruction *currentIns);
     };
 
 

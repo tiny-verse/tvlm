@@ -23,7 +23,7 @@ namespace  tvlm{
     private:
 
 //        tvlm::ProgramBuilderOLD pb_;
-    // /*
+     /*
         bool hardDBG_ = true;
     /*/
         bool hardDBG_ = false;/**/

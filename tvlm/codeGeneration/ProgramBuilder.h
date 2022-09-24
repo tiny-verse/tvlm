@@ -57,28 +57,33 @@ namespace tvlm {
         ,alocatedRegisters_()
         ,jump_patches_()
         ,call_patches_()
+        ,jumpPos_()
+        ,callPos_()
         ,unpatchedFCalls_()
         ,globalTable_()
         ,data_(){
 
         }
-        TargetProgram(const TargetProgram & prog):
-        program_(prog.program_)
-        , funcLocalAlloc_(prog.funcLocalAlloc_)
-        , selectedInstrs_(prog.selectedInstrs_)
-        , selectedFInstrs_(prog.selectedFInstrs_)
-//        , assignedIntRegisters_(prog.assignedIntRegisters_)
-//        , assignedFloatRegisters_(prog.assignedFloatRegisters_)
-        ,alocatedRegisters_(prog.alocatedRegisters_)
-        ,alocatedTMPRegisters_(prog.alocatedTMPRegisters_)
-        ,jump_patches_(prog.jump_patches_)
-        ,call_patches_(prog.call_patches_)
-        , unpatchedFCalls_(prog.unpatchedFCalls_)
-        ,globalTable_(prog.globalTable_)
-        ,data_(prog.data_)
-        {
-
-        }
+        TargetProgram(const TargetProgram & prog) = default;
+//        :
+//        program_(prog.program_)
+//        , funcLocalAlloc_(prog.funcLocalAlloc_)
+//        , selectedInstrs_(prog.selectedInstrs_)
+//        , selectedFInstrs_(prog.selectedFInstrs_)
+////        , assignedIntRegisters_(prog.assignedIntRegisters_)
+////        , assignedFloatRegisters_(prog.assignedFloatRegisters_)
+//        ,alocatedRegisters_(prog.alocatedRegisters_)
+//        ,alocatedTMPRegisters_(prog.alocatedTMPRegisters_)
+//        ,jump_patches_(prog.jump_patches_)
+//        ,call_patches_(prog.call_patches_)
+//        ,jumpPos_(prog.jumpPos_)
+//        ,callPos_(prog.callPos_)
+//        , unpatchedFCalls_(prog.unpatchedFCalls_)
+//        ,globalTable_(prog.globalTable_)
+//        ,data_(prog.data_)
+//        {
+//
+//        }
 
         void setProgram(Program * program){
             program_ = program;
@@ -135,10 +140,12 @@ namespace tvlm {
         }
 
         void patchJump(const Instruction * ins, const Label & label, const BasicBlock * dest){
+            jumpPos_[ins].emplace_back(jump_patches_.size());
             jump_patches_.emplace_back(std::make_pair(ins,label), dest);
         }
 
         void patchCall(const Instruction * ins, const Label & label, Symbol & dest){
+            callPos_[ins].emplace_back(call_patches_.size());
             call_patches_.emplace_back(std::make_pair(ins, label), dest);
         }
 
@@ -185,6 +192,8 @@ namespace tvlm {
         std::map<const ILInstruction*, std::vector<VirtualRegisterPlaceholder>> alocatedRegisters_;
         std::vector<VirtualRegisterPlaceholder> alocatedTMPRegisters_;
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> jump_patches_;
+        std::map<const Instruction *, std::vector<size_t>> jumpPos_; // instruction with positions
+        std::map<const Instruction *, std::vector<size_t>> callPos_; // instruction with positions
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> call_patches_;
         std::map<const Instruction*, uint64_t> globalTable_;
 //        std::vector<std::pair<const ILInstruction *, const BasicBlock*>> jumpPatches_;

@@ -18,10 +18,13 @@ namespace tvlm{
         ,number_(number)
         {}
 
-        VirtualRegisterPlaceholder(const VirtualRegisterPlaceholder & other):
-                regType_(other.regType_)
-                ,number_(other.number_)
-        {}
+//        VirtualRegisterPlaceholder(const VirtualRegisterPlaceholder & other) = delete;
+//        VirtualRegisterPlaceholder(VirtualRegisterPlaceholder && other) :regType_(other.regType_), number_(other.number_){}
+
+//        VirtualRegisterPlaceholder(const VirtualRegisterPlaceholder & other):
+//                regType_(other.regType_)
+//                ,number_(other.number_)
+//        {}
 
         void setNumber(size_t number){
             number_ = number;
@@ -36,6 +39,9 @@ namespace tvlm{
         }
         bool operator<(const VirtualRegisterPlaceholder & rhs) const{
             return (this->regType_ < rhs.regType_ ) ? true :  this->regType_ == rhs.regType_ && this->number_ < rhs.number_ ;
+        }
+        bool operator==(const VirtualRegisterPlaceholder & rhs) const{
+            return  this->regType_ == rhs.regType_ && this->number_ == rhs.number_ ;
         }
     private:
         size_t number_;
