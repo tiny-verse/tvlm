@@ -97,9 +97,9 @@ namespace tvlm {
         size_t returnValueRegister = 0;
         if(ins->f()->getType()->registerType() == ResultType::StructAddress){
             prepareReturnValue(ins->f()->getType()->size(), ins);
-        } else if (ins->resultType() == ResultType::Double){
+        } else if (ins->f()->getType()->registerType() == ResultType::Double){
             returnValueRegister = getFReg(ins, ins);
-        }else if (ins->resultType() == ResultType::Integer) {
+        }else if (ins->f()->getType()->registerType() == ResultType::Integer) {
             returnValueRegister = getReg(ins, ins);
 
         }else{//void
@@ -113,13 +113,13 @@ namespace tvlm {
                 , ins );
 
         // -** manage return Value
-        if(ins->resultType() == ResultType::Double){
+        if(ins->f()->getType()->registerType() == ResultType::Double){
 //            auto freg = getFReg(ins, ins);
             addF( LMBS tiny::t86::MOV( vFR(returnValueRegister), tiny::t86::FReg(0)) LMBE, ins);
-        }else if (ins->resultType() == ResultType::Integer){
+        }else if (ins->f()->getType()->registerType() == ResultType::Integer){
 //            auto reg = getReg(ins, ins);
             addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
-        } else if(ins->resultType() == ResultType::Void){
+        } else if(ins->f()->getType()->registerType() == ResultType::StructAddress){
 
         }
 //
@@ -140,7 +140,71 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(Call *ins) {
-        throw("call implementation");
+//    auto ret = pb_.currentLabel();
+//        //spill everything
+////        regAllocator->spillAllReg();
+
+//        //args /*-> prepare values
+        for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
+            if((*it).second->registerType() == ResultType::StructAddress) {
+//                allocateStructArg(it->second, it->first);
+            }else if((*it).second->registerType() == ResultType::Integer){
+                auto argReg = getReg(it->first, ins);
+                addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
+//                clearIntReg(it->first);
+            }else if ((*it).second->registerType() == ResultType::Double){
+                auto argFReg = getFReg(it->first, ins);
+                addF(LMBS tiny::t86::FPUSH(vFR(argFReg)) LMBE, ins);
+//                clearFloatReg(it->first);
+            }
+        }
+//
+//        //prepare return Value //*-> preparation in RA -- memory and register in RA
+
+        size_t returnValueRegister = 0;
+        if(ins->retType()->registerType()== ResultType::StructAddress){
+            prepareReturnValue(ins->retType()->size(), ins);
+        } else if (ins->retType()->registerType() == ResultType::Double){
+            returnValueRegister = getFReg(ins, ins);
+        }else if (ins->retType()->registerType() == ResultType::Integer) {
+            returnValueRegister = getReg(ins, ins);
+
+        }else{//void
+
+        }
+////        regAllocator->spillCallReg();
+//        //call
+//        tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()}, ins);
+        tiny::t86::Label callLabel = addF(
+                LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
+                , ins );
+
+        // -** manage return Value
+        if(ins->retType()->registerType() == ResultType::Double){
+//            auto freg = getFReg(ins, ins);
+            addF( LMBS tiny::t86::MOV( vFR(returnValueRegister), tiny::t86::FReg(0)) LMBE, ins);
+        }else if (ins->retType()->registerType() == ResultType::Integer){
+//            auto reg = getReg(ins, ins);
+            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
+        } else if(ins->retType()->registerType() == ResultType::Void){
+
+        }
+//
+        //CountArgSize;
+        int argSize  = 0;
+        for (auto & a :ins->args()) {
+            if(a.second->registerType() == ResultType:: Double){
+                argSize +=1;
+            }else{
+                argSize ++;
+            }
+        }
+
+        addF( LMBS tiny::t86::ADD(tiny::t86::Sp(), argSize) LMBE, ins); // instead of popping function args
+//
+        program_.registerCall(ins, callLabel, ins->f()->name());
+//        lastIns_ = ret; //return ret;
+
     }
 
     void SuperNaiveIS::visit(Copy *ins) {
@@ -395,10 +459,21 @@ namespace tvlm {
                         return;
                     }
                     case UnOpType::INC:
+
                         addF(LMBS tiny::t86::INC( vR(reg)) LMBE, ins);
+//                        if(auto load = dynamic_cast<Load*>(ins->operand())){
+//                            auto regAddr = getReg(load->address(), ins);
+//                            //store incremented -- TODO make dirty reg
+//                            addF(LMBS tiny::t86::MOV(tiny::t86::Mem(vR(regAddr)), vR(reg))LMBE, ins);
+//                        }
                         break;
                     case UnOpType::DEC:
                         addF( LMBS tiny::t86::DEC( vR(reg)) LMBE, ins);
+//                        if(auto load = dynamic_cast<Load*>(ins->operand())){
+//                            auto regAddr = getReg(load->address(), ins);
+//                            //store incremented -- TODO make dirty reg
+//                            addF(LMBS tiny::t86::MOV(tiny::t86::Mem(vR(regAddr)), vR(reg))LMBE, ins);
+//                        }
                         break;
                 }
 //                regAllocator->replaceInt(ins->operand(), ins);
@@ -735,8 +810,8 @@ namespace tvlm {
         is.program_.setProgram(prog );
         is.visit(prog);
         return is.finalize();
-//TODO
-        return TargetProgram(is.program_);
+//
+//        return TargetProgram(is.program_);
     }
 
     void SuperNaiveIS::visit(Instruction *ins) {

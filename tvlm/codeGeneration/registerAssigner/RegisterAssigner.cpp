@@ -18,8 +18,9 @@ namespace tvlm{
         auto cpy = functionLocalAllocSize ; // make cpy for lambda capture
         functionLocalAllocSize += size;
         // already allocated, now just find addr for this allocation
+        targetProgram_->registerAllocation(ins, cpy);
         targetProgram_->addF(LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp()) LMBE, ins);
-        targetProgram_->addF(LMBS tiny::t86::SUB( vR(reg), (int64_t) cpy + 1 ) LMBE , ins);
+        targetProgram_->addF(LMBS tiny::t86::SUB( vR(reg), (int64_t) cpy ) LMBE , ins);
     }
 
     void RegisterAssigner::makeGlobalAllocation(size_t size, const size_t reg, const ILInstruction *ins) {
@@ -82,7 +83,7 @@ namespace tvlm{
 //    }
 
     void RegisterAssigner::resetAllocSize() {
-        functionLocalAllocSize = 0;
+        functionLocalAllocSize = 1;
     }
 
     void RegisterAssigner::exportAlloc(Function * fnc){
@@ -93,11 +94,11 @@ namespace tvlm{
 //    pb_(pb)
 //    ,
     targetProgram_(program)
-    ,functionLocalAllocSize(0)
+    ,functionLocalAllocSize(1)
     ,globalAllocSize(0)
     ,regIntCounter_(1)
     ,regFloatCounter_(1) {
-
+    resetAllocSize();
     }
 
     void RegisterAssigner::prepareReturnValue(size_t size, const Instruction *ret) {

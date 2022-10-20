@@ -179,6 +179,7 @@ namespace tvlm {
 //        }
 
         void registerCall(const Instruction * call, Label & label,const Symbol & fncName){
+            callPos_[call].emplace_back(unpatchedFCalls_.size());
             unpatchedFCalls_.emplace_back(std::make_pair(call, label), fncName );
         }
     private:
@@ -198,8 +199,12 @@ namespace tvlm {
         std::map<const Instruction*, uint64_t> globalTable_;
 //        std::vector<std::pair<const ILInstruction *, const BasicBlock*>> jumpPatches_;
         std::vector<std::pair<std::pair<const Instruction *, Label>, Symbol>> unpatchedFCalls_;
-
         std::vector<int64_t> data_;
+
+        std::map<const ILInstruction *, size_t> allocLmapping_;
+        void registerAllocation(const ILInstruction *pInstruction, size_t i) {
+            allocLmapping_[pInstruction] = i;
+        }
     };
 
 

@@ -16,17 +16,24 @@ namespace tvlm{
 
     class LocationEntry{
     public:
-        LocationEntry(Location location, size_t number, const Instruction * ins)
+        LocationEntry( size_t stackPos, const Instruction * ins)
         :
-        loc_(location),
-        num_(number),
+        loc_(Location::Stack),
+        num_(stackPos),
         register_(VirtualRegisterPlaceholder(RegisterType::FLOAT, 0)),
-        ins_(ins){ assert(location != Location::Register && "for register second constructor needs to be used");}
+        ins_(ins){}
 
 
-        LocationEntry(Location location, const VirtualRegisterPlaceholder& reg, const Instruction * ins) : loc_(location), num_(0),
-                                                                                                    register_(reg), ins_(ins){
-            assert(location == Location::Register && "for non register first constructor needs to be used");
+        LocationEntry(const VirtualRegisterPlaceholder& reg, const Instruction * ins) : loc_(Location::Register),
+        num_(0), addr_(nullptr),
+        register_(reg), ins_(ins){
+
+        }
+
+        LocationEntry(const Instruction * addr, const Instruction * ins, int64_t memAddress) : loc_(Location::Memory),
+        num_(memAddress), addr_(addr),
+        register_( VirtualRegisterPlaceholder(RegisterType::FLOAT, -1)), ins_(ins){
+
         }
         Location loc() const {
             return loc_;
@@ -45,11 +52,18 @@ namespace tvlm{
                 throw "[Location Entry] called for regIndex with no reg info";
             }
         };
-        int memAddress()const{
+        size_t memAddress()const{
             if (loc_ == Location::Memory){
                 return num_;
             }else{
                 return INT32_MIN;
+            }
+        }
+        const Instruction* memAddressInstruction()const{
+            if (loc_ == Location::Memory){
+                return addr_;
+            }else{
+                return nullptr;
             }
         }
         bool operator<(const LocationEntry & other) const {
@@ -62,6 +76,7 @@ namespace tvlm{
         Location loc_;
         size_t num_;
         VirtualRegisterPlaceholder register_;
+        const Instruction * addr_;
         const Instruction * ins_;
     };
 
@@ -105,21 +120,28 @@ namespace tvlm{
 
         VirtualRegister getRegToSpill();
 
-        bool spill(VirtualRegister & reg, const Instruction * currentIns);
+        //:/ INTERFACE
+        bool spill(const VirtualRegister & reg, const Instruction * currentIns);
+        void spillAll(const Instruction * currentIns);
+        void registerMemLocation( const Store * ins, const Instruction * currentIns);
+
         void restore(const VirtualRegister & whereTo, const LocationEntry & from, const Instruction * currentIns);
 
         VirtualRegister getReg(const Instruction * currentIns);
         VirtualRegister getFreeFRegister(const Instruction * currentIns);
 
+        // :/ ---------------------
+
+
         std::vector<VirtualRegisterPlaceholder> * getAllocatedVirtualRegisters(const Instruction * ins){
 //            return targetProgram_.alocatedRegisters_[ins];
             auto it = targetProgram_.alocatedRegisters_.find(ins);
             if ( it != targetProgram_.alocatedRegisters_.end()){
-                return & (it->second);
+                return  &(it->second);
             }else{
                     throw "trying to find allocated registers for ins that was not compiled";
                 if(targetProgram_.selectedFInstrs_.find(ins) != targetProgram_.selectedFInstrs_.end()){
-                    return & (targetProgram_.alocatedRegisters_[ins]);
+                    return  &(targetProgram_.alocatedRegisters_[ins]);
                 }else{
                 }
             }
@@ -191,6 +213,10 @@ namespace tvlm{
 
 
 //        void setupRegister(VirtualRegisterPlaceholder &reg, const Instruction *ins, const Instruction *currentIns);
+        std::set<LocationEntry>::iterator findLocation(std::set<LocationEntry> & set1, Location location);
+
+        void callingConvCallerSave(const Instruction *ins);
+        void callingConvCalleeRestore(const Instruction *ins);
     };
 
 
