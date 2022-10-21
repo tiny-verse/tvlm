@@ -5,7 +5,6 @@
 #include "t86/program/label.h"
 #include "t86/program/programbuilder.h"
 #include "tvlm/tvlm/codeGeneration/registerAllocation/RegisterAllocator.h"
-#include "tvlm/tvlm/codeGeneration/registerAllocation/NaiveRegisterAllocator.h"
 
 
 

@@ -3,7 +3,6 @@
 #include "t86/program/label.h"
 #include "tvlm/tvlm/codeGeneration/ProgramBuilder.h"
 #include "tvlm/tvlm/codeGeneration/registerAllocation/RegisterAllocator.h"
-#include "tvlm/tvlm/codeGeneration/registerAllocation/NaiveRegisterAllocator.h"
 #include "tvlm/tvlm/codeGeneration/registerAssigner/RegisterAssigner.h"
 
 namespace tvlm{

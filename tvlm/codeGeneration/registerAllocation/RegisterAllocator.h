@@ -1,100 +1,167 @@
 #pragma once
 
 #include "t86/program/helpers.h"
-#include "tvlm/tvlm/il/il.h"
-#include "tvlm/tvlm/codeGeneration/ProgramBuilder.h"
+#include "tvlm/codeGeneration/ProgramBuilder.h"
 
 namespace tvlm{
-    using Register = tiny::t86::Register;
-    using FRegister = tiny::t86::FloatRegister;
-    using TInstruction = tiny::t86::Instruction;
-    using ILInstruction = ::tvlm::Instruction;
 
-    /*abstract*/ class RegisterAllocator {
+
+    enum class Location{
+        Register,
+        Memory,
+        Stack
+    };
+
+    class LocationEntry{
+    public:
+        LocationEntry( size_t stackPos, const Instruction * ins)
+                :
+                loc_(Location::Stack),
+                num_(stackPos),
+                register_(VirtualRegisterPlaceholder(RegisterType::FLOAT, 0)),
+                ins_(ins){}
+
+
+        LocationEntry(const VirtualRegisterPlaceholder& reg, const Instruction * ins) : loc_(Location::Register),
+                                                                                        num_(0), addr_(nullptr),
+                                                                                        register_(reg), ins_(ins){
+
+        }
+
+        LocationEntry(const Instruction * addr, const Instruction * ins, int64_t memAddress) : loc_(Location::Memory),
+                                                                                               num_(memAddress), addr_(addr),
+                                                                                               register_( VirtualRegisterPlaceholder(RegisterType::FLOAT, -1)), ins_(ins){
+
+        }
+        Location loc() const {
+            return loc_;
+        }
+        int stackOffset() const {
+            if(loc_ == Location::Stack){
+                return num_;
+            }else{
+                return INT32_MAX;
+            }
+        }
+        VirtualRegisterPlaceholder regIndex() const {
+            if(loc_ == Location::Register){
+                return register_;
+            }else{
+                throw "[Location Entry] called for regIndex with no reg info";
+            }
+        };
+        size_t memAddress()const{
+            if (loc_ == Location::Memory){
+                return num_;
+            }else{
+                return INT32_MIN;
+            }
+        }
+        const Instruction* memAddressInstruction()const{
+            if (loc_ == Location::Memory){
+                return addr_;
+            }else{
+                return nullptr;
+            }
+        }
+        bool operator<(const LocationEntry & other) const {
+            return loc_ < other.loc_ ||  (loc_ == other.loc_ && num_ < other.num_);
+        }
+        const Instruction * ins() const{
+            return ins_;
+        }
+    private:
+        Location loc_;
+        size_t num_;
+        VirtualRegisterPlaceholder register_;
+        const Instruction * addr_;
+        const Instruction * ins_;
+    };
+
+
+    class RegisterAllocator : public ILVisitor{
+    protected:
+        using Register = tiny::t86::Register;
+        using FRegister = tiny::t86::FloatRegister;
+        using VirtualRegister = VirtualRegisterPlaceholder;
 
     public:
         virtual ~RegisterAllocator() = default;
-        explicit RegisterAllocator(ProgramBuilderOLD * pb);
-
-        /**
-         * getReg : Code generator uses getReg function to determine the status of available registers
-         *           and the location of name values. getReg works as follows:\n
-         *
-         * - If variable Y is already in register R, it uses that register.\n
-         * - Else if some register R is available, it uses that register.\n
-         * - Else if both the above options are not possible, it chooses a register that requires minimal number of load and store instructions.
-         * */
-        virtual Register getReg(const ILInstruction * ins) = 0;
-        virtual FRegister getFloatReg(const ILInstruction * ins) = 0;
-
-        virtual void clearInt(const ILInstruction * ins) = 0;
-        virtual void clearFloat(const ILInstruction * ins) = 0;
-        virtual void spillCallReg() = 0;
-        virtual void clearAllReg() = 0;
+        RegisterAllocator( TargetProgram & tp);
 
 
-        Register fillIntRegister(){
-            auto reg = getFreeIntRegister();
-            tmpIntRegs_.emplace(reg);
-            return reg;
+        TargetProgram run(){
+            //implement logic of passing through the program;
+            visit(targetProgram_.program_);
+            return targetProgram_;
         }
-
-        FRegister fillFloatRegister(){
-            auto reg = getFreeFloatRegister();
-            tmpFloatRegs_.emplace(reg);
-            return reg;
-        }
-
-        virtual void clearIntRegister(const Register & reg ){
-            tmpIntRegs_.erase(reg);
-            size_t regi= reg.index();
-            alloc_regs_[regi] = nullptr;
-        }
-
-        void replaceInt(const ILInstruction * from, const ILInstruction * to ){
-            alloc_regs_[getIntRegister(from).index()] = to;
-        }
-        void replaceFloat(const ILInstruction * from, const ILInstruction * to ){
-            alloc_fregs_[getFloatRegister(from).index()] = to;
-        }
-        virtual void spillAllReg()  = 0;
-
-        virtual void registerPhi(Phi * phi) {
-            for(auto & content : phi->contents() ){
-                auto f = std::find(alloc_regs_.begin(), alloc_regs_.end(), content.second);
-                if(f != alloc_regs_.end()){
-                    *f = phi;
-                    break;
-                }
-            }
-        }
-
-
-        virtual void prepareReturnValue(size_t size, const ILInstruction * ret) = 0;
-        virtual void makeLocalAllocation(size_t size, const Register & reg, const ILInstruction * ins) = 0;
-
-        virtual void allocateStructArg(const Type * type, const ILInstruction * ins) = 0;
-
-        virtual void resetAllocSize() = 0;
-
-        virtual void correctStackAlloc(size_t patch ) = 0;
 
     protected:
-        virtual Register getIntRegister(const ILInstruction * ins) = 0;
-        virtual FRegister getFloatRegister(const ILInstruction * ins) = 0;
+        void visit(Instruction *ins) override;
+        void visit(Jump *ins) override;
+        void visit(CondJump *ins) override;
+        void visit(Return *ins) override;
+        void visit(CallStatic *ins) override;
+        void visit(Call *ins) override;
+        void visit(Copy *ins) override;
+        void visit(Extend *ins) override;
+        void visit(Truncate *ins) override;
+        void visit(BinOp *ins) override;
+        void visit(UnOp *ins) override;
+        void visit(LoadImm *ins) override;
+        void visit(AllocL *ins) override;
+        void visit(AllocG *ins) override;
+        void visit(ArgAddr *ins) override;
+        void visit(PutChar *ins) override;
+        void visit(GetChar *ins) override;
+        void visit(Load *ins) override;
+        void visit(Store *ins) override;
+        void visit(Phi *ins) override;
+        void visit(ElemAddrOffset *ins) override;
+        void visit(ElemAddrIndex *ins) override;
+        void visit(Halt *ins) override;
+        void visit(StructAssign *ins) override;
+        void visit(BasicBlock *bb) override;
+        void visit(Function *fce) override;
+        void visit(Program *p) override;
 
-        virtual Register getFreeIntRegister() = 0; //care not to take tmpAllocated
-        virtual FRegister getFreeFloatRegister() = 0; //care not to take tmpAllocated
 
 
-        std::vector< const ILInstruction *> alloc_regs_; //register descriptor
-        std::vector< const ILInstruction *> alloc_fregs_;
+        bool spill(const VirtualRegister & reg, const Instruction * currentIns);
+        void spillAll(const Instruction * currentIns);
+        void restore(const VirtualRegister & whereTo, const LocationEntry & from, const Instruction * currentIns);
 
-        std::set<Register> tmpIntRegs_;
-        std::set<FRegister> tmpFloatRegs_;
+        virtual VirtualRegister getReg(const Instruction * currentIns) = 0;
+        virtual VirtualRegister getFReg(const Instruction * currentIns) = 0;
 
-        ProgramBuilderOLD * pb_;
+        virtual VirtualRegister getLastRegister(const Instruction * currentIns) = 0;
+        virtual void releaseRegister(const VirtualRegister & reg) = 0;
+        void updateJumpPatchPositions(const Instruction *ins);
+        void updateCallPatchPositions(const Instruction *ins);
+        void setupRegister( VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);
+        void setupFRegister(VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);
+        void replaceInRegister(const Instruction * replace, const Instruction * with);
 
+
+
+        std::set<VirtualRegister> freeReg_;
+        std::set<VirtualRegister> freeFReg_;
+
+        Function * currenFunction_;
+        TargetProgram & targetProgram_;
+
+        std::map<const Instruction *, std::set<LocationEntry>> addressDescriptor_;
+        std::map<VirtualRegister, std::set<const Instruction*>> registerDescriptor_;
+        size_t writingPos_; //position for insertion of code (spill or load code)
+
+        void callingConvCallerSave(const Instruction *ins);
+        void callingConvCalleeRestore(const Instruction *ins);
+
+        //:/Helpers
+        std::set<LocationEntry>::iterator findLocation(std::set<LocationEntry> & set1, Location location);
+        std::vector<VirtualRegisterPlaceholder> * getAllocatedVirtualRegisters(const Instruction * ins);
 
     };
+
 }
+

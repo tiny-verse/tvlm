@@ -46,6 +46,7 @@ namespace tvlm {
         friend class NaiveEpilogue;
 //        friend class RegisterAllocator;
         friend class SuperNaiveRegisterAllocator;
+        friend class RegisterAllocator;
         virtual ~TargetProgram() = default;
         TargetProgram():
         program_(nullptr)
