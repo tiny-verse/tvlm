@@ -42,7 +42,7 @@ namespace tvlm{
 
         VirtualRegister getReg(const Instruction * currentIns) override;
         VirtualRegister getFReg(const Instruction * currentIns) override;
-        VirtualRegister getFreeFRegister(const Instruction * currentIns);
+//        VirtualRegister getFreeFRegister(const Instruction * currentIns);
 
         // :/ ---------------------
 

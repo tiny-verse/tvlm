@@ -57,11 +57,6 @@ namespace tvlm {
     }
 
 
-
-    SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getFreeFRegister(const Instruction * currentIns) {
-
-    }
-
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getReg( const Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         if(freeReg_.size() > 1){

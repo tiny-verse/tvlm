@@ -150,4 +150,12 @@ namespace tvlm {
     void ColoringAllocator::releaseRegister(const RegisterAllocator::VirtualRegister &reg) {
 
     }
+
+    void ColoringAllocator::generateLiveRanges() {
+
+        for (auto i : analysisResult_) {
+
+        }
+
+    }
 }

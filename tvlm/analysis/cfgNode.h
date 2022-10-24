@@ -9,8 +9,10 @@ using Function  = ::tvlm::Function;
 namespace tvlm {
 
     class TilingRule;
+    class DummyClass{
+    };
 
-    template<class T>
+    template<class T = DummyClass>
     class CfgNode {
     public:
         int id_;
@@ -19,7 +21,15 @@ namespace tvlm {
         IL *il_;
 //            std::vector<TilingRule * > possibleRules_;
 //            TilingRule * selectedRule_;
-        T * innerInfo;
+        T innerInfo_;
+
+        void setInnerInfo(const T & info){
+            innerInfo_ = info;
+        }
+
+        T getInnerInfo()const{
+            return innerInfo_;
+        }
 
         static int counter_; // 0;
 

@@ -90,12 +90,15 @@ namespace tvlm{
         RegisterAllocator( TargetProgram & tp);
 
 
-        TargetProgram run(){
+        virtual TargetProgram run(){
             //implement logic of passing through the program;
-            visit(targetProgram_.program_);
+            visit(getProgram());
             return targetProgram_;
         }
 
+        inline Program *  getProgram(){
+            return targetProgram_.program_;
+        }
     protected:
         void visit(Instruction *ins) override;
         void visit(Jump *ins) override;
