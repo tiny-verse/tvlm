@@ -6,9 +6,9 @@
 
 namespace tvlm{
 
-    class ILUsageVisitor : public ILVisitor {
+    class DeclarationAnalysis : public ILVisitor {
     public:
-        virtual ~ILUsageVisitor() = default;
+        virtual ~DeclarationAnalysis() = default;
 //        ILUsageVisitor(): ILVisitor(), result_(){}
         std::unordered_set<Declaration*>result(){
             return result_;

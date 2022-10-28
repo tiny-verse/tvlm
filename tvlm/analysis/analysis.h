@@ -7,7 +7,7 @@ namespace tvlm {
     template<class T>
     class Analysis {
     public:
-        virtual T analyze() = 0;
+        virtual T  analyze() = 0;
         virtual ~Analysis() = default;
     };
 

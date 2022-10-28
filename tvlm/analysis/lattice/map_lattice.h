@@ -6,31 +6,36 @@
 #include "flat_lattice.h"
 
 template<typename A, typename B>
-class MAP : public std::map<A, B>{
+class MAP {
 public:
     explicit MAP():
-    std::map<A, B>(),
+    contents_(),
     specified(false){}
 
     MAP( B defaultVal )
-    : std::map<A, B>(),
+    :contents_(),
     defaultValue(defaultVal),
     specified(true){
-
     }
+
     MAP( B && defaultVal )
-    : std::map<A, B>(),
+    :contents_(),
     defaultValue(std::move(defaultVal)),
     specified(true){
-
     }
-    MAP( MAP && other) :registered_(std::move(other.registered_)),
-        specified(other.specified), defaultValue(std::move(other.defaultValue)){
 
+    MAP( MAP && other) :
+    contents_(std::move(other.contents_)),
+    registered_(std::move(other.registered_)),
+    specified(std::move(other.specified)),
+    defaultValue(std::move(other.defaultValue)){
     }
-    MAP( const MAP & other) :registered_(other.registered_),
-        specified(other.specified), defaultValue(other.defaultValue){
 
+    MAP( const MAP & other) :
+    contents_(other.contents_),
+    registered_(other.registered_),
+    specified(other.specified),
+    defaultValue(other.defaultValue){
     }
 
     virtual ~MAP(){
@@ -41,19 +46,23 @@ public:
         }
         registered_.clear();
     }
+
     MAP operator= (const MAP & other){
         this->~MAP();
 //        MAP tmp {other};
 //        std::swap(tmp, *this);
+        contents_ = other.contents_;
         specified = other.specified;
         defaultValue = other.defaultValue;
         registered_ = other.registered_;
         return *this;
     }
+
     MAP operator= (MAP && other){
         this->~MAP();
 //        MAP tmp {other};
 //        std::swap(tmp, *this);
+        contents_ = std::move(other.contents_);
         specified = other.specified;
         defaultValue = std::move(other.defaultValue);
         registered_ = std::move(other.registered_);
@@ -65,6 +74,7 @@ public:
         specified = true;
         return *this;
     }
+
     MAP<A, B> & withDefault(B && defaultVal){
         defaultValue = std::move(defaultVal);
         specified = true;
@@ -72,21 +82,66 @@ public:
     }
 
     virtual B & access (const A & idx){
-        if( !specified || std::map<A, B>::find(idx) != std::map<A, B>::end()) {
-            return this->operator[](idx);
-//            return std::map<A, B>::operator[](idx);
+        auto it = contents_.find(idx);
+        if( !specified ||  it != contents_.end()) {
+            return it->second;
         }
         return defaultValue;
+    }
 
-    };
     virtual B const & access (const A & idx)const{
-        if( !specified || std::map<A, B>::find(idx) != std::map<A, B>::end()) {
-            return this->at(idx);
-//            return std::map<A, B>::operator[](idx);
+        auto it = contents_.find(idx);
+        if( !specified ||  it != contents_.end()) {
+            return it->second;
         }
         return defaultValue;
+    }
 
-    };
+    typename std::map<A, B>::iterator begin(){
+        return contents_.begin();
+    }
+
+    typename std::map<A, B>::const_iterator cbegin()const{
+        return contents_.cbegin();
+    }
+
+    typename std::map<A, B>::const_iterator begin()const{
+        return contents_.cbegin();
+    }
+
+    typename std::map<A, B>::iterator end(){
+        return contents_.end();
+    }
+
+    typename std::map<A, B>::const_iterator cend()const{
+        return contents_.cend();
+    }
+
+    typename std::map<A, B>::const_iterator end()const{
+        return contents_.cend();
+    }
+
+    std::pair<typename std::map<A,B>::iterator, bool>
+    insert(typename std::map<A,B>::value_type && x)
+    { return contents_.insert(std::move(x)); }
+
+    std::pair<typename std::map<A,B>::iterator, bool>
+    insert(const typename std::map<A,B>::value_type & x)
+    { return contents_.insert(x); }
+
+    template<typename... Args>
+    std::pair<typename std::map<A, B>::iterator, bool>
+    emplace(Args&&... args){
+        return contents_.emplace(args...);
+    }
+
+    typename std::map<A, B>::mapped_type&
+    operator[](const typename std::map<A,B>::key_type& k){
+        return contents_[k];
+    }
+
+
+
 //    virtual B makeVal(B val) {
 //        storage_.push_back(val);
 //        return val;
@@ -98,14 +153,30 @@ private:
     B defaultValue;
     bool specified;
     std::vector<B> registered_;
+    std::map<A,B> contents_;
 //    std::vector<std::unique_ptr<B>> storage_;
+
+
+template<typename Aa, typename Bb>
+friend
+inline bool    operator==(const MAP<Aa, Bb>& x, const MAP<Aa, Bb>& y);
 };
 
 template<typename A, typename B>
 void MAP<A, B>::reg( B pVal) {
     registered_.push_back(pVal);
 }
+template<typename A, typename B>
+inline bool
+operator!=(const MAP<A, B>& x,
+           const MAP<A, B>& y)
+{ return !(x == y); }
 
+template<typename A, typename B>
+inline bool
+operator==(const MAP<A, B>& x,
+           const MAP<A, B>& y)
+{ return x.contents_ == y.contents_; }
 
 namespace tvlm{
 

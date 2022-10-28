@@ -44,20 +44,31 @@ namespace tvlm{
 
     class LiveRange {
     public:
-        LiveRange(const Instruction * start){
+        LiveRange(const Instruction * il, const IL * start):
+        il_(il),
+        start_(start),
+        end_(start){
 
         }
 
-        void setEnd(const Instruction *){
+        void setEnd(const IL *end){
+            end_ = end;
+        }
 
+        const IL * il() const {
+            return il_;
         }
     private:
-
+        const ILInstruction * il_;
+        const IL * start_;
+        const IL * end_;
     };
 
     class ColoringAllocator : public RegisterAllocator{
     public:
+        ColoringAllocator(TargetProgram & prog):RegisterAllocator(prog){
 
+        }
 
         TargetProgram run()override{
 
@@ -128,15 +139,39 @@ namespace tvlm{
 //
 //        FRegister getFreeFloatRegister() override;
 
-        MAP<const CfgNode<ColorInfo> * , std::unordered_set<IL*>> analysisResult_;
+        class LiveRangesComparator
+        {
+            // this member is required to let container be aware that
+            // comparator is capable of dealing with types other than key
+        public: using is_transparent = std::true_type;
+
+        public: bool operator()(const ILInstruction * left, const std::pair<LiveRange *, size_t> & right) const
+            {
+                return left < right.first->il();
+            }
+
+        public: bool operator()(const std::pair<LiveRange *, size_t> & left, const ILInstruction * right) const
+            {
+                return left.first->il() < right;
+            }
+
+        public: bool operator()(const std::pair<LiveRange *, size_t> &  left, const std::pair<LiveRange *, size_t> &  right) const
+            {
+                return left.first->il() < right.first->il();
+            }
+        };
+
+
+        MAP<const CfgNode<ColorInfo> *,std::unordered_set<IL*>> analysisResult_;
         std::map<const CfgNode<ColorInfo> * , const Instruction *> analysis_mapping_;
 
         //incidence graph
-        std::vector<LiveRange> liveRanges_;
-        std::vector<std::set<int>> LRincidence_;
+        std::vector<std::unique_ptr<LiveRange>> liveRanges_;
+        std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
+        std::vector<std::set<size_t>> LRincidence_;
 
-        std::map<int, int> spillIndexes_; //int -> index in liveRanges_ //both: 1st where to spill ; 2nd: what to spill
-        std::stack<int> colorPickingStack_; //int -> index in liveRanges_
+        std::map<size_t, size_t> spillIndexes_; //size_t -> index in liveRanges_ //both: 1st where to spill ; 2nd: what to spill
+        std::stack<size_t> colorPickingStack_; //size_t -> index in liveRanges_
         std::map<const Instruction * , ColorInfo> colorPickingResult_;
 
 

@@ -25,11 +25,11 @@ namespace tvlm{
 
         }
 
-        Declarations analyze() override{
+        Declarations  analyze() override{
             auto visitor = std::make_unique<InsVisitor>();
             visitor->visit(p_);
             //for each
-            return visitor->declarations;
+            return std::move(visitor->declarations);
         }
 
     protected:

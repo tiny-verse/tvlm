@@ -1678,6 +1678,9 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         const std::vector<std::pair<Symbol, std::unique_ptr<Function>>> & functions() const {
             return functions_;
         }
+        const BasicBlock * globals() const {
+            return globals_.get();
+        }
         const std::unordered_map<std::string, Instruction*> & stringLiterals() const{
             return stringLiterals_;
         }
@@ -1691,6 +1694,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     protected:
         friend class ILVisitor;
         friend class ILBuilder;
+        template<class T>
+        friend class CfgBuilder;
         inline  void accept(ILVisitor * v) override{ v->visit(this); };
     private:
         std::unordered_map<std::string, Instruction*> stringLiterals_;

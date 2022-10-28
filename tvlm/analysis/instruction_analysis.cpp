@@ -91,13 +91,18 @@ void tvlm::InstructionAnalysis::InsVisitor::visit(Function *fce) {
 
 
 void tvlm::InstructionAnalysis::InsVisitor::visit(Program *p) {
+    std::vector<IL * > globs;
+    for(auto * il : getBBsInstructions(getProgramsGlobals(p))){
+        globs.emplace_back(il);
+    }
+    auto extEnv1 = extendEnv(env_, globs);
     std::vector<IL * > tmp;
     for(const auto & f : p->functions()){
         tmp.emplace_back(f.second.get());
     }
-    auto extEnv = extendEnv(env_, tmp);
+    auto extEnv2 = extendEnv(extEnv1, tmp);
     for (const auto & f : p->functions()) {
-        visitChild(f.second, extEnv);
+        visitChild(f.second, extEnv2);
     }
 }
 

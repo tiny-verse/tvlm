@@ -152,10 +152,85 @@ namespace tvlm {
     }
 
     void ColoringAllocator::generateLiveRanges() {
+        this->spillIndexes_;
+        this->liveRanges_;
+        this->LRincidence_;
+        this->colorPickingStack_;
+        this->colorPickingResult_;
 
-        for (auto i : analysisResult_) {
+
+
+        for (auto & t : analysisResult_) { // step
+
+            std::set<std::pair<LiveRange *, size_t>, LiveRangesComparator> tmp;
+            for( auto * alive_ : t.second ){
+                if(auto * alive = dynamic_cast<ILInstruction * >(alive_)){
+                    auto it = rangesAlive_.find(alive);
+                    if(it == rangesAlive_.end()){
+                        auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
+                        tmp.emplace(newRange.get(), liveRanges_.size());
+                        liveRanges_.push_back(std::move(newRange));
+                    }else{
+                        it->first->setEnd(t.first->il());
+                        tmp.insert(*it);
+                    }
+                }
+            }
+            rangesAlive_ = std::move(tmp);
+
+            //incidence graph build
+            LRincidence_.resize(liveRanges_.size());
+            for (auto & i : rangesAlive_) {
+                for (auto & j : rangesAlive_) {
+                    if(i.second != j.second ) {
+                        LRincidence_[i.second].emplace(j.second);
+                        LRincidence_[j.second].emplace(i.second);
+                    }
+                }
+            }
 
         }
+        this->LRincidence_;
+        //algo colorPicking
+
+        while(!std::all_of(LRincidence_.begin(),LRincidence_.end(), [](const std::set<size_t>& input){
+                return input.empty();
+            } )){
+//            for (size_t i = LRincidence_.size()-1; i >=  0; i--) {
+            for (size_t i = 0; i < LRincidence_.size(); i++) {
+                if(LRincidence_[i].size() <= freeReg_.size() - 2 ){
+                    //remove from incidence and push to stack
+                    colorPickingStack_.push(i);
+                    //remove
+                    for (auto & k : LRincidence_) {
+                        k.erase(i);
+                    }
+                }
+            }
+            if(!std::all_of(LRincidence_.begin(),LRincidence_.end(), [](const std::set<size_t>& input){
+                return input.empty();
+            })){
+                size_t firstNonEmpty = 0;
+                while(LRincidence_[firstNonEmpty].empty()){
+                    firstNonEmpty++;
+                }
+                //add first NonEmpty to spill stack and remove from Graph
+                spillIndexes_.emplace(0, firstNonEmpty); // TODO find spill place
+
+                //remove from graph
+                for (auto & k : LRincidence_) {
+                    k.erase(firstNonEmpty);
+                }
+
+
+            }
+        }
+
+        this->LRincidence_;
+
+
+        //fill colorPicking result
+
 
     }
 }

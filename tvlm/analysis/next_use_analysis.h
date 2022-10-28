@@ -10,7 +10,7 @@
 
 #include "cfg.h"
 #include "tvlm/analysis/lattice/next_use_lattice.h"
-#include "tvlm/analysis/ILUsageVisitor.h"
+#include "tvlm/analysis/DeclarationAnalysis.h"
 
 namespace tvlm{
     using Instruction = ::tvlm::Instruction;
@@ -73,7 +73,7 @@ namespace tvlm{
 
     template<class I>
     std::unordered_set<Declaration*> NextUseAnalysis<I>::getSubtree(const CfgNode<I> *node) {
-        ILUsageVisitor v;
+        DeclarationAnalysis v;
         v.begin(node->il());
         return v.result();
     }
