@@ -136,6 +136,9 @@ namespace tvlm {
 //    }
 
     RegisterAllocator::VirtualRegister ColoringAllocator::getReg(const Instruction *currentIns) {
+
+
+
         return {RegisterType::INTEGER, 0};
     }
 
@@ -147,9 +150,6 @@ namespace tvlm {
         return tvlm::RegisterAllocator::VirtualRegister(RegisterType::INTEGER, 0);
     }
 
-    void ColoringAllocator::releaseRegister(const RegisterAllocator::VirtualRegister &reg) {
-
-    }
 
     void ColoringAllocator::generateLiveRanges() {
         this->spillIndexes_;
@@ -169,7 +169,7 @@ namespace tvlm {
                     if(it == rangesAlive_.end()){
                         auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
                         tmp.emplace(newRange.get(), liveRanges_.size());
-                        liveRanges_.push_back(std::move(newRange));
+                        addLR(std::move(newRange));
                     }else{
                         it->first->setEnd(t.first->il());
                         tmp.insert(*it);
@@ -192,36 +192,49 @@ namespace tvlm {
         }
         this->LRincidence_;
         //algo colorPicking
-
-        while(!std::all_of(LRincidence_.begin(),LRincidence_.end(), [](const std::set<size_t>& input){
-                return input.empty();
-            } )){
+        bool anyNonEmpty = true;
+        while(anyNonEmpty){
 //            for (size_t i = LRincidence_.size()-1; i >=  0; i--) {
             for (size_t i = 0; i < LRincidence_.size(); i++) {
-                if(LRincidence_[i].size() <= freeReg_.size() - 2 ){
+                if(LRincidence_[i].size() < freeReg_.size() - 1 ){
                     //remove from incidence and push to stack
                     colorPickingStack_.push(i);
                     //remove
                     for (auto & k : LRincidence_) {
                         k.erase(i);
                     }
+                    LRincidence_[i].clear();
                 }
             }
-            if(!std::all_of(LRincidence_.begin(),LRincidence_.end(), [](const std::set<size_t>& input){
-                return input.empty();
-            })){
-                size_t firstNonEmpty = 0;
-                while(LRincidence_[firstNonEmpty].empty()){
-                    firstNonEmpty++;
+            anyNonEmpty = !std::all_of(LRincidence_.begin(), LRincidence_.end(), [](const std::set<size_t>& input){
+                        return input.empty();
+                    });
+            if(anyNonEmpty)
+            {
+                size_t selected = 0;
+                size_t max = 0;
+                for( size_t i = 0;i < LRincidence_.size();i++){
+                        if(LRincidence_[i].size() > max){
+                            selected = i;
+                            max = LRincidence_[i].size();
+                            if(max >  freeReg_.size() ){
+                                break;
+                            }
+                        }
                 }
-                //add first NonEmpty to spill stack and remove from Graph
-                spillIndexes_.emplace(0, firstNonEmpty); // TODO find spill place
+                //add NonEmpty with biggest degree to spill stack and remove from Graph
+//                spillIndexes_.emplace( selected, 0); // TODO find spill place
+
+                colorPickingStack_.push(selected);
+
 
                 //remove from graph
                 for (auto & k : LRincidence_) {
-                    k.erase(firstNonEmpty);
+                    k.erase(selected);
                 }
+                LRincidence_[selected].clear();
 
+            }else{
 
             }
         }
@@ -232,5 +245,11 @@ namespace tvlm {
         //fill colorPicking result
 
 
+    }
+
+    void ColoringAllocator::addLR(std::unique_ptr<LiveRange> && lr) {
+        searchRanges_.emplace(std::make_pair(lr.get()->il(), liveRanges_.size()));
+        searchInstrs_.emplace(std::make_pair(liveRanges_.size(), lr.get()->il()));
+        liveRanges_.push_back(std::move(lr));
     }
 }

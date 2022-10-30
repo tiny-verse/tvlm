@@ -147,8 +147,8 @@ namespace tvlm{
 
 
 
-        std::set<VirtualRegister> freeReg_;
-        std::set<VirtualRegister> freeFReg_;
+//        std::set<VirtualRegister> freeReg_;
+//        std::set<VirtualRegister> freeFReg_;
 
         Function * currenFunction_;
         TargetProgram & targetProgram_;

@@ -9,11 +9,7 @@
 namespace tvlm{
 
     class SuperNaiveRegisterAllocator :public RegisterAllocator{
-        using Register = tiny::t86::Register;
-        using FRegister = tiny::t86::FloatRegister;
-        using VirtualRegister = VirtualRegisterPlaceholder;
-        using TargetProgramBuilder = tvlm::ProgramBuilderOLD;
-
+        
     public:
         virtual ~SuperNaiveRegisterAllocator() = default;
         SuperNaiveRegisterAllocator( TargetProgram & tp);
@@ -52,7 +48,7 @@ namespace tvlm{
 
         VirtualRegister getLastRegister(const Instruction *currentIns) override;
 
-    private:
+    protected:
 void removeFromRegisterDescriptor(const Instruction * ins);
 
 

@@ -37,6 +37,7 @@ namespace tvlm {
         Instruction * add(Instruction * ins) {
             assert(bb_ != nullptr);
             bb_->add(ins);
+            ins->setParentBB(bb_);
             if (ins->name().empty()) {
                 if (f_ != nullptr)
                     ins->setName(STR("r" << (localRegisterCounter_++)));

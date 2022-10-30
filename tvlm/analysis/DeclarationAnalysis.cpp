@@ -123,6 +123,7 @@ void tvlm::DeclarationAnalysis::visit(tvlm::Return *ins) {
 
 void tvlm::DeclarationAnalysis::visit(tvlm::CallStatic *ins) {
 
+    result_.insert((IL *) program_->getGlobalVariableAddress(ins->f()->name()));
     for (auto & arg : ins->args()) {
         result_.insert(arg.first);
     }
@@ -130,6 +131,7 @@ void tvlm::DeclarationAnalysis::visit(tvlm::CallStatic *ins) {
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::Call *ins) {
+    result_.insert(ins->f());
     for (auto & arg : ins->args()) {
         result_.insert(arg.first);
     }

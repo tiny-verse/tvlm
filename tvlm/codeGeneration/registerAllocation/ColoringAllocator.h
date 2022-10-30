@@ -9,6 +9,7 @@
 #include "tvlm/codeGeneration/ProgramBuilder.h"
 
 #include "tvlm/analysis/liveness_analysis.h"
+#include "SuperNaiveRegisterAllocator.h"
 
 
 /**
@@ -64,9 +65,9 @@ namespace tvlm{
         const IL * end_;
     };
 
-    class ColoringAllocator : public RegisterAllocator{
+    class ColoringAllocator : public SuperNaiveRegisterAllocator{
     public:
-        ColoringAllocator(TargetProgram & prog):RegisterAllocator(prog){
+        ColoringAllocator(TargetProgram & prog):SuperNaiveRegisterAllocator(prog){
 
         }
 
@@ -75,13 +76,15 @@ namespace tvlm{
         //----Preparation----
             //LivenessAnalysis
             Program * prog = getProgram();
-            auto la = new LivenessAnalysis<ColorInfo>(prog);
-            analysisResult_ = la->analyze(); //TODO check memory allocation
+            bool again = true;
+            while(again){
 
-            //ColorPicking
-            generateLiveRanges();
+                auto la = new LivenessAnalysis<ColorInfo>(prog);
+                analysisResult_ = la->analyze(); //TODO check memory allocation
 
-
+                //ColorPicking
+                generateLiveRanges();
+            }
             //implement logic of passing through the program;
             return RegisterAllocator::run();
         }
@@ -165,12 +168,16 @@ namespace tvlm{
         MAP<const CfgNode<ColorInfo> *,std::unordered_set<IL*>> analysisResult_;
         std::map<const CfgNode<ColorInfo> * , const Instruction *> analysis_mapping_;
 
+
+        void addLR(std::unique_ptr<LiveRange> && lr);
         //incidence graph
+        std::map<const IL *, size_t> searchRanges_; // size_t -> index to liveRanges
+        std::map<size_t, const IL *> searchInstrs_; // size_t -> index to liveRanges
         std::vector<std::unique_ptr<LiveRange>> liveRanges_;
         std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
         std::vector<std::set<size_t>> LRincidence_;
 
-        std::map<size_t, size_t> spillIndexes_; //size_t -> index in liveRanges_ //both: 1st where to spill ; 2nd: what to spill
+        std::map<const Instruction *, size_t> spillIndexes_; //size_t -> index in liveRanges_ //both: 1st where to spill ; 2nd: what to spill
         std::stack<size_t> colorPickingStack_; //size_t -> index in liveRanges_
         std::map<const Instruction * , ColorInfo> colorPickingResult_;
 
@@ -183,8 +190,6 @@ namespace tvlm{
         VirtualRegister getFReg(const Instruction *currentIns) override;
 
         VirtualRegister getLastRegister(const Instruction *currentIns) override;
-
-        void releaseRegister(const VirtualRegister &reg) override;
 
     };
 }

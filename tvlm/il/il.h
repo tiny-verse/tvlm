@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <list>
 
 #include <memory>
 
@@ -32,6 +33,7 @@ namespace tvlm{
         virtual bool operator==(const IL * il) const = 0;
     protected:
         friend class ILVisitor;
+        IL * parent_;
     };
     class Instruction;
 
@@ -288,6 +290,14 @@ namespace tvlm{
             name_ = value;
         }
 
+        void setParentBB(BasicBlock * parent ){
+            parentBB_ = parent;
+        }
+
+        BasicBlock * getParentBB()const{
+            return parentBB_;
+        }
+
         virtual void print(tiny::ASTPrettyPrinter & p) const {
             if (resultType_ != ResultType::Void) {
                 printRegister(p, this);
@@ -400,6 +410,7 @@ namespace tvlm{
 
         ResultType resultType_;
         std::string name_;
+        BasicBlock * parentBB_;
 
     }; // tinyc::il::Instruction
 
@@ -1506,6 +1517,11 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         Instruction * add(Instruction * ins) {
             assert(! terminated());
             insns_.push_back(std::unique_ptr<Instruction>{ins});
+            return ins;
+        }
+
+        Instruction * inject(Instruction * ins, size_t pos = 0) {
+            insns_.insert( insns_.begin() + pos, std::unique_ptr<Instruction>{ins});
             return ins;
         }
 

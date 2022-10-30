@@ -8,6 +8,7 @@ namespace tvlm{
 
     class DeclarationAnalysis : public ILVisitor {
     public:
+        DeclarationAnalysis(Program * prog):program_(prog){}
         virtual ~DeclarationAnalysis() = default;
 //        ILUsageVisitor(): ILVisitor(), result_(){}
         std::unordered_set<Declaration*>result(){
@@ -18,6 +19,7 @@ namespace tvlm{
             ILVisitor::visitChild(ins);
         }
     protected:
+        Program * program_;
         void visit(Instruction *ins) override{};
     public:
         void visit(Jump *ins) override;
