@@ -58,7 +58,7 @@ namespace tvlm{
 //        class String;
         virtual ~Type() = default;
 
-        virtual int size() const  = 0;
+        virtual size_t size() const  = 0;
         std::string toString() const {
             std::stringstream ss;
             toStream(ss);
@@ -74,7 +74,7 @@ namespace tvlm{
     class Type::Integer : public Type{
     public:
         explicit Integer(){}
-        int size() const override;
+        size_t size() const override;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -88,7 +88,7 @@ namespace tvlm{
     class Type::Char : public Type{
     public:
         explicit Char(){}
-        int size() const override;
+        size_t size() const override;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -102,7 +102,7 @@ namespace tvlm{
     class Type::Void : public Type{
     public:
         explicit Void(){}
-        int size() const override {
+        size_t size() const override {
             return 0;
         }
 
@@ -136,7 +136,7 @@ namespace tvlm{
     class Type::Double : public Type{
     public:
         Double(){}
-        int size() const override;
+        size_t size() const override;
 
         ResultType registerType() const override {
             return ResultType::Double;
@@ -151,7 +151,7 @@ namespace tvlm{
     class Type::Pointer : public Type{
     public:
         Pointer(Type * base) : base_{base}{}
-        int size()const override;
+        size_t size()const override;
 
         ResultType registerType() const override {
             return ResultType::Integer;
@@ -168,7 +168,7 @@ namespace tvlm{
     class Type::Array : public Type{
     public:
         Array(Type * base, Instruction * size) : base_{base}, size_(size){}
-        int size()const override;
+        size_t size()const override;
 
         ResultType registerType() const override {
             return ResultType::StructAddress;
@@ -185,7 +185,7 @@ namespace tvlm{
     class Type::Struct : public Type{
     public:
         Struct(const  Symbol &name, const std::vector<std::pair<Symbol, Type *>> & fields):name_(name) , fields_(fields){}
-        int size()const override{
+        size_t size()const override{
             int size = 0;
             for(auto & i : fields_){
                 size += i.second->size();
@@ -422,13 +422,14 @@ namespace tvlm{
 
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::ImmSize*>(il)){
-                return type_ == other->type_ && amount_->operator==(other->amount_);
+                return size_ == other->size_ && amount_->operator==(other->amount_);
             }
             else return false;
         }
 
         int size() const {
-            return type_->size();
+            return size_;
+//            return type_->size();
         }
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
@@ -440,7 +441,7 @@ namespace tvlm{
         void print(tiny::ASTPrettyPrinter & p) const override {
 
             Instruction::print(p);
-            p << p.keyword << instrName_ << " "<< p.numberLiteral << size() << p.keyword << " (" << type_->toString() <<   ")";
+            p << p.keyword << instrName_ << " "<< p.numberLiteral << size() << p.keyword << " (size: " << size_ <<   ")";
             if(amount_){
                 p << p.keyword << " x ";
                 printRegister(p, amount_);
@@ -455,7 +456,7 @@ namespace tvlm{
 
         ImmSize(Type * type,Instruction * amount, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Integer, ast, instrName, opcode},
-            type_{type},
+            size_{type->size()},
             amount_(amount){
             if(amount && amount->resultType() != ResultType::Integer ){
                 throw tiny::ParserError(STR("vector size has to be of type Int"), ast->location());
@@ -464,10 +465,16 @@ namespace tvlm{
 
             if(amount_) amount_->registerUsage(this);
         }
+        ImmSize(size_t size, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+            Instruction{ResultType::Integer, ast, instrName, opcode},
+            size_{size},
+            amount_(nullptr){
+        }
         ImmSize(Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode ):
                 ImmSize(type, nullptr, ast, instrName, opcode){}
         Instruction * amount_;
-        Type * type_;
+        size_t size_;
+//        Type * type_;
     };
 
     class Instruction::ImmIndex : public Instruction {
@@ -1469,8 +1476,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         { v->visit(this); } \
 };
 
-#define ImmSize(NAME, ENCODING) NAME (Type * type,Instruction * amount, ASTBase const * ast) : Instruction::ENCODING{type, amount, ast, #NAME, Instruction::Opcode::NAME} {}
-//#define ImmSize(NAME, ENCODING) NAME (Type * type, ASTBase const * ast) : Instruction::ENCODING{type, ast, #NAME, Instruction::Opcode::NAME} {}
+#define ImmSize(NAME, ENCODING) NAME (Type * type,Instruction * amount, ASTBase const * ast) : Instruction::ENCODING{type, amount, ast, #NAME, Instruction::Opcode::NAME} {} \
+                                NAME (size_t size, ASTBase const * ast) : Instruction::ENCODING{size, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ImmIndex(NAME, ENCODING) NAME (size_t index, Type * type,  ASTBase const * ast) : Instruction::ENCODING{index,type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define ImmValue(NAME, ENCODING) NAME (int64_t value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {} \
                                  NAME (double value, ASTBase const * ast) : Instruction::ENCODING{value, ast, #NAME, Instruction::Opcode::NAME} {}
@@ -1522,6 +1529,32 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
         Instruction * inject(Instruction * ins, size_t pos = 0) {
             insns_.insert( insns_.begin() + pos, std::unique_ptr<Instruction>{ins});
+            return ins;
+        }
+        Instruction * injectAfter(Instruction * ins, const Instruction * pos ) {
+            auto it = insns_.begin();
+            for (; it != insns_.end() ;it++ ) {
+                if(it->get() == pos){
+                    break;
+                }
+            }
+            if(it == insns_.end()){
+                return nullptr;
+            }
+            insns_.insert( it, std::unique_ptr<Instruction>{ins});
+            return ins;
+        }
+        Instruction * injectBefore(Instruction * ins, const Instruction * pos ) {
+            auto it = insns_.begin();
+            for (; it != insns_.end() ;it++ ) {
+                if(it->get() == pos){
+                    break;
+                }
+            }
+            if(it == insns_.end()){
+                return nullptr;
+            }
+            insns_.insert( --it, std::unique_ptr<Instruction>{ins});
             return ins;
         }
 

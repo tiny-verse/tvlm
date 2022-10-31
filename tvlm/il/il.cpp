@@ -235,23 +235,23 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         return p.getVariableAddress(name);
     }
 
-    int Type::Char::size() const {
+    size_t Type::Char::size() const {
         return std::ceil(1/(double) Backend::MemoryCellSize);
     }
 
-    int Type::Double::size() const {
-        return std::ceil(4/ (double) Backend::MemoryCellSize);
+    size_t Type::Double::size() const {
+        return std::ceil(4/ (double) Backend::MemoryCellSize);//Just Float
     }
 
-    int Type::Integer::size() const {
+    size_t Type::Integer::size() const {
         return std::ceil(4 / (double) Backend::MemoryCellSize);
     }
 
-    int Type::Pointer::size() const {
+    size_t Type::Pointer::size() const {
         return std::ceil(4 / (double) Backend::MemoryCellSize);
     }
 
-    int Type::Array::size() const {
+    size_t Type::Array::size() const {
         //throw "unknown size"; TODO
         auto sz = dynamic_cast<LoadImm *>(size_);
         assert(sz && sz->resultType() == ResultType::Integer);

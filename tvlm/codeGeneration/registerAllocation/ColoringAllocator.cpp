@@ -151,14 +151,16 @@ namespace tvlm {
     }
 
 
-    void ColoringAllocator::generateLiveRanges() {
-        this->spillIndexes_;
-        this->liveRanges_;
-        this->LRincidence_;
-        this->colorPickingStack_;
-        this->colorPickingResult_;
+    bool ColoringAllocator::generateLiveRanges() {
+        //return true <=> run successful no more repeats needed
+        this->spillIndexes_.clear();
+        this->liveRanges_.clear();
+        this->LRincidence_.clear();
+        this->colorPickingStack_ = std::stack<size_t>();
+//        this->colorPickingResult_.clear();
 
-
+        size_t colors = this->freeReg_.size();
+        bool spill = false;
 
         for (auto & t : analysisResult_) { // step
 
@@ -191,12 +193,18 @@ namespace tvlm {
 
         }
         this->LRincidence_;
+        //**********************************************************************************
         //algo colorPicking
-        bool anyNonEmpty = true;
-        while(anyNonEmpty){
+//        bool anyNonEmpty =
+//                !std::all_of(LRincidence_.begin(), LRincidence_.end(), [](const std::set<size_t>& input) {
+//                            return input.empty();;
+//                        });
+//        while(anyNonEmpty){
+
+
 //            for (size_t i = LRincidence_.size()-1; i >=  0; i--) {
             for (size_t i = 0; i < LRincidence_.size(); i++) {
-                if(LRincidence_[i].size() < freeReg_.size() - 1 ){
+                if(LRincidence_[i].size() < colors ){
                     //remove from incidence and push to stack
                     colorPickingStack_.push(i);
                     //remove
@@ -204,9 +212,10 @@ namespace tvlm {
                         k.erase(i);
                     }
                     LRincidence_[i].clear();
+                    colors--;
                 }
             }
-            anyNonEmpty = !std::all_of(LRincidence_.begin(), LRincidence_.end(), [](const std::set<size_t>& input){
+            bool anyNonEmpty = !std::all_of(LRincidence_.begin(), LRincidence_.end(), [](const std::set<size_t>& input){
                         return input.empty();
                     });
             if(anyNonEmpty)
@@ -224,9 +233,34 @@ namespace tvlm {
                 }
                 //add NonEmpty with biggest degree to spill stack and remove from Graph
 //                spillIndexes_.emplace( selected, 0); // TODO find spill place
-
                 colorPickingStack_.push(selected);
 
+                Instruction * instr  = dynamic_cast<Instruction *>(searchInstrs_[selected]);
+                Instruction * alloc;
+                if(instr == nullptr){
+                    throw "[ColoringAllocator] - generateLiveRanges - trying to spill Function/BB ...";
+                }
+                BasicBlock *  bb = instr->getParentBB();
+
+                switch(instr->resultType()){
+                    case ResultType::Integer:
+                    case ResultType::StructAddress:
+                        //spilling IntegerTypeRegister
+
+                        alloc = bb->inject(new AllocL( Type::Integer().size(), instr->ast()  ));//begining of BB
+
+
+                        bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
+
+
+                        break;
+                    case ResultType::Double:
+
+                        break;
+                    default:
+                        throw "[Coloring Allocator] wrong case of ResultType for spilling";
+                        break;
+                }
 
                 //remove from graph
                 for (auto & k : LRincidence_) {
@@ -234,10 +268,10 @@ namespace tvlm {
                 }
                 LRincidence_[selected].clear();
 
-            }else{
-
+                return false;
+            }else {
+                return true;
             }
-        }
 
         this->LRincidence_;
 
@@ -249,7 +283,9 @@ namespace tvlm {
 
     void ColoringAllocator::addLR(std::unique_ptr<LiveRange> && lr) {
         searchRanges_.emplace(std::make_pair(lr.get()->il(), liveRanges_.size()));
-        searchInstrs_.emplace(std::make_pair(liveRanges_.size(), lr.get()->il()));
+        if(auto instr = dynamic_cast<Instruction *>(lr.get()->il())){
+            searchInstrs_.emplace(std::make_pair(liveRanges_.size(), instr));
+        }
         liveRanges_.push_back(std::move(lr));
     }
 }
