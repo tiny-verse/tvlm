@@ -106,8 +106,8 @@ namespace tvlm {
     void SuperNaiveRegisterAllocator::registerMemLocation(const Store *ins, const Instruction *currentIns) {
 
         ins->address(); //TODO
-        auto it = targetProgram_.allocLmapping_.find(ins->address());
-        if(it != targetProgram_.allocLmapping_.end()){
+        auto it = getAllocLmapping(targetProgram_).find(ins->address());
+        if(it != getAllocLmapping(targetProgram_).end()){
 
             addressDescriptor_[ins->value()].emplace( LocationEntry( ins->address(), ins->value(), it->second));
         }

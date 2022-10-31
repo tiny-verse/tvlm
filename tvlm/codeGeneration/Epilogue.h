@@ -9,7 +9,7 @@
 
 namespace tvlm{
 
-class Epilogue {
+class Epilogue : public TargetProgramFriend{
 public:
     using TProgram = tiny::t86::Program;
     using SProgram = tvlm::TargetProgram;
@@ -22,30 +22,6 @@ public:
 
      virtual TProgram translate( SProgram & program) = 0;
 
-    Program * getProgramprogram (SProgram & program){
-        return program.program_;
-    }
-    std::map<const Function * ,size_t> & getFuncLocalAlloc(SProgram & program){
-        return program.funcLocalAlloc_;
-    }
-
-    std::map<const ILInstruction*, std::vector<TInstruction*>> & getSelectedInstrs(SProgram & program){
-        return program.selectedInstrs_;
-    }
-
-    std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> & getJump_patches(SProgram & program){
-        return program.jump_patches_;
-    }
-
-
-    std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> & getCall_patches(SProgram & program){
-//        return program.call_patches_;
-        return program.unpatchedFCalls_;
-    }
-
-    auto & getGlobalTable(SProgram & program){
-        return program.globalTable_;
-    }
 
 protected:
 
@@ -68,7 +44,7 @@ protected:
     Label resolveInstruction(const std::pair<const Instruction *, Label> & pos)const {
         auto it = compiledInsns_.find(pos);
         if(it == compiledInsns_.end()){
-            throw "instruction could not be found";
+            throw "[Epilogue] - resolveInstruction - instruction could not be found";
             return Label::empty();
         }else{
             return (it->second );
@@ -93,7 +69,7 @@ protected:
     }
 
 private:
-    ProgramBuilderOLD pb_;
+    ProgramBuilder pb_;
     SProgram & program_;
     Label lastIns_;
     std::unordered_map<tiny::Symbol, Label> functionTable_;

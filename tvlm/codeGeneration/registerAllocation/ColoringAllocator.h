@@ -45,7 +45,7 @@ namespace tvlm{
 
     class LiveRange {
     public:
-        LiveRange(const Instruction * il, const IL * start):
+        LiveRange(Instruction * il, const IL * start):
         il_(il),
         start_(start),
         end_(start){
@@ -56,11 +56,11 @@ namespace tvlm{
             end_ = end;
         }
 
-        const IL * il() const {
+        IL * il() const {
             return il_;
         }
     private:
-        const ILInstruction * il_;
+        ILInstruction * il_;
         const IL * start_;
         const IL * end_;
     };
@@ -75,7 +75,7 @@ namespace tvlm{
 
         //----Preparation----
             //LivenessAnalysis
-            Program * prog = getProgram();
+            Program * prog = getProgram(targetProgram_);
             bool again = true;
             while(again){
 
@@ -83,8 +83,12 @@ namespace tvlm{
                 analysisResult_ = la->analyze(); //TODO check memory allocation
 
                 //ColorPicking
-                generateLiveRanges();
+               again = !generateLiveRanges();
             }
+            //Next convert result of colorPicking to update VirtualRegisterPlaceholders
+
+
+
             //implement logic of passing through the program;
             return RegisterAllocator::run();
         }
@@ -172,7 +176,7 @@ namespace tvlm{
         void addLR(std::unique_ptr<LiveRange> && lr);
         //incidence graph
         std::map<const IL *, size_t> searchRanges_; // size_t -> index to liveRanges
-        std::map<size_t, const IL *> searchInstrs_; // size_t -> index to liveRanges
+        std::map<size_t, Instruction *> searchInstrs_; // size_t -> index to liveRanges
         std::vector<std::unique_ptr<LiveRange>> liveRanges_;
         std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
         std::vector<std::set<size_t>> LRincidence_;
@@ -183,7 +187,7 @@ namespace tvlm{
 
 
         //create live ranges, and create incidence graph
-        void generateLiveRanges();
+        bool generateLiveRanges(); // true == assigned without spilling
 
         VirtualRegister getReg(const Instruction *currentIns) override;
 

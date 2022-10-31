@@ -1,11 +1,13 @@
 #pragma once
 #include "cfg.h"
+#include "tvlm/tvlm/codeGeneration/ProgramBuilder.h"
 
 namespace tvlm {
 
 
+
     template<class T>
-    class Analysis {
+    class Analysis : public TargetProgramFriend{
     public:
         virtual T  analyze() = 0;
         virtual ~Analysis() = default;

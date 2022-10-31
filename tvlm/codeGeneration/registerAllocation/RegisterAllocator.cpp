@@ -560,7 +560,7 @@ namespace tvlm{
                             if(stackLoc != addr->second.end()){ //use old stack loc
                                 newPosition = stackLoc->stackOffset();
                             }else{ // create new stack loc
-                                newStackPlace = LocationEntry(targetProgram_.funcLocalAlloc_[currenFunction_]++,  regLoc->ins());
+                                newStackPlace = LocationEntry(getFuncLocalAlloc(targetProgram_)[currenFunction_]++,  regLoc->ins());
                                 newPosition = newStackPlace.stackOffset();
                                 addr->second.insert(newStackPlace);
                             }
@@ -748,14 +748,14 @@ namespace tvlm{
     }
 
     void RegisterAllocator::updateJumpPatchPositions(const Instruction * ins) {
-        for ( size_t pos : targetProgram_.jumpPos_[ins]) {
-            targetProgram_.jump_patches_[pos].first.second = Label( targetProgram_.jump_patches_[pos].first.second.address() + writingPos_);
+        for ( size_t pos : getJumpPos(targetProgram_)[ins]) {
+            getJump_patches(targetProgram_)[pos].first.second = Label( getJump_patches(targetProgram_)[pos].first.second.address() + writingPos_);
         }
     }
     void RegisterAllocator::updateCallPatchPositions(const Instruction * ins) {
-        for ( auto & pos : targetProgram_.callPos_[ins]) {
+        for ( auto & pos : getCallPos(targetProgram_)[ins]) {
 //            targetProgram_.call_patches_[pos].first.second = Label( targetProgram_.call_patches_[pos].first.second.address() + writingPos_);
-            targetProgram_.unpatchedFCalls_[pos].first.second = Label( targetProgram_.unpatchedFCalls_[pos].first.second.address() + writingPos_);
+            getUnpatchedFCalls(targetProgram_)[pos].first.second = Label( getUnpatchedFCalls(targetProgram_)[pos].first.second.address() + writingPos_);
         }
     }
 
@@ -789,13 +789,13 @@ namespace tvlm{
     std::vector<VirtualRegisterPlaceholder> *
     RegisterAllocator::getAllocatedVirtualRegisters(const Instruction *ins) {
 //            return targetProgram_.alocatedRegisters_[ins];
-        auto it = targetProgram_.alocatedRegisters_.find(ins);
-        if ( it != targetProgram_.alocatedRegisters_.end()){
+        auto it = getAllocatedRegisters(targetProgram_).find(ins);
+        if ( it != getAllocatedRegisters(targetProgram_).end()){
             return  &(it->second);
         }else{
             throw "trying to find allocated registers for ins that was not compiled";
-            if(targetProgram_.selectedFInstrs_.find(ins) != targetProgram_.selectedFInstrs_.end()){
-                return  &(targetProgram_.alocatedRegisters_[ins]);
+            if(getSelectedFInstrs(targetProgram_).find(ins) != getSelectedFInstrs(targetProgram_).end()){
+                return  &(getAllocatedRegisters(targetProgram_)[ins]);
             }else{
             }
         }

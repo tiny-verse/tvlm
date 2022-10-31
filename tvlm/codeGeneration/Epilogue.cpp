@@ -100,8 +100,7 @@ namespace tvlm{
 
     Epilogue::TProgram NaiveEpilogue::translate(Epilogue::SProgram & sprogram) {
 //        return Epilogue::translate(program);
-        this->program_ = sprogram;
-        visit(getProgramprogram(sprogram));
+        visit(getProgram(program_));
 
 
 
@@ -116,9 +115,9 @@ namespace tvlm{
     }
 
     void NaiveEpilogue::visitInstrHelper(Instruction * ins){
-        auto registers = program_.alocatedRegisters_.find(ins);
+        auto registers = getAllocatedRegisters(program_).find(ins);
         std::vector<VirtualRegisterPlaceholder> regs;
-        if(registers == program_.alocatedRegisters_.end()){
+        if(registers == getAllocatedRegisters(program_).end()){
  //           return;
 //            throw "instruction failed to compile -> no registers allocated"; // Jump will never have
             regs = std::vector<VirtualRegisterPlaceholder>();
@@ -126,8 +125,8 @@ namespace tvlm{
             regs = registers->second;
         }
 
-        auto finstruction = program_.selectedFInstrs_.find(ins);
-        if(finstruction == program_.selectedFInstrs_.end()){
+        auto finstruction = getSelectedFInstrs(program_).find(ins);
+        if(finstruction == getSelectedFInstrs(program_).end()){
             throw "instruction failed to compile -> no selectedInstruction";
             return;
         }
@@ -135,11 +134,11 @@ namespace tvlm{
         auto & finsns = finstruction->second;
         for (auto & finsn : finsns){
             TInstruction * compiled = finsn(regs);
-//            auto selected = program_.selectedInstrs_.find(ins);
-//            if(selected == program_.selectedInstrs_.end()){
-//                program_.selectedInstrs_[ins] = std::vector<TInstruction *>();
+//            auto selected = getSelectedInstrs(program_).find(ins);
+//            if(selected == getSelectedInstrs(program_).end()){
+//                getSelectedInstrs(program_)[ins] = std::vector<TInstruction *>();
 //            }
-            program_.selectedInstrs_[ins].emplace_back(compiled);
+            getSelectedInstrs(program_)[ins].emplace_back(compiled);
         }
         lastIns_ = add(ins);
         for(int c = 0; c < finsns.size();c++){

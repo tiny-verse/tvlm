@@ -79,7 +79,7 @@ namespace tvlm{
     };
 
 
-    class RegisterAllocator : public ILVisitor{
+    class RegisterAllocator : public ILVisitor, public TargetProgramFriend{
     protected:
         using Register = tiny::t86::Register;
         using FRegister = tiny::t86::FloatRegister;
@@ -92,13 +92,10 @@ namespace tvlm{
 
         virtual TargetProgram run(){
             //implement logic of passing through the program;
-            visit(getProgram());
+            visit(getProgram(targetProgram_));
             return targetProgram_;
         }
 
-        inline Program *  getProgram(){
-            return targetProgram_.program_;
-        }
     protected:
         void visit(Instruction *ins) override;
         void visit(Jump *ins) override;

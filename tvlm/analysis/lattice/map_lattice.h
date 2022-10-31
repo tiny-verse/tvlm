@@ -47,8 +47,14 @@ public:
         registered_.clear();
     }
 
-    MAP operator= (const MAP & other){
-        this->~MAP();
+    MAP & operator= (const MAP & other){
+//        this->~MAP();
+        for (auto & b: registered_) {
+            if constexpr(std::is_pointer<B>::value){
+                delete b;
+            }
+        }
+        registered_.clear();
 //        MAP tmp {other};
 //        std::swap(tmp, *this);
         contents_ = other.contents_;
@@ -58,14 +64,22 @@ public:
         return *this;
     }
 
-    MAP operator= (MAP && other){
-        this->~MAP();
+    MAP & operator= (MAP && other){
+//        this->~MAP();
+        for (auto & b: registered_) {
+            if constexpr(std::is_pointer<B>::value){
+                delete b;
+            }
+        }
+        registered_.clear();
 //        MAP tmp {other};
 //        std::swap(tmp, *this);
         contents_ = std::move(other.contents_);
         specified = other.specified;
         defaultValue = std::move(other.defaultValue);
         registered_ = std::move(other.registered_);
+
+        other.contents_ = std::map<A,B>();
         return *this;
     }
 

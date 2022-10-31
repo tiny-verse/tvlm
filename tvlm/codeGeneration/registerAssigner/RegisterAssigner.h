@@ -6,7 +6,7 @@
 
 namespace tvlm{
 
-    class RegisterAssigner {
+    class RegisterAssigner :public TargetProgramFriend {
     public:
 
         using Label = tiny::t86::Label;
