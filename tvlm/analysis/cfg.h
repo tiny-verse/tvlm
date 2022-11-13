@@ -343,11 +343,11 @@ private:
 
 
         auto entry  = new CfgFunEntryNode<T>(bb);
-        auto exit  = new CfgFunExitNode<T>(bb);
+        auto exit  = new CfgGlobExitNode<T>(bb);
         auto globalCfg = new GlobalCfg(bb, entry, exit);
         current_fnc = globalCfg;
 //        globalCfg->addNode(entry);
-        globalCfg->addNode(exit);
+//        globalCfg->addNode(exit);
         auto entryPtr = single(entry);
         auto exitPtr = single(exit);
 

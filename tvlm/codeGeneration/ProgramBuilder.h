@@ -49,6 +49,37 @@ namespace tvlm {
          std::map<const Function * ,size_t> &
          getFuncLocalAlloc(TargetProgram * program)const;
 
+
+         std::map<const ILInstruction*, std::vector<TInstruction*>> &
+         getSelectedInstrs(TargetProgram * program)const;
+
+         std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> &
+         getJump_patches(TargetProgram * program)const ;
+
+         std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> &
+         getCall_patches(TargetProgram * program)const ;
+
+         std::map<const Instruction *, uint64_t> &
+         getGlobalTable(TargetProgram * program)const;
+
+         std::map<const Instruction *, std::vector<VirtualRegisterPlaceholder>> &
+         getAllocatedRegisters(TargetProgram * program)const;
+
+         std::map<const Instruction *, std::list<std::function<tvlm::TInstruction *(std::vector<VirtualRegisterPlaceholder> &)>>> &
+         getSelectedFInstrs(TargetProgram * program)const;
+
+         std::vector<std::pair<std::pair<const Instruction *, tiny::t86::Label>, tiny::Symbol>> &
+         getUnpatchedFCalls(TargetProgram * program)const;
+
+         std::map<const Instruction *, std::vector<size_t>> &
+         getCallPos(TargetProgram * program)const;
+
+         std::map<const Instruction *, std::vector<size_t>> &
+         getJumpPos(TargetProgram * program)const;
+
+         std::map<const Instruction *, int64_t> &
+         getAllocMapping(TargetProgram * program)const;
+
          std::map<const ILInstruction*, std::vector<TInstruction*>> &
          getSelectedInstrs(TargetProgram & program)const;
 
@@ -76,12 +107,11 @@ namespace tvlm {
          std::map<const Instruction *, std::vector<size_t>> &
          getJumpPos(TargetProgram & program)const;
 
-         std::map<const Instruction *, size_t> &
-         getAllocLmapping(TargetProgram & program)const;
+         std::map<const Instruction *, int64_t> &
+         getAllocMapping(TargetProgram & program)const;
 
 
     };
-
     class TargetProgram{
     public:
         using Register = tiny::t86::Register;
@@ -91,23 +121,25 @@ namespace tvlm {
         friend TargetProgramFriend;
         virtual ~TargetProgram() = default;
         TargetProgram():
-        program_(nullptr)
+                program_(nullptr)
         , funcLocalAlloc_()
         , selectedInstrs_()
         , selectedFInstrs_()
 //        , assignedIntRegisters_()
 //        , assignedFloatRegisters_()
-        ,alocatedRegisters_()
-        ,jump_patches_()
-        ,call_patches_()
-        ,jumpPos_()
-        ,callPos_()
-        ,unpatchedFCalls_()
-        ,globalTable_()
-        ,data_(){
+        , alocatedRegisters_()
+        , jump_patches_()
+        , call_patches_()
+        , jumpPos_()
+        , callPos_()
+        , unpatchedFCalls_()
+        , globalTableAddress_()
+        , data_(){
 
         }
+        TargetProgram( TargetProgram && prog) = default;
         TargetProgram(const TargetProgram & prog) = default;
+        TargetProgram & operator=(TargetProgram && prog) = default;
 //        :
 //        program_(prog.program_)
 //        , funcLocalAlloc_(prog.funcLocalAlloc_)
@@ -129,6 +161,9 @@ namespace tvlm {
 //        }
 
         void setProgram(Program * program){
+            program_.reset(program);
+        }
+        void setProgram(std::shared_ptr<Program> & program){
             program_ = program;
         }
 
@@ -192,15 +227,25 @@ namespace tvlm {
             call_patches_.emplace_back(std::make_pair(ins, label), dest);
         }
 
-        auto globalFind(const Instruction * ins)const{
-            return globalTable_.find(ins);
+        auto globalFindValue(const Instruction * ins)const{
+            return globalTableValue_.find(ins);
         }
-        auto globalEnd() const{
-            return globalTable_.end();
+        auto globalEndValue() const{
+            return globalTableValue_.end();
         }
 
-        void globalEmplace(const Instruction * ins, uint64_t val ){
-            globalTable_.emplace(std::make_pair(ins, val));
+        auto globalFindAddress(const Instruction * ins)const{
+            return globalTableAddress_.find(ins);
+        }
+        auto globalEndAddress() const{
+            return globalTableAddress_.end();
+        }
+
+        void globalEmplaceValue(const Instruction * ins, uint64_t val ){
+            globalTableValue_.emplace(std::make_pair(ins, val));
+        }
+        void globalEmplaceAddress(const Instruction * ins, uint64_t val ){
+            globalTableAddress_.emplace(std::make_pair(ins, val));
         }
 
         size_t registerAdd(const ILInstruction * instr, VirtualRegisterPlaceholder && virt){
@@ -225,11 +270,13 @@ namespace tvlm {
             callPos_[call].emplace_back(unpatchedFCalls_.size());
             unpatchedFCalls_.emplace_back(std::make_pair(call, label), fncName );
         }
-        void registerAllocation(const ILInstruction *pInstruction, size_t i) {
-            allocLmapping_[pInstruction] = i;
-        }
+        void registerAllocation(const ILInstruction *pInstruction, int64_t i) {
+
+            allocMapping_[pInstruction] = i;
+            }
+
+        std::shared_ptr<Program> program_;
     private:
-        Program * program_;
         std::map<const Function * ,size_t> funcLocalAlloc_;
         std::map<const ILInstruction*, std::vector<TInstruction*>> selectedInstrs_;
         std::map<const ILInstruction*, std::list<TFInstruction>> selectedFInstrs_;
@@ -242,12 +289,13 @@ namespace tvlm {
         std::map<const Instruction *, std::vector<size_t>> jumpPos_; // instruction with positions
         std::map<const Instruction *, std::vector<size_t>> callPos_; // instruction with positions
         std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> call_patches_;
-        std::map<const Instruction*, uint64_t> globalTable_;
+        std::map<const Instruction*, uint64_t> globalTableAddress_;
+        std::map<const Instruction*, uint64_t> globalTableValue_;
 //        std::vector<std::pair<const ILInstruction *, const BasicBlock*>> jumpPatches_;
         std::vector<std::pair<std::pair<const Instruction *, Label>, Symbol>> unpatchedFCalls_;
         std::vector<int64_t> data_;
 
-        std::map<const ILInstruction *, size_t> allocLmapping_;
+        std::map<const ILInstruction *, int64_t> allocMapping_;
 
     };
 

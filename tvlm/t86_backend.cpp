@@ -372,7 +372,7 @@ namespace tvlm{
 ////                            const Rule *  tmp = (*r)[i];
 ////                            auto chIt = chLabels.find(tmp); // find rule in
 ////                            if(chIt == chLabels.end() && ! dynamic_cast<const DummyRule *>(tmp)){
-////                                ret = false; break; //does not satisfy childs label
+////                                ret = false; break; //does not satisfy children label
 ////                            }
 ////                        }
 ////                        if(ret){ // all satisfied
@@ -475,9 +475,26 @@ namespace tvlm{
     t86_Backend::PB t86_Backend::compileToTarget(t86_Backend::IL &&il) {
         //auto codeGenerator = CodeGenerator (il);
         auto selected =  SuperNaiveIS::translate(il);
-        auto regAllocator =ColoringAllocator(selected);
-        auto raSelected = regAllocator.run();
-        auto epiloged = NaiveEpilogue(raSelected).translate();
+        auto regAllocator = ColoringAllocator(std::move(selected));
+        selected = std::move(regAllocator.run());
+        auto index = 0;
+        std::stringstream ss;
+        auto printer = tiny::ASTPrettyPrinter(ss);
+        bool again = regAllocator.changedProgram();
+        while(again){
+            selected.program_->print(printer);
+            std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
+            selected = std::move(SuperNaiveIS::translate(std::move(selected)));
+            auto newregAllocator = std::move(ColoringAllocator(std::move(selected)));
+            selected = std::move(newregAllocator.run());
+            again = newregAllocator.changedProgram();
+
+        }
+        selected.program_->print(printer);
+        again = regAllocator.changedProgram();
+        std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
+
+        auto epiloged = NaiveEpilogue(selected).translate();
         return epiloged;
 //            return tvlm::ILTiler::translate(il);
 //        return NaiveIS::translate(il);

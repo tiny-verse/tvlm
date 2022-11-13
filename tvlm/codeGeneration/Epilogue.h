@@ -30,9 +30,9 @@ protected:
 
 class NaiveEpilogue : public Epilogue, public ILVisitor{
 public:
-    TProgram translate(SProgram & program) override;
+    TProgram  translate(SProgram & program) override;
     TProgram translate() {
-        return translate(program_);
+        return std::move(translate(program_));
     }
 
     ~NaiveEpilogue() override = default;
@@ -70,7 +70,7 @@ protected:
 
 private:
     ProgramBuilder pb_;
-    SProgram & program_;
+    SProgram  program_;
     Label lastIns_;
     std::unordered_map<tiny::Symbol, Label> functionTable_;
     std::unordered_map<const BasicBlock *, Label> compiledBB_;

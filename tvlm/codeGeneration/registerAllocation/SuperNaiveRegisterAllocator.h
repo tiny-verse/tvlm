@@ -12,7 +12,7 @@ namespace tvlm{
         
     public:
         virtual ~SuperNaiveRegisterAllocator() = default;
-        SuperNaiveRegisterAllocator( TargetProgram & tp);
+        SuperNaiveRegisterAllocator( TargetProgram && tp);
 
 
 

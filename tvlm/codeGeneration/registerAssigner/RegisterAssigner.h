@@ -83,8 +83,10 @@ namespace tvlm{
 //            }
         }
 
-        void makeLocalAllocation(size_t size, size_t reg, const Instruction * ins);
-        void makeGlobalAllocation(size_t size, size_t reg, const Instruction * ins);
+        void makeLocalAllocation(int64_t size, const Instruction * ins);
+        void makeGlobalAllocation(int64_t size, const Instruction * ins);
+
+        int64_t getAllocOffset(const Instruction * ins) const;
 //        void allocateStructArg(const Type * type,const Instruction * ins);
 //        void correctStackAlloc(size_t patch);
 
@@ -102,8 +104,8 @@ namespace tvlm{
 
 //        ProgramBuilderOLD *  pb_;
         TargetProgram * targetProgram_;
-        size_t functionLocalAllocSize;
-        size_t globalAllocSize;
+        int64_t functionLocalAllocSize;
+        int64_t globalAllocSize;
         std::map<const Instruction *, Register> assignedIntRegisters_;
         std::map<const Instruction *, FRegister> assignedFloatRegisters_;
         size_t regIntCounter_;

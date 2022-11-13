@@ -200,13 +200,18 @@ void tvlm::DeclarationAnalysis::visit(tvlm::GetChar *ins) {
 
 void tvlm::DeclarationAnalysis::visit(tvlm::Load *ins) {
 
-    result_.insert(ins->address());
+    if(!dynamic_cast<AllocL*>(ins->address()) && !dynamic_cast<AllocG*>(ins->address()) ){
+        // is Alloc .. ignore
+        result_.insert(ins->address());
+    }
     result_.insert(ins);
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::Store *ins) {
 
-    result_.insert(ins->address());
+    if(!dynamic_cast<AllocL*>(ins->address()) && !dynamic_cast<AllocG*>(ins->address()) ){
+        result_.insert(ins->address());
+    }
     result_.insert(ins->value());
 }
 

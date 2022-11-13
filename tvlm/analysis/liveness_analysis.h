@@ -70,8 +70,14 @@ namespace tvlm{
     template<class I>
     typename LivenessAnalysis<I>::NodeState
     LivenessAnalysis<I>::transferFun(const CfgNode<I> *node, const LivenessAnalysis::NodeState &state){
-        if(dynamic_cast<const CfgFunExitNode<I> *>(node)){
+        if(dynamic_cast<const CfgFunEntryNode<I> *>(node)){
+            return state;
+        }else if (dynamic_cast<const CfgFunExitNode<I> *>(node)){
+
             return nodeLattice_.bot();
+        }else if (dynamic_cast<const CfgGlobExitNode<I> *>(node)){
+
+            return state;
         }else if(dynamic_cast<const CfgStmtNode<I> *>(node)){
             auto * stmtNode = dynamic_cast<const CfgStmtNode<I> *>(node);
             auto instr = dynamic_cast<ILInstruction *>(stmtNode->il());
@@ -80,11 +86,20 @@ namespace tvlm{
 
                 if (dynamic_cast<AllocL *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
-                }else if (dynamic_cast<Store *>(stmtNode->il())){
+//                    return ;
+                }else if (dynamic_cast<AllocG *>(stmtNode->il())){
+                    auto newState = state;
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
+                    newState.erase(node->il());
+                    return newState;
+
+                    return state; // TODO create state transfer - liveness analysis
+                }else if (auto store = dynamic_cast<Store *>(stmtNode->il())){
                     auto newState = state;
                     std::unordered_set<Declaration*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
@@ -106,19 +121,19 @@ namespace tvlm{
                     auto ret  = dynamic_cast<Return *>(stmtNode->il());
                     auto newState = state;
                     newState.emplace(ret->returnValue());
-                    newState.erase(node->il());
+//                    newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<CondJump *>(stmtNode->il())){
                     auto newState = state;
                     std::unordered_set<Declaration*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
-                    newState.erase(node->il());
+//                    newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<Jump *>(stmtNode->il())){
                     auto newState = state;
                     std::unordered_set<Declaration*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
-                    newState.erase(node->il());
+//                    newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<PutChar *>(stmtNode->il())){
                     auto newState = state;
@@ -183,14 +198,6 @@ namespace tvlm{
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<AllocG *>(stmtNode->il())){
-                    auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
-                    newState.erase(node->il());
-                    return newState;
-
-                    return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<Phi *>(stmtNode->il())){
                     auto newState = state;
                     std::unordered_set<Declaration*> children = getSubtree(node);
@@ -240,9 +247,6 @@ namespace tvlm{
 
                     return state; // TODO create state transfer - liveness analysis
                 }
-            }else if (dynamic_cast<const CfgFunExitNode<I> *>(node)){
-
-                return nodeLattice_.bot();
             }
 
 
@@ -269,11 +273,11 @@ namespace tvlm{
             auto y = funOne(n, X);
 
             if (y != x) {
-                X.insert(std::make_pair(n, y));//X += n -> y
+                X.update(std::make_pair(n, y));//X += n -> y
                 //W ++= n.pred;
                 W.insert( n->pred_.begin(), n->pred_.end());
             } else if (y.empty()) {
-                X.insert(std::make_pair(n, y));//X += n -> y;
+                X.update(std::make_pair(n, y));//X += n -> y;
             }
         }
 

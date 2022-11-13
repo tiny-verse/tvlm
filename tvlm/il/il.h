@@ -260,7 +260,7 @@ namespace tvlm{
         ~Instruction() override = default;
 
         bool operator==(const IL *il) const override = 0;
-        virtual std::vector<Instruction *> childs() const = 0;
+        virtual std::vector<Instruction *> children() const = 0;
 
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
         void replaceMe(Instruction * with ) {
@@ -297,6 +297,12 @@ namespace tvlm{
         BasicBlock * getParentBB()const{
             return parentBB_;
         }
+
+
+        std::vector<Instruction *> & usages() {
+            return used_;
+        }
+
 
         virtual void print(tiny::ASTPrettyPrinter & p) const {
             if (resultType_ != ResultType::Void) {
@@ -401,7 +407,6 @@ namespace tvlm{
             p << p.symbol << "[" << p.identifier << reg->name() << p.symbol << "] ";
         }
 
-
         std::vector<Instruction *> used_;
         std::string instrName_;
         ASTBase const * ast_;
@@ -416,7 +421,7 @@ namespace tvlm{
 
     class Instruction::ImmSize : public Instruction {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {amount_};
         }
 
@@ -479,7 +484,7 @@ namespace tvlm{
 
     class Instruction::ImmIndex : public Instruction {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {};
         }
         bool operator==(const IL *il) const override {
@@ -523,7 +528,7 @@ namespace tvlm{
 
     class Instruction::ImmValue : public Instruction {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {};
         }
 
@@ -599,7 +604,7 @@ namespace tvlm{
 
     class Instruction::BinaryOperator : public Instruction {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {lhs_, rhs_};
         }
 
@@ -696,7 +701,7 @@ namespace tvlm{
 
     class Instruction::UnaryOperator : public Instruction {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {operand_};
         }
 
@@ -744,13 +749,13 @@ namespace tvlm{
 
     class Instruction::LoadAddress : public Instruction {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {address_};
         }
 
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::LoadAddress*>(il)){
-                return type_ == other->type_ && address_->operator==(other->address_);
+                return resultType_ == other->resultType_ && address_->operator==(other->address_);
             }
             else return false;
         }
@@ -780,6 +785,12 @@ namespace tvlm{
 
             address_->registerUsage(this);
         }
+        LoadAddress(Instruction * address,const ResultType & type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
+            Instruction{type, ast, instrName, opcode},
+            address_{address}, type_(nullptr) {
+
+            address_->registerUsage(this);
+        }
     private:
 
         Instruction * address_;
@@ -789,7 +800,7 @@ namespace tvlm{
 
     class Instruction::StoreAddress : public Instruction {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {address_, value_};
         }
         bool operator==(const IL *il) const override {
@@ -870,7 +881,7 @@ namespace tvlm{
 
     class Instruction::Returnator : public Instruction::Terminator0 {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {returnValue_};
         }
 
@@ -916,7 +927,7 @@ namespace tvlm{
 
     class Instruction::Terminator1 : public Instruction::Terminator {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {};
         }
 
@@ -946,7 +957,7 @@ namespace tvlm{
 
     class Instruction::Terminator2 : public Instruction::Terminator {
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {cond_};
         }
 
@@ -979,7 +990,7 @@ namespace tvlm{
 
     class Instruction::SrcInstruction : public Instruction{
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {src_};
         }
 
@@ -1019,7 +1030,7 @@ namespace tvlm{
 
     class Instruction::VoidInstruction : public Instruction{
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {};
         }
 
@@ -1053,8 +1064,8 @@ namespace tvlm{
 
     class Instruction::PhiInstruction : public Instruction{
     public:
-        std::vector<Instruction*> childs() const override{
-//            throw "not implemented childs on Phi Instruction";
+        std::vector<Instruction*> children() const override{
+//            throw "not implemented children on Phi Instruction";
             std::vector<Instruction*> successors;
             for (auto & c: contents_) {
                 successors.push_back(c.second);
@@ -1100,7 +1111,7 @@ namespace tvlm{
 
   class Instruction::StructAssignInstruction : public Instruction{
     public:
-      std::vector<Instruction*> childs() const override{
+      std::vector<Instruction*> children() const override{
           return {srcVal_, dstAddr_};
       }
       bool operator==(const IL *il) const override{
@@ -1157,7 +1168,7 @@ namespace tvlm{
 
     class Instruction::ElemInstruction : public Instruction{
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {base_};
         }
         bool operator==(const IL *il) const override{
@@ -1184,7 +1195,7 @@ namespace tvlm{
 
     class Instruction::ElemOffsetInstruction : public Instruction::ElemInstruction{
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {base_, offset_};
         }
         bool operator==(const IL *il) const override{
@@ -1226,7 +1237,7 @@ namespace tvlm{
 
 class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             return {base_, offset_, index_};
         }
         bool operator==(const IL *il) const override{
@@ -1278,7 +1289,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     class Instruction::CallInstruction : public Instruction{
     public:
 
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             std::vector<Instruction*> predecessors;
             for (auto & arg : args_) {
                 predecessors.push_back(arg.first);
@@ -1344,7 +1355,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
     class Instruction::IndirectCallInstruction : public CallInstruction{
     public:
-        std::vector<Instruction*> childs() const override{
+        std::vector<Instruction*> children() const override{
             std::vector<Instruction*> predecessors{f_};
             for (auto & arg : args_) {
                 predecessors.push_back(arg.first);
@@ -1487,7 +1498,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 #define Returnator(NAME, ENCODING) NAME (Instruction * returnValue, Type * type, ASTBase const * ast): Instruction::ENCODING{returnValue, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define Terminator1(NAME, ENCODING) NAME (BasicBlock * target, ASTBase const * ast): Instruction::ENCODING{target, ast, #NAME, Instruction::Opcode::NAME} {}
 #define Terminator2(NAME, ENCODING) NAME (Instruction * condition,BasicBlock * trueTarget, BasicBlock * falseTarget,  ASTBase const * ast): Instruction::ENCODING{condition, trueTarget, falseTarget, ast, #NAME, Instruction::Opcode::NAME} {}
-#define LoadAddress(NAME, ENCODING) NAME (Instruction * address, Type * type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME, Instruction::Opcode::NAME} {}
+#define LoadAddress(NAME, ENCODING) NAME (Instruction * address, Type * type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME, Instruction::Opcode::NAME} {} \
+                                    NAME (Instruction * address, const ResultType & type, ASTBase const * ast): Instruction::ENCODING{address, type, ast, #NAME, Instruction::Opcode::NAME} {}
 #define StoreAddress(NAME, ENCODING) NAME (Instruction * value, Instruction * address, ASTBase const * ast): Instruction::ENCODING{value, address, ast, #NAME, Instruction::Opcode::NAME} {}
 #define DirectCallInstruction(NAME, ENCODING) NAME (Function * f, std::vector<std::pair< Instruction *, Type*>> && args, ASTBase const * ast): Instruction::ENCODING{f, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
 #define IndirectCallInstruction(NAME, ENCODING) NAME (Instruction * f, Type * retType, std::vector<std::pair< Instruction *, Type*>> && args, ASTBase const * ast): Instruction::ENCODING{f, retType, std::move(args), ast, #NAME, Instruction::Opcode::NAME} {}
@@ -1523,38 +1535,37 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
         Instruction * add(Instruction * ins) {
             assert(! terminated());
+            ins->setParentBB(this);
             insns_.push_back(std::unique_ptr<Instruction>{ins});
             return ins;
         }
 
         Instruction * inject(Instruction * ins, size_t pos = 0) {
+            ins->setParentBB(this);
             insns_.insert( insns_.begin() + pos, std::unique_ptr<Instruction>{ins});
             return ins;
         }
         Instruction * injectAfter(Instruction * ins, const Instruction * pos ) {
             auto it = insns_.begin();
-            for (; it != insns_.end() ;it++ ) {
-                if(it->get() == pos){
-                    break;
-                }
-            }
+            for (;it != insns_.end() && it->get() != pos ;it++ );
             if(it == insns_.end()){
                 return nullptr;
             }
+            it++;
+            ins->setParentBB(this);
+            ins->setName(STR("injectA " << pos->name()) );
             insns_.insert( it, std::unique_ptr<Instruction>{ins});
             return ins;
         }
         Instruction * injectBefore(Instruction * ins, const Instruction * pos ) {
             auto it = insns_.begin();
-            for (; it != insns_.end() ;it++ ) {
-                if(it->get() == pos){
-                    break;
-                }
-            }
+            for (;it != insns_.end() && it->get() != pos ;it++ );
             if(it == insns_.end()){
                 return nullptr;
             }
-            insns_.insert( --it, std::unique_ptr<Instruction>{ins});
+            ins->setParentBB(this);
+            ins->setName(STR("injectB " << pos->name()) );
+            insns_.insert( it, std::unique_ptr<Instruction>{ins});
             return ins;
         }
 
@@ -1739,6 +1750,12 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
                 return i->second;
             else
                 return nullptr;
+        }
+
+        void print(tiny::ASTPrettyPrinter & p) const {
+            globals_->print(p);
+            for (auto & i : functions_)
+                i.second->print(p);
         }
     protected:
         friend class ILVisitor;

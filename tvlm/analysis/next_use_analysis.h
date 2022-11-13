@@ -179,7 +179,7 @@ namespace tvlm{
             auto y = funOne(n, X);
 
             if (y != x) {
-                X.insert(std::make_pair(n, y));//X += n -> y
+                X.update(std::make_pair(n, y));//X += n -> y
                 //W ++= n.pred;
                 W.insert( n->pred_.begin(), n->pred_.end());
             }

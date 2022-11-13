@@ -39,8 +39,8 @@ public:
     }
 
     virtual ~MAP(){
-        for (auto & b: registered_) {
-            if constexpr(std::is_pointer<B>::value){
+        if constexpr(std::is_pointer<B>::value){
+            for (auto & b: registered_) {
                 delete b;
             }
         }
@@ -49,12 +49,13 @@ public:
 
     MAP & operator= (const MAP & other){
 //        this->~MAP();
-        for (auto & b: registered_) {
-            if constexpr(std::is_pointer<B>::value){
+        if constexpr(std::is_pointer<B>::value){
+            for (auto & b: registered_) {
                 delete b;
             }
         }
         registered_.clear();
+
 //        MAP tmp {other};
 //        std::swap(tmp, *this);
         contents_ = other.contents_;
@@ -66,8 +67,8 @@ public:
 
     MAP & operator= (MAP && other){
 //        this->~MAP();
-        for (auto & b: registered_) {
-            if constexpr(std::is_pointer<B>::value){
+        if constexpr(std::is_pointer<B>::value){
+            for (auto & b: registered_) {
                 delete b;
             }
         }
@@ -143,6 +144,26 @@ public:
     insert(const typename std::map<A,B>::value_type & x)
     { return contents_.insert(x); }
 
+    typename std::map<A,B>::iterator
+    update(typename std::map<A,B>::value_type && x)
+    {
+        auto [res, succ] = contents_.insert(std::move(x));
+        if(!succ){
+            contents_.insert_or_assign(res, x.first, std::move(x.second));
+        }
+        return res;
+    }
+
+    typename std::map<A,B>::iterator
+    update(const typename std::map<A,B>::value_type & x)
+    {
+        auto [res, succ] = contents_.insert(std::move(x));
+        if(!succ){
+            contents_.insert_or_assign(res, x.first, x.second);
+        }
+        return res;
+    }
+
     template<typename... Args>
     std::pair<typename std::map<A, B>::iterator, bool>
     emplace(Args&&... args){
@@ -154,6 +175,12 @@ public:
         return contents_[k];
     }
 
+    typename std::map<A,B>::iterator find(const typename std::map<A,B>::key_type& x){
+        return contents_.find(x);
+    }
+    typename std::map<A,B>::const_iterator find(const typename std::map<A,B>::key_type& x)const {
+        return contents_.find(x);
+    }
 
 
 //    virtual B makeVal(B val) {
@@ -213,7 +240,7 @@ namespace tvlm{
             MAP<A, B> res = y;
             for (auto & xx: x) {
                 auto & e = xx.first;
-                res.insert(std::make_pair(e, lat_->lub(x.access(e), y.access(e))));
+                res.update(std::make_pair(e, lat_->lub(x.access(e), y.access(e))));
             }
             return res;
         }

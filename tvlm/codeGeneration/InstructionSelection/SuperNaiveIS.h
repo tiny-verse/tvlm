@@ -12,7 +12,7 @@
 namespace  tvlm{
 
 
-    class SuperNaiveIS : public ILVisitor{
+    class SuperNaiveIS : public ILVisitor, public TargetProgramFriend{
 
     using ILInstruction = Instruction;
     using TInstruction = tiny::t86::Instruction;
@@ -40,9 +40,13 @@ namespace  tvlm{
     public:
         ~SuperNaiveIS() override;
         SuperNaiveIS();
+
+    static TargetProgram translate(TargetProgram && prog) ;
     static TargetProgram translate(ILBuilder &ilb) ;
-        TargetProgram finalize();
+        TargetProgram&  finalize();
     protected:
+        SuperNaiveIS(Program * prog);
+        void run();
         void visit(Instruction *ins) override;
         void visit(Jump *ins) override;
         void visit(CondJump *ins) override;
@@ -151,11 +155,11 @@ namespace  tvlm{
             auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
             return program_.registerAdd(me, std::move(virt));
         }
-        void makeLocalAllocation(size_t size, size_t reg, const Instruction * ins){
-            regAssigner->makeLocalAllocation(size, reg, ins);
+        void makeLocalAllocation(int64_t size,  const Instruction * ins){
+            regAssigner->makeLocalAllocation(size,  ins);
         }
-        void makeGlobalAllocation(size_t size, size_t reg, const Instruction * ins){
-            regAssigner->makeGlobalAllocation(size, reg, ins);
+        void makeGlobalAllocation(int64_t size, const Instruction * ins){
+            regAssigner->makeGlobalAllocation(size,  ins);
         }
 //        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
         void copyStruct(size_t from, Type * type,size_t to, const ILInstruction * ins );

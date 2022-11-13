@@ -19,7 +19,7 @@ namespace tvlm{
 
 
     class InstructionAnalysis : public Analysis<Declarations>{
-        using Env = MAP<VirtualRegisterPlaceholder *, Declaration*>;
+        using Env = MAP<VirtualRegisterPlaceholder*, Declaration*>;
     public:
         InstructionAnalysis(Program * p): Analysis<Declarations>(), p_(p){
 
@@ -35,6 +35,9 @@ namespace tvlm{
     protected:
         class InsVisitor : public ::tvlm::ILVisitor{
         public:
+            InsVisitor():
+            env_(Env())
+            {}
             Declarations declarations;
         protected:
             Env env_;
@@ -46,11 +49,12 @@ namespace tvlm{
 
 
             void visitChild(::tvlm::IL * il, const Env & env) {
-                Env tmp = env_;
-                env_ = env;
+//                Env tmp = env_;
+//                env_ = env;
                 ILVisitor::visitChild(il);
-                env_ = tmp;
+//                env_ = tmp;
             }
+
 
             template<typename T>
             void visitChild(std::unique_ptr<T> const &ptr, const Env & env) {
@@ -115,5 +119,6 @@ namespace tvlm{
 
     private:
         Program * p_;
+        static size_t counter_;
     };
 }

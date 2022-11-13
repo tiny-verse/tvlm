@@ -98,7 +98,7 @@ namespace tvlm{
 
 
 
-    Epilogue::TProgram NaiveEpilogue::translate(Epilogue::SProgram & sprogram) {
+    Epilogue::TProgram NaiveEpilogue::translate(SProgram & sprogram) {
 //        return Epilogue::translate(program);
         visit(getProgram(program_));
 
@@ -196,7 +196,7 @@ namespace tvlm{
     }
 
     void NaiveEpilogue::visit(AllocL *ins) {
-        visitInstrHelper(ins);
+//        visitInstrHelper(ins);
     }
 
     void NaiveEpilogue::visit(AllocG *ins) {
@@ -297,7 +297,7 @@ namespace tvlm{
         for(auto & f : functionTable_){
             const Instruction * fnc_addr = p->getGlobalVariableAddress( f.first);
 //            instructionToEmplace.emplace(fnc_addr, new LoadImm((int64_t)f.second.address(), nullptr));
-            program_.globalEmplace(fnc_addr, f.second.address());
+            program_.globalEmplaceAddress(fnc_addr, f.second.address());
         }
         compiledGlobalTable(globs);
 

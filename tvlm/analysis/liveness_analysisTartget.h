@@ -8,6 +8,9 @@
 #include "cfg.h"
 #include "DeclarationAnalysis.h"
 
+///NO USAGE
+
+
 namespace tvlm{
     using Instruction = ::tvlm::Instruction;
 
@@ -276,11 +279,11 @@ namespace tvlm{
             auto y = funOne(n, X);
 
             if (y != x) {
-                X.insert(std::make_pair(n, y));//X += n -> y
+                X.update(std::make_pair(n, y));//X += n -> y
                 //W ++= n.pred;
-                W.insert( n->pred_.begin(), n->pred_.end());
+                W.update( n->pred_.begin(), n->pred_.end());
             } else if (y.empty()) {
-                X.insert(std::make_pair(n, y));//X += n -> y;
+                X.update(std::make_pair(n, y));//X += n -> y;
             }
         }
 

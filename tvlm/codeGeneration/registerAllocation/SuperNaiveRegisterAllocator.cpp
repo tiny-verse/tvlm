@@ -6,8 +6,8 @@ namespace tvlm {
 
 
 
-    SuperNaiveRegisterAllocator::SuperNaiveRegisterAllocator(TargetProgram &tp):
-            RegisterAllocator(tp)
+    SuperNaiveRegisterAllocator::SuperNaiveRegisterAllocator(TargetProgram && tp):
+            RegisterAllocator(std::move(tp))
     {
         size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
         for(size_t i = 1 ; i < regSize ; i++){
@@ -106,8 +106,8 @@ namespace tvlm {
     void SuperNaiveRegisterAllocator::registerMemLocation(const Store *ins, const Instruction *currentIns) {
 
         ins->address(); //TODO
-        auto it = getAllocLmapping(targetProgram_).find(ins->address());
-        if(it != getAllocLmapping(targetProgram_).end()){
+        auto it = getAllocMapping(targetProgram_).find(ins->address());
+        if(it != getAllocMapping(targetProgram_).end()){
 
             addressDescriptor_[ins->value()].emplace( LocationEntry( ins->address(), ins->value(), it->second));
         }

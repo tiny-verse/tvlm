@@ -67,30 +67,51 @@ namespace tvlm{
 
     class ColoringAllocator : public SuperNaiveRegisterAllocator{
     public:
-        ColoringAllocator(TargetProgram & prog):SuperNaiveRegisterAllocator(prog){
-
+        ColoringAllocator(TargetProgram && prog):
+        SuperNaiveRegisterAllocator(std::move(prog)),
+        programChanged_(false){
         }
 
-        TargetProgram run()override{
+        bool changedProgram()const{
+            return programChanged_;
+        }
+        TargetProgram & run(TargetProgram &&  prog){
+            targetProgram_ = std::move(prog);
+            return this->run();
+        }
+
+        TargetProgram & run()override{
 
         //----Preparation----
             //LivenessAnalysis
             Program * prog = getProgram(targetProgram_);
+            programChanged_ = false;
             bool again = true;
-            while(again){
+//            while(again){
 
                 auto la = new LivenessAnalysis<ColorInfo>(prog);
                 analysisResult_ = la->analyze(); //TODO check memory allocation
 
                 //ColorPicking
                again = !generateLiveRanges();
-            }
+               delete la;
+//            }
             //Next convert result of colorPicking to update VirtualRegisterPlaceholders
 
 
 
             //implement logic of passing through the program;
+            if(programChanged_){
+                return targetProgram_;
+            }
+
+            setColors();
+
+
+
+
             return RegisterAllocator::run();
+
         }
 
 
@@ -183,17 +204,20 @@ namespace tvlm{
 
         std::map<const Instruction *, size_t> spillIndexes_; //size_t -> index in liveRanges_ //both: 1st where to spill ; 2nd: what to spill
         std::stack<size_t> colorPickingStack_; //size_t -> index in liveRanges_
-        std::map<const Instruction * , ColorInfo> colorPickingResult_;
+        std::map<const Instruction * , size_t> colorPickingResult_;
+        std::map<size_t , size_t> colorPickingSemiResult_;
 
-
+        bool programChanged_;
         //create live ranges, and create incidence graph
         bool generateLiveRanges(); // true == assigned without spilling
+        bool setColors();
 
+        VirtualRegister getRegToSpill();
         VirtualRegister getReg(const Instruction *currentIns) override;
+//
+//        VirtualRegister getFReg(const Instruction *currentIns) override;
 
-        VirtualRegister getFReg(const Instruction *currentIns) override;
-
-        VirtualRegister getLastRegister(const Instruction *currentIns) override;
+//        VirtualRegister getLastRegister(const Instruction *currentIns) override;
 
     };
 }

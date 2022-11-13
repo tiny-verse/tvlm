@@ -92,6 +92,12 @@ namespace tvlm {
     public:
         CfgFunExitNode(IL *fnc) ;
     };
+
+    template<class T>
+    class CfgGlobExitNode : public CfgFunExitNode<T> {
+    public:
+        CfgGlobExitNode(IL *bb) ;
+    };
 //******************************************************************************************
 
 
@@ -123,5 +129,9 @@ namespace tvlm {
     template<class T>
     CfgFunExitNode<T>::CfgFunExitNode(IL *fnc):
             CfgNode<T>(fnc) {}
+
+    template<class T>
+    CfgGlobExitNode<T>::CfgGlobExitNode(IL *bb):
+            CfgFunExitNode<T>(bb) {}
 
 }

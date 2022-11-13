@@ -87,10 +87,10 @@ namespace tvlm{
 
     public:
         virtual ~RegisterAllocator() = default;
-        RegisterAllocator( TargetProgram & tp);
+        RegisterAllocator( TargetProgram  && tp);
 
 
-        virtual TargetProgram run(){
+        virtual TargetProgram & run(){
             //implement logic of passing through the program;
             visit(getProgram(targetProgram_));
             return targetProgram_;
@@ -148,7 +148,7 @@ namespace tvlm{
 //        std::set<VirtualRegister> freeFReg_;
 
         Function * currenFunction_;
-        TargetProgram & targetProgram_;
+        TargetProgram targetProgram_;
 
         std::map<const Instruction *, std::set<LocationEntry>> addressDescriptor_;
         std::map<VirtualRegister, std::set<const Instruction*>> registerDescriptor_;
