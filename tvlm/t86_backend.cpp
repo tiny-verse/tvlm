@@ -716,6 +716,6 @@ int tvlm::Rule::counter = 0;
 
 #if (defined TARGET_t86)
 int tvlm::t86_Backend::MemoryCellSize = 4; // inBytes
-#elif
+#else
 int tvlm::t86_Backend::MemoryCellSize = 1; // inBytes
 #endif

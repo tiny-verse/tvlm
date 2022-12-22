@@ -9,6 +9,7 @@
 #include "tvlm/codeGeneration/ProgramBuilder.h"
 
 #include "tvlm/analysis/liveness_analysis.h"
+#include "tvlm/analysis/liveness_analysisTartget.h"
 #include "SuperNaiveRegisterAllocator.h"
 
 
@@ -45,23 +46,30 @@ namespace tvlm{
 
     class LiveRange {
     public:
-        LiveRange(Instruction * il, const IL * start):
-        il_(il),
+        LiveRange(Instruction * il, IL * start):
+        il_({il}),
         start_(start),
         end_(start){
 
+        }
+
+        void add(Instruction * in) {
+            il_.emplace(in);
         }
 
         void setEnd(const IL *end){
             end_ = end;
         }
 
-        IL * il() const {
+        const std::set<ILInstruction *>& il() const {
             return il_;
         }
+        IL * start() const {
+            return start_;
+        }
     private:
-        ILInstruction * il_;
-        const IL * start_;
+        std::set<ILInstruction *> il_;
+        IL * start_;
         const IL * end_;
     };
 
@@ -89,12 +97,17 @@ namespace tvlm{
             bool again = true;
 //            while(again){
 
-                auto la = new LivenessAnalysis<ColorInfo>(prog);
+                auto la =  new ColoringLiveAnalysis<ColorInfo>(&targetProgram_);
                 analysisResult_ = la->analyze(); //TODO check memory allocation
+                auto tmp = la->getLiveRanges();
+                for (auto * i : tmp) {
+                    addLR(std::move(std::unique_ptr<CLiveRange>(i)));
+                }
+
 
                 //ColorPicking
                again = !generateLiveRanges();
-               delete la;
+
 //            }
             //Next convert result of colorPicking to update VirtualRegisterPlaceholders
 
@@ -102,6 +115,7 @@ namespace tvlm{
 
             //implement logic of passing through the program;
             if(programChanged_){
+                delete la;
                 return targetProgram_;
             }
 
@@ -109,7 +123,7 @@ namespace tvlm{
 
 
 
-
+            delete la;
             return RegisterAllocator::run();
 
         }
@@ -175,30 +189,33 @@ namespace tvlm{
 
         public: bool operator()(const ILInstruction * left, const std::pair<LiveRange *, size_t> & right) const
             {
-                return left < right.first->il();
+                return left < right.first->start();
             }
 
         public: bool operator()(const std::pair<LiveRange *, size_t> & left, const ILInstruction * right) const
             {
-                return left.first->il() < right;
+                return left.first->start() < right;
             }
 
         public: bool operator()(const std::pair<LiveRange *, size_t> &  left, const std::pair<LiveRange *, size_t> &  right) const
             {
-                return left.first->il() < right.first->il();
+                return left.first->start() < right.first->start();
             }
         };
 
 
-        MAP<const CfgNode<ColorInfo> *,std::unordered_set<IL*>> analysisResult_;
+//        MAP<const CfgNode<ColorInfo> *,std::unordered_set<IL*>> analysisResult_;
+        MAP<const CfgNode<ColorInfo> *,std::set<CLiveRange*>> analysisResult_;
         std::map<const CfgNode<ColorInfo> * , const Instruction *> analysis_mapping_;
 
 
-        void addLR(std::unique_ptr<LiveRange> && lr);
+        void addLR(std::unique_ptr<CLiveRange> && lr);
         //incidence graph
         std::map<const IL *, size_t> searchRanges_; // size_t -> index to liveRanges
+        std::map<CLiveRange *, size_t> lrIndex_; //  liveRange to index
+//        std::vector<Instruction *> searchInstrs_; // size_t -> index to liveRanges
         std::map<size_t, Instruction *> searchInstrs_; // size_t -> index to liveRanges
-        std::vector<std::unique_ptr<LiveRange>> liveRanges_;
+        std::vector<std::unique_ptr<CLiveRange>> liveRanges_;
         std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
         std::vector<std::set<size_t>> LRincidence_;
 

@@ -182,6 +182,9 @@ public:
         return contents_.find(x);
     }
 
+    typename std::map<A,B>::size_type size() const noexcept {
+        return contents_.size();
+    }
 
 //    virtual B makeVal(B val) {
 //        storage_.push_back(val);

@@ -724,7 +724,9 @@ namespace tvlm{
             case RegisterType::INTEGER:
                 switch (from.loc()) {
                     case Location::Register:
-                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( Register(whereTo.getNumber()), Register(from.regIndex().getNumber()) ) LMBE,currentIns, writingPos_++);
+                        if(whereTo.getNumber() != from.regIndex().getNumber()){
+                            targetProgram_.addF_insert(LMBS tiny::t86::MOV( Register(whereTo.getNumber()), Register(from.regIndex().getNumber()) ) LMBE,currentIns, writingPos_++);
+                        }
 
                         break;
                     case Location::Stack:
@@ -739,8 +741,9 @@ namespace tvlm{
             case RegisterType::FLOAT:
                 switch (from.loc()) {
                     case Location::Register:
-                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), Register(from.regIndex().getNumber()) ) LMBE,currentIns, writingPos_++);
-
+                        if(whereTo.getNumber() != from.regIndex().getNumber()){
+                            targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), Register(from.regIndex().getNumber()) ) LMBE,currentIns, writingPos_++);
+                        }
                         break;
                     case Location::Stack:{
 
@@ -778,9 +781,7 @@ namespace tvlm{
                     case Location::Memory: {
                         VirtualRegister freeVirtReg = getReg(currentIns);
                         Register freeReg = freeVirtReg.getNumber();
-                        targetProgram_.addF_insert(
-                                LMBS tiny::t86::MOV(freeReg, tiny::t86::Mem(loc.memAddress()))LMBE, currentIns,
-                                writingPos_++);
+                        restore(freeVirtReg, loc, currentIns);
                         addressDescriptor_[ins].emplace(LocationEntry(freeVirtReg, ins));
                         registerDescriptor_[freeVirtReg].emplace(ins);
 
@@ -793,13 +794,7 @@ namespace tvlm{
                         VirtualRegister freeVirtReg = getReg(currentIns);
                         Register freeReg = freeVirtReg.getNumber();
 
-
-                        targetProgram_.addF_insert(LMBS tiny::t86::MOV(freeReg, tiny::t86::Bp())LMBE, currentIns, writingPos_++);
-                        targetProgram_.addF_insert(
-                                LMBS tiny::t86::SUB(freeReg, (int64_t) loc.stackOffset() )LMBE, currentIns,
-                                writingPos_++);
-                        targetProgram_.addF_insert(LMBS tiny::t86::MOV(freeReg, tiny::t86::Mem(freeReg))LMBE, currentIns, writingPos_++);
-                        addressDescriptor_[currentIns].emplace( freeVirtReg, currentIns);
+                        restore(freeVirtReg, loc, currentIns);addressDescriptor_[currentIns].emplace( freeVirtReg, currentIns);
                         registerDescriptor_[freeVirtReg].emplace(currentIns);
                         reg.setNumber(freeReg.index());
                         return;

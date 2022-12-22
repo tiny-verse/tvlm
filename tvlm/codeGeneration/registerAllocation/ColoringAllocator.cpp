@@ -173,6 +173,7 @@ namespace tvlm {
 //
 //        }
 //
+        bool twoAddress = true;
         while(!colorPickingStack_.empty()){
             auto pos = colorPickingStack_.top();colorPickingStack_.pop();
             size_t availableColor = 1;
@@ -180,6 +181,57 @@ namespace tvlm {
                 bool OK = true;//reset
                 for(auto neighPos : LRincidence_[pos]){
                     auto it = colorPickingSemiResult_.find(neighPos);
+                    if(twoAddress){
+                        auto instr = searchInstrs_[pos];
+                        if (auto binOp = dynamic_cast<BinOp*>(instr)){
+                            if(binOp->lhs() == searchInstrs_[neighPos]){
+                                auto res = colorPickingSemiResult_.find(neighPos);
+                                if(res != colorPickingSemiResult_.end()){
+                                    OK = true;
+                                    availableColor = res->second;
+                                    break;
+                                }
+                            }
+                        }else if (auto unOp = dynamic_cast<UnOp*>(instr)){
+                            if(unOp->operand() == searchInstrs_[neighPos]){
+                                auto res = colorPickingSemiResult_.find(neighPos);
+                                if(res != colorPickingSemiResult_.end()){
+                                    OK = true;
+                                    availableColor = res->second;
+                                    break;
+                                }
+                            }
+                        }else if (auto trunc = dynamic_cast<Truncate*>(instr)){
+                            if(trunc->src() == searchInstrs_[neighPos]){
+                                auto res = colorPickingSemiResult_.find(neighPos);
+                                if(res != colorPickingSemiResult_.end()){
+                                    OK = true;
+                                    availableColor = res->second;
+                                    break;
+                                }
+                            }
+                        }else if (auto extend = dynamic_cast<Extend*>(instr)){
+                            if(extend->src() == searchInstrs_[neighPos]){
+                                auto res = colorPickingSemiResult_.find(neighPos);
+                                if(res != colorPickingSemiResult_.end()){
+                                    OK = true;
+                                    availableColor = res->second;
+                                    break;
+                                }
+                            }
+                        }else if (auto copy = dynamic_cast<Copy*>(instr)){
+                            if(copy->src() == searchInstrs_[neighPos]){
+                                auto res = colorPickingSemiResult_.find(neighPos);
+                                if(res != colorPickingSemiResult_.end()){
+                                    OK = true;
+                                    availableColor = res->second;
+                                    break;
+                                }
+                            }
+                        }else {
+                            //TODO fill other two address insrtuction -- to repeat register as first argument
+                        }
+                    }
                     if(  it != colorPickingSemiResult_.end() &&
                         it->second == availableColor){
                         OK = false;
@@ -205,7 +257,7 @@ namespace tvlm {
     bool ColoringAllocator::generateLiveRanges() {
         //return true <=> run successful no more repeats needed
         this->spillIndexes_.clear();
-        this->liveRanges_.clear();
+//        this->liveRanges_.clear();
         this->LRincidence_.clear();
         std::vector<std::set<size_t>> LRincidence;
         this->colorPickingStack_ = std::stack<size_t>();
@@ -214,54 +266,83 @@ namespace tvlm {
         size_t colors = this->freeReg_.size() -1;
         bool spill = false;
 
+//        for (auto & t : analysisResult_) { // step -> for each cfgNode TODO go by cfg_
+//
+//            std::set<std::pair<LiveRange *, size_t>, LiveRangesComparator> tmp;
+//
+//            //instruction alone is alive for sure
+//            auto * alive = dynamic_cast<ILInstruction * >(t.first->il());
+//            if(alive &&alive->resultType() != ResultType::Void ) { //if the node is instruction
+//
+//                auto it = rangesAlive_.find(alive);
+//                if (it == rangesAlive_.end()) {
+//                    auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
+//                    tmp.emplace(newRange.get(), liveRanges_.size());
+//                    addLR(std::move(newRange));
+//                } else {
+//                    it->first->setEnd(t.first->il());
+//                    tmp.insert(*it);
+//                }
+//            }
+//            for( auto * alive_ : t.second ){
+//                if(auto * alive = dynamic_cast<ILInstruction * >(alive_->start())){ //if the node is instruction
+//                    auto it = rangesAlive_.find(alive);
+//                    if(it == rangesAlive_.end()){
+//                        auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
+//                        tmp.emplace(newRange.get(), liveRanges_.size());
+//                        addLR(std::move(newRange));
+//                    }else{
+//                        it->first->setEnd(t.first->il());
+//                        tmp.insert(*it);
+//                    }
+//                }
+//            }
+//            rangesAlive_ = std::move(tmp);
+//
+//            //incidence graph build
+//            LRincidence_.resize(liveRanges_.size());
+//            LRincidence.resize(liveRanges_.size());
+//            for (auto & i : rangesAlive_) {
+//                for (auto & j : rangesAlive_) {
+//                    if(i.second != j.second ) {
+//                        LRincidence_[i.second].emplace(j.second);
+//                        LRincidence_[j.second].emplace(i.second);
+//                        LRincidence[i.second].emplace(j.second);
+//                        LRincidence[j.second].emplace(i.second);
+//                    }
+//                }
+//            }
+//
+//        }
+        LRincidence_.resize(analysisResult_.size());
+        LRincidence.resize(analysisResult_.size());
         for (auto & t : analysisResult_) { // step -> for each cfgNode TODO go by cfg_
 
-            std::set<std::pair<LiveRange *, size_t>, LiveRangesComparator> tmp;
 
-            //instruction alone is alive for sure
-            auto * alive = dynamic_cast<ILInstruction * >(t.first->il());
-            if(alive &&alive->resultType() != ResultType::Void ) { //if the node is instruction
 
-                auto it = rangesAlive_.find(alive);
-                if (it == rangesAlive_.end()) {
-                    auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
-                    tmp.emplace(newRange.get(), liveRanges_.size());
-                    addLR(std::move(newRange));
-                } else {
-                    it->first->setEnd(t.first->il());
-                    tmp.insert(*it);
+            if(auto ins = dynamic_cast<tvlm::Instruction*>(t.first->il())){
+                auto lrPos = searchRanges_.find(ins);
+                if(lrPos == searchRanges_.end()){
+                    throw "[Coloring Allocator.cpp] cannot find Range for instruction";
                 }
-            }
-            for( auto * alive_ : t.second ){
-                if(auto * alive = dynamic_cast<ILInstruction * >(alive_)){ //if the node is instruction
-                    auto it = rangesAlive_.find(alive);
-                    if(it == rangesAlive_.end()){
-                        auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
-                        tmp.emplace(newRange.get(), liveRanges_.size());
-                        addLR(std::move(newRange));
-                    }else{
-                        it->first->setEnd(t.first->il());
-                        tmp.insert(*it);
+                for (auto * LR : t.second) {
+                    auto otherPos = lrIndex_.find(LR);
+                    if(otherPos == lrIndex_.end()){
+                        throw "[Coloring Allocator.cpp] cannot find index for liveRange -- probably not registered";
                     }
-                }
-            }
-            rangesAlive_ = std::move(tmp);
+                    LRincidence_[lrPos->second].emplace(otherPos->second);
+                    LRincidence_[otherPos->second].emplace(lrPos->second);
+                    LRincidence[lrPos->second].emplace(otherPos->second);
+                    LRincidence[otherPos->second].emplace(lrPos->second);
 
-            //incidence graph build
-            LRincidence_.resize(liveRanges_.size());
-            LRincidence.resize(liveRanges_.size());
-            for (auto & i : rangesAlive_) {
-                for (auto & j : rangesAlive_) {
-                    if(i.second != j.second ) {
-                        LRincidence_[i.second].emplace(j.second);
-                        LRincidence_[j.second].emplace(i.second);
-                        LRincidence[i.second].emplace(j.second);
-                        LRincidence[j.second].emplace(i.second);
-                    }
                 }
+
             }
+
+
 
         }
+
         this->LRincidence_;
         //**********************************************************************************
         //algo colorPicking
@@ -365,10 +446,12 @@ namespace tvlm {
 
     }
 
-    void ColoringAllocator::addLR(std::unique_ptr<LiveRange> && lr) {
-        searchRanges_.emplace(std::make_pair(lr->il(), liveRanges_.size()));
-        if(auto instr = dynamic_cast<Instruction *>(lr->il())){
-            searchInstrs_.emplace(std::make_pair(liveRanges_.size(), instr));
+    void ColoringAllocator::addLR(std::unique_ptr<CLiveRange> && lr) {
+        searchRanges_.emplace(std::make_pair(lr->start(), liveRanges_.size()));
+        lrIndex_.emplace(std::make_pair(lr.get(), liveRanges_.size()));
+        if(auto instr = dynamic_cast<Instruction *>(lr->start())){
+//            searchInstrs_.resize(liveRanges_.size()+1);
+            searchInstrs_[liveRanges_.size()] = instr;
         }
         liveRanges_.push_back(std::move(lr));
     }
