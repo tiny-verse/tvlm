@@ -104,6 +104,7 @@ namespace tvlm{
                     addLR(std::move(std::unique_ptr<CLiveRange>(i)));
                 }
 
+                getLRBundles();
 
                 //ColorPicking
                again = !generateLiveRanges();
@@ -214,7 +215,7 @@ namespace tvlm{
         std::map<const IL *, size_t> searchRanges_; // size_t -> index to liveRanges
         std::map<CLiveRange *, size_t> lrIndex_; //  liveRange to index
 //        std::vector<Instruction *> searchInstrs_; // size_t -> index to liveRanges
-        std::map<size_t, Instruction *> searchInstrs_; // size_t -> index to liveRanges
+        std::map<size_t, std::set<Instruction *>> searchInstrs_; // size_t -> index to liveRanges
         std::vector<std::unique_ptr<CLiveRange>> liveRanges_;
         std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
         std::vector<std::set<size_t>> LRincidence_;
@@ -227,6 +228,7 @@ namespace tvlm{
         bool programChanged_;
         //create live ranges, and create incidence graph
         bool generateLiveRanges(); // true == assigned without spilling
+        void getLRBundles(); //
         bool setColors();
 
         VirtualRegister getRegToSpill();

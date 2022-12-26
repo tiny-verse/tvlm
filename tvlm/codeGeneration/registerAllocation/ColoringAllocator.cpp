@@ -181,57 +181,57 @@ namespace tvlm {
                 bool OK = true;//reset
                 for(auto neighPos : LRincidence_[pos]){
                     auto it = colorPickingSemiResult_.find(neighPos);
-                    if(twoAddress){
-                        auto instr = searchInstrs_[pos];
-                        if (auto binOp = dynamic_cast<BinOp*>(instr)){
-                            if(binOp->lhs() == searchInstrs_[neighPos]){
-                                auto res = colorPickingSemiResult_.find(neighPos);
-                                if(res != colorPickingSemiResult_.end()){
-                                    OK = true;
-                                    availableColor = res->second;
-                                    break;
-                                }
-                            }
-                        }else if (auto unOp = dynamic_cast<UnOp*>(instr)){
-                            if(unOp->operand() == searchInstrs_[neighPos]){
-                                auto res = colorPickingSemiResult_.find(neighPos);
-                                if(res != colorPickingSemiResult_.end()){
-                                    OK = true;
-                                    availableColor = res->second;
-                                    break;
-                                }
-                            }
-                        }else if (auto trunc = dynamic_cast<Truncate*>(instr)){
-                            if(trunc->src() == searchInstrs_[neighPos]){
-                                auto res = colorPickingSemiResult_.find(neighPos);
-                                if(res != colorPickingSemiResult_.end()){
-                                    OK = true;
-                                    availableColor = res->second;
-                                    break;
-                                }
-                            }
-                        }else if (auto extend = dynamic_cast<Extend*>(instr)){
-                            if(extend->src() == searchInstrs_[neighPos]){
-                                auto res = colorPickingSemiResult_.find(neighPos);
-                                if(res != colorPickingSemiResult_.end()){
-                                    OK = true;
-                                    availableColor = res->second;
-                                    break;
-                                }
-                            }
-                        }else if (auto copy = dynamic_cast<Copy*>(instr)){
-                            if(copy->src() == searchInstrs_[neighPos]){
-                                auto res = colorPickingSemiResult_.find(neighPos);
-                                if(res != colorPickingSemiResult_.end()){
-                                    OK = true;
-                                    availableColor = res->second;
-                                    break;
-                                }
-                            }
-                        }else {
-                            //TODO fill other two address insrtuction -- to repeat register as first argument
-                        }
-                    }
+//                    if(twoAddress){
+//                        auto instr = searchInstrs_[pos];
+//                        if (auto binOp = dynamic_cast<BinOp*>(instr)){
+//                            if(binOp->lhs() == searchInstrs_[neighPos]){
+//                                auto res = colorPickingSemiResult_.find(neighPos);
+//                                if(res != colorPickingSemiResult_.end()){
+//                                    OK = true;
+//                                    availableColor = res->second;
+//                                    break;
+//                                }
+//                            }
+//                        }else if (auto unOp = dynamic_cast<UnOp*>(instr)){
+//                            if(unOp->operand() == searchInstrs_[neighPos]){
+//                                auto res = colorPickingSemiResult_.find(neighPos);
+//                                if(res != colorPickingSemiResult_.end()){
+//                                    OK = true;
+//                                    availableColor = res->second;
+//                                    break;
+//                                }
+//                            }
+//                        }else if (auto trunc = dynamic_cast<Truncate*>(instr)){
+//                            if(trunc->src() == searchInstrs_[neighPos]){
+//                                auto res = colorPickingSemiResult_.find(neighPos);
+//                                if(res != colorPickingSemiResult_.end()){
+//                                    OK = true;
+//                                    availableColor = res->second;
+//                                    break;
+//                                }
+//                            }
+//                        }else if (auto extend = dynamic_cast<Extend*>(instr)){
+//                            if(extend->src() == searchInstrs_[neighPos]){
+//                                auto res = colorPickingSemiResult_.find(neighPos);
+//                                if(res != colorPickingSemiResult_.end()){
+//                                    OK = true;
+//                                    availableColor = res->second;
+//                                    break;
+//                                }
+//                            }
+//                        }else if (auto copy = dynamic_cast<Copy*>(instr)){
+//                            if(copy->src() == searchInstrs_[neighPos]){
+//                                auto res = colorPickingSemiResult_.find(neighPos);
+//                                if(res != colorPickingSemiResult_.end()){
+//                                    OK = true;
+//                                    availableColor = res->second;
+//                                    break;
+//                                }
+//                            }
+//                        }else {
+//                            //TODO fill other two address insrtuction -- to repeat register as first argument
+//                        }
+//                    }
                     if(  it != colorPickingSemiResult_.end() &&
                         it->second == availableColor){
                         OK = false;
@@ -245,14 +245,19 @@ namespace tvlm {
                 }
             }
 
-
-            colorPickingResult_.emplace(searchInstrs_[pos], availableColor);
+            for (auto instr : searchInstrs_[pos]) {
+                colorPickingResult_.emplace(instr, availableColor);
+            }
             colorPickingSemiResult_.emplace(pos, availableColor);
         }
     return true;
     }
 
 
+
+    void ColoringAllocator::getLRBundles() {
+
+    }
 
     bool ColoringAllocator::generateLiveRanges() {
         //return true <=> run successful no more repeats needed
@@ -264,7 +269,7 @@ namespace tvlm {
 //        this->colorPickingResult_.clear();
 
         size_t colors = this->freeReg_.size() -1;
-        bool spill = false;
+        programChanged_ = false;
 
 //        for (auto & t : analysisResult_) { // step -> for each cfgNode TODO go by cfg_
 //
@@ -314,31 +319,52 @@ namespace tvlm {
 //            }
 //
 //        }
-        LRincidence_.resize(analysisResult_.size());
-        LRincidence.resize(analysisResult_.size());
+        LRincidence_.resize(liveRanges_.size());
+        LRincidence.resize(liveRanges_.size());
         for (auto & t : analysisResult_) { // step -> for each cfgNode TODO go by cfg_
 
 
+//
+//            if(auto ins = dynamic_cast<tvlm::Instruction*>(t.first->il())){
+//                auto lrPos = searchRanges_.find(ins);
+//                if(ins->resultType() != ResultType::Void && lrPos == searchRanges_.end()){
+//                    throw "[Coloring Allocator.cpp] cannot find Range for instruction";
+//                }
+//                    for (auto * LR : t.second) {
+//                        auto otherPos = lrIndex_.find(LR);
+//                        if(otherPos == lrIndex_.end()){
+//                            throw "[Coloring Allocator.cpp] cannot find index for liveRange -- probably not registered";
+//                        }
+//                        LRincidence_[lrPos->second].emplace(otherPos->second);
+//                        LRincidence_[otherPos->second].emplace(lrPos->second);
+//                        LRincidence[lrPos->second].emplace(otherPos->second);
+//                        LRincidence[otherPos->second].emplace(lrPos->second);
+//
+//                    }
+//
+//
+//            }
+            std::vector<CLiveRange*> tmpVector(t.second.begin(), t.second.end());
 
-            if(auto ins = dynamic_cast<tvlm::Instruction*>(t.first->il())){
-                auto lrPos = searchRanges_.find(ins);
-                if(lrPos == searchRanges_.end()){
-                    throw "[Coloring Allocator.cpp] cannot find Range for instruction";
-                }
-                for (auto * LR : t.second) {
-                    auto otherPos = lrIndex_.find(LR);
-                    if(otherPos == lrIndex_.end()){
-                        throw "[Coloring Allocator.cpp] cannot find index for liveRange -- probably not registered";
+            for ( size_t i = 0 ; i < tmpVector.size();i++) {
+                for (size_t j = i +1 ; j < tmpVector.size();j++){
+                    auto lr1 = tmpVector[i];
+                    auto lr2 = tmpVector[j];
+                    auto lr1Pos = lrIndex_.find(lr2);
+                    auto lr2Pos = lrIndex_.find(lr1);
+                    if(lr1Pos == lrIndex_.end()){
+                        throw STR( "[Coloring Allocator.cpp] cannot find index for liveRange lr1-- probably not registered " << lr1->il().size() << " with " << lr1->start());
                     }
-                    LRincidence_[lrPos->second].emplace(otherPos->second);
-                    LRincidence_[otherPos->second].emplace(lrPos->second);
-                    LRincidence[lrPos->second].emplace(otherPos->second);
-                    LRincidence[otherPos->second].emplace(lrPos->second);
+                    if(lr2Pos == lrIndex_.end()){
+                        throw STR( "[Coloring Allocator.cpp] cannot find index for liveRange lr2 -- probably not registered " << lr2->il().size() << " with " << lr2->start());
+                    }
+                    LRincidence_[lr1Pos->second].emplace(lr2Pos->second);
+                    LRincidence[lr1Pos->second].emplace(lr2Pos->second);
+                    LRincidence_[lr2Pos->second].emplace(lr1Pos->second);
+                    LRincidence[lr2Pos->second].emplace(lr1Pos->second);
 
                 }
-
             }
-
 
 
         }
@@ -359,9 +385,9 @@ namespace tvlm {
                     //remove from incidence and push to stack
                     colorPickingStack_.push(i);
                     //remove
-                    for (auto & k : LRincidence) {
-                        k.erase(i);
-                    }
+//                    for (auto & k : LRincidence) {
+//                        k.erase(i);
+//                    }
                     LRincidence[i].clear();
 //                    colors--;
                 }
@@ -377,7 +403,7 @@ namespace tvlm {
                 size_t selected = 0;
                 size_t max = 0;
                 for( size_t i = 0;i < LRincidence.size();i++){
-                        if(LRincidence[i].size() > max){
+                        if(LRincidence[i].size() > max){// spill the node with the biggest degree
                             selected = i;
                             max = LRincidence[i].size();
                             if(max >  colors ){
@@ -389,43 +415,46 @@ namespace tvlm {
 //                spillIndexes_.emplace( selected, 0); // TODO find spill place
                 // ***********************  spilling *******************************
                 programChanged_ = true;
+                for (auto instrToSpill : searchInstrs_[selected]) {
 
-                Instruction * instr  = dynamic_cast<Instruction *>(searchInstrs_[selected]);
-                Instruction * alloc;
-                if(instr == nullptr){
-                    throw "[ColoringAllocator] - generateLiveRanges - trying to spill Function/BB ...";
-                }
-                BasicBlock *  bb = instr->getParentBB();
-
-                switch(instr->resultType()){
-
-                    case ResultType::Double:
-                    case ResultType::Integer:
-                    case ResultType::StructAddress:{
-
-                        //spilling IntegerTypeRegister
-
-                        alloc = bb->inject(new AllocL( Type::Integer().size(), instr->ast()  ));//begining of BB
-                        alloc->setName(STR("inject " << instr->name() ));
-
-
-                        for(auto * u : instr->usages()){
-                            BasicBlock * bbu = u->getParentBB();
-                            Instruction * newLoad = bbu->injectBefore(new Load(alloc,instr->resultType(), instr->ast()), u);
-                            u->replaceWith(instr, newLoad);
-                            newLoad->setName(STR(newLoad->name() << " by " << instr->name() ));
-
-                        }
-
-                        auto * nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
-                        nStore->setName(STR(nStore->name() << " by " << instr->name() ));
-
-
-                        break;
+                    Instruction *instr = dynamic_cast<Instruction *>(instrToSpill);
+                    Instruction *alloc;
+                    if (instr == nullptr) {
+                        throw "[ColoringAllocator] - generateLiveRanges - trying to spill Function/BB ...";
                     }
-                    default:
-                        throw "[Coloring Allocator] wrong case of ResultType for spilling";
-                        break;
+                    BasicBlock *bb = instr->getParentBB();
+
+                    switch (instr->resultType()) {
+
+                        case ResultType::Double:
+                        case ResultType::Integer:
+                        case ResultType::StructAddress: {
+
+                            //spilling IntegerTypeRegister
+
+                            alloc = bb->inject(new AllocL(Type::Integer().size(), instr->ast()));//begining of BB
+                            alloc->setName(STR("inject " << instr->name()));
+
+
+                            for (auto *u: instr->usages()) {
+                                BasicBlock *bbu = u->getParentBB();
+                                Instruction *newLoad = bbu->injectBefore(
+                                        new Load(alloc, instr->resultType(), instr->ast()), u);
+                                u->replaceWith(instr, newLoad);
+                                newLoad->setName(STR(newLoad->name() << " by " << instr->name()));
+
+                            }
+
+                            auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
+                            nStore->setName(STR(nStore->name() << " by " << instr->name()));
+
+
+                            break;
+                        }
+                        default:
+                            throw "[Coloring Allocator] wrong case of ResultType for spilling";
+                            break;
+                    }
                 }
 
                 //remove from graph
@@ -447,12 +476,14 @@ namespace tvlm {
     }
 
     void ColoringAllocator::addLR(std::unique_ptr<CLiveRange> && lr) {
-        searchRanges_.emplace(std::make_pair(lr->start(), liveRanges_.size()));
-        lrIndex_.emplace(std::make_pair(lr.get(), liveRanges_.size()));
-        if(auto instr = dynamic_cast<Instruction *>(lr->start())){
-//            searchInstrs_.resize(liveRanges_.size()+1);
-            searchInstrs_[liveRanges_.size()] = instr;
+        for(auto il : lr->il()){
+            if(auto ins = dynamic_cast<Instruction *>(il)) {
+                searchRanges_.emplace(ins, liveRanges_.size());
+                searchInstrs_[liveRanges_.size()].emplace( ins);
+
+            }
         }
+        lrIndex_.emplace(lr.get(), liveRanges_.size());
         liveRanges_.push_back(std::move(lr));
     }
 }

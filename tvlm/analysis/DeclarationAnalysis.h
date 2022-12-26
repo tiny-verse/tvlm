@@ -16,6 +16,7 @@ namespace tvlm{
         }
 
         void begin(IL * ins){
+            result_.clear();
             ILVisitor::visitChild(ins);
         }
     protected:

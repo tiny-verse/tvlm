@@ -21,7 +21,6 @@ namespace tvlm{
     class Function;
     class ILVisitor;
     class ILBuilder;
-
     class Program;
 
 #include "il_insns_predeclare.h"

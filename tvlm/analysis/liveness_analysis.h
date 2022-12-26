@@ -70,16 +70,15 @@ namespace tvlm{
     template<class I>
     typename LivenessAnalysis<I>::NodeState
     LivenessAnalysis<I>::transferFun(const CfgNode<I> *node, const LivenessAnalysis::NodeState &state){
-        if(dynamic_cast<const CfgFunEntryNode<I> *>(node)){
+        if(auto tmp = dynamic_cast<const CfgFunEntryNode<I> *>(node)){
             return state;
-        }else if (dynamic_cast<const CfgFunExitNode<I> *>(node)){
+        }else if (auto tmp1 = dynamic_cast<const CfgFunExitNode<I> *>(node)){
 
             return nodeLattice_.bot();
-        }else if (dynamic_cast<const CfgGlobExitNode<I> *>(node)){
+        }else if (auto tmp2 = dynamic_cast<const CfgGlobExitNode<I> *>(node)){
 
             return state;
-        }else if(dynamic_cast<const CfgStmtNode<I> *>(node)){
-            auto * stmtNode = dynamic_cast<const CfgStmtNode<I> *>(node);
+        }else if(auto * stmtNode = dynamic_cast<const CfgStmtNode<I> *>(node)){
             auto instr = dynamic_cast<ILInstruction *>(stmtNode->il());
             if(instr){ //TODO rules to add and remove from states
 

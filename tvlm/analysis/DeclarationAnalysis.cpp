@@ -201,7 +201,7 @@ void tvlm::DeclarationAnalysis::visit(tvlm::GetChar *ins) {
 void tvlm::DeclarationAnalysis::visit(tvlm::Load *ins) {
 
     if(!dynamic_cast<AllocL*>(ins->address()) && !dynamic_cast<AllocG*>(ins->address()) ){
-        // is Alloc .. ignore
+        // is Alloc .. ignore -> can be counted at use, does not need to be alive
         result_.insert(ins->address());
     }
     result_.insert(ins);

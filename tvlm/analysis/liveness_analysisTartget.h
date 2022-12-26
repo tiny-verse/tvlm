@@ -10,16 +10,36 @@
 
 class CLiveRange {
     using IL = ::tvlm::IL;
+protected:
+    CLiveRange(const std::set<IL *>& il, IL * start, IL * end):
+            il_(il),
+            start_(start),
+            end_(end){
+
+    }
 public:
     CLiveRange(Instruction * il, IL * end):
-            il_({il}),
-            start_(end),
-            end_(end){
+    il_({il}),
+    start_(end),
+    end_(end){
 
     }
 
     void add(Instruction * in) {
         il_.emplace(in);
+    }
+
+    CLiveRange * merge( CLiveRange * other) { // always care for merge order
+        il_.merge( other->il_);
+        start_ = other->start_;
+
+        //just to be safe
+        other->start_ = start_;
+        other->end_ = end_;
+        other->il_ = il_;
+        //
+
+        return this;
     }
 
     void setStart(IL *start){
@@ -43,6 +63,7 @@ private:
     IL * start_;
     IL * end_;
 };
+
 
 //class CliveRangeComparator{
 //public:
@@ -92,22 +113,24 @@ namespace tvlm{
         }
         explicit ColoringLiveAnalysis(TargetProgram * p);
         CLiveVars<Info> analyze() override;
-        std::vector<CLiveRange*> & getLiveRanges(){
-            return allocatedLR_;
+        std::vector<CLiveRange*> getLiveRanges(){
+            return std::vector<CLiveRange*>(allocatedLR_.begin(), allocatedLR_.end());
         }
 
         std::map<const CfgNode<Info>*, const Instruction *>instr_mapping(){
             return instr_mapping_;
         };
     private:
-        std::vector<CLiveRange*> allocatedLR_;
+        std::set<CLiveRange*> allocatedLR_;
         std::map<const CfgNode<Info>*, const Instruction *>instr_mapping_;
         std::map<const IL*, CLiveRange *> varMaps_;
+        std::map<CLiveRange *, CLiveRange *> deletedLR_; // delete key, replaced with value
         NodeState allVars_;
         CPowersetLattice<CLiveRange*> nodeLattice_;
         MapLattice<const CfgNode<Info> *, NodeState> lattice_;
         ProgramCfg<Info> * cfg_;
         TargetProgram * program_;
+        DeclarationAnalysis declAnalysis_;
 
     };
 //************************************************************************************************************
@@ -120,16 +143,21 @@ namespace tvlm{
 
     template<class I>
     std::set<CLiveRange*> ColoringLiveAnalysis<I>::getSubtree(const CfgNode<I> *node) {
-        DeclarationAnalysis v(getProgram(program_));
+//        DeclarationAnalysis v(getProgram(program_));
         std::set<CLiveRange*> res;
-        v.begin(node->il());
-        auto children = v.result();
+        declAnalysis_.begin(node->il());
+        auto children = declAnalysis_.result();
+        children.erase(node->il());
         for (const auto * ch : children) {
             auto lr = varMaps_.find(ch);
             if(lr != varMaps_.end()){
                    lr->second->setEnd(node->il());
                    res.emplace(lr->second);
             }
+        }
+        auto lr = varMaps_.find(node->il());
+        if(lr != varMaps_.end()){
+            res.emplace(lr->second);
         }
         return res;
     }
@@ -139,10 +167,10 @@ namespace tvlm{
     ColoringLiveAnalysis<I>::transferFun(const CfgNode<I> *node, const ColoringLiveAnalysis::NodeState &state){
         if(dynamic_cast<const CfgFunExitNode<I> *>(node)){
             return nodeLattice_.bot();
-        }else if (dynamic_cast<const CfgGlobExitNode<I> *>(node)){
+        }else if (auto gext = dynamic_cast<const CfgGlobExitNode<I> *>(node)){
 
             return state;
-        }else if(dynamic_cast<const CfgStmtNode<I> *>(node)){
+        }else if(auto stmt = dynamic_cast<const CfgStmtNode<I> *>(node)){
             auto * stmtNode = dynamic_cast<const CfgStmtNode<I> *>(node);
             auto instr = dynamic_cast<ILInstruction *>(stmtNode->il());
             if(instr){ //TODO rules to add and remove from states
@@ -186,6 +214,13 @@ namespace tvlm{
                             newState.erase(r);
                         }
                     }
+//                    auto valInstr  = varMaps_.find(store->value());
+//                    if(valInstr != varMaps_.end()){
+//                        newState.erase(valInstr->second);
+//                    }else{
+//                        throw "[LivenessAnalysis Target] cannot find value of instruction in live ranges";
+//                    }
+
                     return newState;
                 }else if (dynamic_cast<Load *>(stmtNode->il())){
                     auto newState = state;
@@ -282,58 +317,102 @@ namespace tvlm{
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<Extend *>(stmtNode->il())){
+                }else if (auto extend = dynamic_cast<Extend *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
-                    if(res!=varMaps_.end()){
-                        auto r = newState.find(res->second);
-                        if(r != newState.end()) {
-                            newState.erase(r);
+                    auto operand = varMaps_.find(extend->src());
+                    if(operand != varMaps_.end() && res!=varMaps_.end()){
+                        auto operandLR = newState.find(operand->second);
+                        if(operandLR != newState.end()) {
+                            //live range of LHS merged, so it has to be removed from newState
+                            newState.erase(operandLR);
                         }
+                        auto newAddressLR = res->second->merge(operand->second);
+                        deletedLR_.emplace(operand->second, newAddressLR);
+                        varMaps_.insert_or_assign(extend->src(), newAddressLR);
+                        varMaps_.insert_or_assign(extend, newAddressLR);
+//                        auto r = newState.find(res->second);
+//                        if(r != newState.end()) {
+//                            newState.erase(r);
+//                        }
                     }
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<Truncate *>(stmtNode->il())){
+                }else if (auto trunc = dynamic_cast<Truncate *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
-                    if(res!=varMaps_.end()){
-                        auto r = newState.find(res->second);
-                        if(r != newState.end()) {
-                            newState.erase(r);
+                    auto operand = varMaps_.find(trunc->src());
+                    if(operand != varMaps_.end() && res!=varMaps_.end()){
+                        auto operandLR = newState.find(operand->second);
+                        if(operandLR != newState.end()) {
+                            //live range of LHS merged, so it has to be removed from newState
+                            newState.erase(operandLR);
                         }
+                        auto newAddressLR = res->second->merge(operand->second);
+                        deletedLR_.emplace(operand->second, newAddressLR);
+                        varMaps_.insert_or_assign(trunc->src(), newAddressLR);
+                        varMaps_.insert_or_assign(trunc, newAddressLR);
+//                        auto r = newState.find(res->second);
+//                        if(r != newState.end()) {
+//                            newState.erase(r);
+//                        }
                     }
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<BinOp *>(stmtNode->il())){
+                }else if (auto binop = dynamic_cast<BinOp *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
-                    auto res = varMaps_.find(node->il());
-                    if(res!=varMaps_.end()){
-                        auto r = newState.find(res->second);
-                        if(r != newState.end()) {
-                            newState.erase(r);
+                    auto lhs = varMaps_.find(binop->lhs());
+                    auto res = varMaps_.find(binop);
+                    if(lhs != varMaps_.end() && res!=varMaps_.end() ){
+                        auto lhsLR = newState.find(lhs->second);
+                        if(lhs->second != res->second){
+                            if(lhsLR != newState.end()) {
+                                //live range of LHS merged, so it has to be removed from newState
+                                // instead there will be extended/merged LR
+                                newState.erase(lhsLR);
+                            }
+                            auto newAddressLR = res->second->merge(lhs->second);
+                            assert(newAddressLR == res->second);
+                            deletedLR_.emplace(lhs->second, newAddressLR);
                         }
+                        newState.emplace(res->second);
+                        varMaps_.insert_or_assign(binop->lhs(), res->second);
+                        varMaps_.insert_or_assign(binop, res->second);
+                    }else{
+                        throw "[Liveness Analysis] cant find instruction in VarMaps";
                     }
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<UnOp *>(stmtNode->il())){
+                }else if (auto unop = dynamic_cast<UnOp *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
+                    auto operand = varMaps_.find(unop->operand());
                     auto res = varMaps_.find(node->il());
-                    if(res!=varMaps_.end()){
-                        auto r = newState.find(res->second);
-                        if(r != newState.end()) {
-                            newState.erase(r);
+
+                    if(operand != varMaps_.end() &&res!=varMaps_.end()){
+                        auto operandLR = newState.find(operand->second);
+                        if(operandLR != newState.end()) {
+                            //live range of LHS merged, so it has to be removed from newState
+                            newState.erase(operandLR);
                         }
+                        auto newAddressLR = res->second->merge(operand->second);
+                        deletedLR_.emplace(operand->second, newAddressLR);
+                        varMaps_.insert_or_assign(unop->operand(), newAddressLR);
+                        varMaps_.insert_or_assign(unop, newAddressLR);
+//                        auto r = newState.find(res->second);
+//                        if(r != newState.end()) {
+//                            newState.erase(r);
+//                        }
                     }
                     return newState;
 
@@ -471,6 +550,18 @@ namespace tvlm{
             }
         }
 
+        for (auto dlr : deletedLR_) {
+            allocatedLR_.erase(dlr.first);
+
+//            for (auto & x : X) {
+//                auto foundDel= x.second.find(dlr.first);
+//                if( foundDel != x.second.end()){
+//                    x.second.erase(foundDel);
+//                    x.second.emplace(dlr.second);
+//                }
+//            }
+            delete dlr.first;
+        }
         return std::move(X);
     }
 
@@ -499,11 +590,13 @@ namespace tvlm{
             ,allVars_([&](){
                 std::set< CLiveRange*> tmp;
                 for ( auto & n : cfg->nodes()){
-                    if(auto t = dynamic_cast<Instruction *>(n->il())){
-                        auto lr = new CLiveRange(t, t);
-                        allocatedLR_.push_back(lr);
-                        tmp.emplace(lr);
-                        varMaps_.emplace(n->il(), lr);
+                    if(auto t = dynamic_cast<Instruction *>(n->il()) ){
+                        if(t->resultType() != ResultType::Void){
+                            auto lr = new CLiveRange(t, t);
+                            allocatedLR_.emplace(lr);
+                            tmp.emplace(lr);
+                            varMaps_.emplace(n->il(), lr);
+                        }
                     }
                 }
                 return tmp;
@@ -512,7 +605,8 @@ namespace tvlm{
             nodeLattice_(CPowersetLattice<CLiveRange*>(allVars_)),
             lattice_(MapLattice<const CfgNode<Info>*, std::set<CLiveRange*>>(cfg->nodes(), &nodeLattice_)),
     cfg_(cfg),
-    program_(program){
+    program_(program),
+    declAnalysis_(getProgram(program_)){
 
     }
 } //namespace tvlm
