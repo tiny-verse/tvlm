@@ -248,6 +248,10 @@ namespace tvlm {
             globalTableAddress_.emplace(std::make_pair(ins, val));
         }
 
+        void registerPlain(const ILInstruction * ins){
+            alocatedRegisters_[ins];
+        }
+
         size_t registerAdd(const ILInstruction * instr, VirtualRegisterPlaceholder && virt){
             auto it = alocatedRegisters_.find(instr);
             if(it == alocatedRegisters_.end()){

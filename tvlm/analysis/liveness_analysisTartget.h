@@ -30,7 +30,9 @@ public:
     }
 
     CLiveRange * merge( CLiveRange * other) { // always care for merge order
-        il_.merge( other->il_);
+        if(il_ != other->il_){
+            il_.merge( other->il_);
+        }
         start_ = other->start_;
 
         //just to be safe
@@ -104,6 +106,7 @@ namespace tvlm{
 
         NodeState transferFun(const CfgNode<Info> * node, const  NodeState & state );
 
+        void combineLR( NodeState & newState, Instruction * ins, Instruction * otherIns);
 
         NodeState funOne(const CfgNode<Info> * node, CLiveVars<Info> & state);
     public:
@@ -161,6 +164,29 @@ namespace tvlm{
         }
         return res;
     }
+
+    template<class I>
+    void ColoringLiveAnalysis<I>::combineLR( ColoringLiveAnalysis<I>::NodeState & newState, Instruction * ins, Instruction * otherIns){
+        auto res = varMaps_.find(ins);
+        auto operand = varMaps_.find(otherIns);
+        if(operand != varMaps_.end() && res!=varMaps_.end()){
+            auto operandLR = newState.find(operand->second);
+            if(operand->second != res->second){
+                if(operandLR != newState.end()) {
+                    //live range of LHS merged, so it has to be removed from newState
+                    // instead there will be extended/merged LR
+                    newState.erase(operandLR);
+                }
+                auto newAddressLR = res->second->merge(operand->second);
+                assert(newAddressLR == res->second);
+                deletedLR_.emplace(operand->second, newAddressLR);
+            }
+            newState.emplace(res->second);
+            varMaps_.insert_or_assign(otherIns, res->second);
+            varMaps_.insert_or_assign(ins, res->second);
+        }
+    }
+
 
     template<class I>
     typename ColoringLiveAnalysis<I>::NodeState
@@ -222,18 +248,24 @@ namespace tvlm{
 //                    }
 
                     return newState;
-                }else if (dynamic_cast<Load *>(stmtNode->il())){
+                }else if (auto load = dynamic_cast<Load *>(stmtNode->il())){
                     auto newState = state;
-                    std::set<CLiveRange*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
-                    auto res = varMaps_.find(node->il());
-                    if(res!=varMaps_.end()){
-                        auto r = newState.find(res->second);
-                        if(r != newState.end()) {
-                            newState.erase(r);
+                    if(load->resultType() != ResultType::StructAddress){
+                        std::set<CLiveRange*> children = getSubtree(node);
+                        newState.insert(children.begin(), children.end());
+                        auto res = varMaps_.find(node->il());
+                        if(res!=varMaps_.end()){
+                            auto r = newState.find(res->second);
+                            if(r != newState.end()) {
+                                newState.erase(r);
+                            }
                         }
+                        return newState;
+                    }else{
+                        std::set<CLiveRange*> children = getSubtree(node);
+                        newState.insert(children.begin(), children.end());
+                        combineLR(newState, load, load->address());
                     }
-                    return newState;
                 }else if (dynamic_cast<LoadImm *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
@@ -303,7 +335,7 @@ namespace tvlm{
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<Copy *>(stmtNode->il())){
+                }else if (auto copy = dynamic_cast<Copy *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
@@ -322,22 +354,12 @@ namespace tvlm{
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
-                    auto operand = varMaps_.find(extend->src());
-                    if(operand != varMaps_.end() && res!=varMaps_.end()){
-                        auto operandLR = newState.find(operand->second);
-                        if(operandLR != newState.end()) {
-                            //live range of LHS merged, so it has to be removed from newState
-                            newState.erase(operandLR);
+
+                        auto r = newState.find(res->second);
+                        if(r != newState.end()) {
+                            newState.erase(r);
                         }
-                        auto newAddressLR = res->second->merge(operand->second);
-                        deletedLR_.emplace(operand->second, newAddressLR);
-                        varMaps_.insert_or_assign(extend->src(), newAddressLR);
-                        varMaps_.insert_or_assign(extend, newAddressLR);
-//                        auto r = newState.find(res->second);
-//                        if(r != newState.end()) {
-//                            newState.erase(r);
-//                        }
-                    }
+
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
@@ -346,22 +368,12 @@ namespace tvlm{
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
-                    auto operand = varMaps_.find(trunc->src());
-                    if(operand != varMaps_.end() && res!=varMaps_.end()){
-                        auto operandLR = newState.find(operand->second);
-                        if(operandLR != newState.end()) {
-                            //live range of LHS merged, so it has to be removed from newState
-                            newState.erase(operandLR);
+
+                        auto r = newState.find(res->second);
+                        if(r != newState.end()) {
+                            newState.erase(r);
                         }
-                        auto newAddressLR = res->second->merge(operand->second);
-                        deletedLR_.emplace(operand->second, newAddressLR);
-                        varMaps_.insert_or_assign(trunc->src(), newAddressLR);
-                        varMaps_.insert_or_assign(trunc, newAddressLR);
-//                        auto r = newState.find(res->second);
-//                        if(r != newState.end()) {
-//                            newState.erase(r);
-//                        }
-                    }
+
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
@@ -369,26 +381,27 @@ namespace tvlm{
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
-                    auto lhs = varMaps_.find(binop->lhs());
-                    auto res = varMaps_.find(binop);
-                    if(lhs != varMaps_.end() && res!=varMaps_.end() ){
-                        auto lhsLR = newState.find(lhs->second);
-                        if(lhs->second != res->second){
-                            if(lhsLR != newState.end()) {
-                                //live range of LHS merged, so it has to be removed from newState
-                                // instead there will be extended/merged LR
-                                newState.erase(lhsLR);
-                            }
-                            auto newAddressLR = res->second->merge(lhs->second);
-                            assert(newAddressLR == res->second);
-                            deletedLR_.emplace(lhs->second, newAddressLR);
-                        }
-                        newState.emplace(res->second);
-                        varMaps_.insert_or_assign(binop->lhs(), res->second);
-                        varMaps_.insert_or_assign(binop, res->second);
-                    }else{
-                        throw "[Liveness Analysis] cant find instruction in VarMaps";
-                    }
+                    combineLR(newState, binop, binop->lhs());
+//                    auto lhs = varMaps_.find(binop->lhs());
+//                    auto res = varMaps_.find(binop);
+//                    if(lhs != varMaps_.end() && res!=varMaps_.end() ){
+//                        auto lhsLR = newState.find(lhs->second);
+//                        if(lhs->second != res->second){
+//                            if(lhsLR != newState.end()) {
+//                                //live range of LHS merged, so it has to be removed from newState
+//                                // instead there will be extended/merged LR
+//                                newState.erase(lhsLR);
+//                            }
+//                            auto newAddressLR = res->second->merge(lhs->second);
+//                            assert(newAddressLR == res->second);
+//                            deletedLR_.emplace(lhs->second, newAddressLR);
+//                        }
+//                        newState.emplace(res->second);
+//                        varMaps_.insert_or_assign(binop->lhs(), res->second);
+//                        varMaps_.insert_or_assign(binop, res->second);
+//                    }else{
+//                        throw "[Liveness Analysis] cant find instruction in VarMaps";
+//                    }
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
@@ -396,24 +409,29 @@ namespace tvlm{
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
-                    auto operand = varMaps_.find(unop->operand());
-                    auto res = varMaps_.find(node->il());
 
-                    if(operand != varMaps_.end() &&res!=varMaps_.end()){
-                        auto operandLR = newState.find(operand->second);
-                        if(operandLR != newState.end()) {
-                            //live range of LHS merged, so it has to be removed from newState
-                            newState.erase(operandLR);
-                        }
-                        auto newAddressLR = res->second->merge(operand->second);
-                        deletedLR_.emplace(operand->second, newAddressLR);
-                        varMaps_.insert_or_assign(unop->operand(), newAddressLR);
-                        varMaps_.insert_or_assign(unop, newAddressLR);
-//                        auto r = newState.find(res->second);
-//                        if(r != newState.end()) {
-//                            newState.erase(r);
+                    combineLR(newState, unop, unop->operand());
+//                    auto operand = varMaps_.find(unop->operand());
+//                    auto res = varMaps_.find(node->il());
+//
+//                    if(operand != varMaps_.end() &&res!=varMaps_.end()){
+//                        auto operandLR = newState.find(operand->second);
+//                        if(operand->second != res->second) {
+//                            if (operandLR != newState.end()) {
+//                                //live range of LHS merged, so it has to be removed from newState
+//                                newState.erase(operandLR);
+//                            }
+//                            auto newAddressLR = res->second->merge(operand->second);
+//                            assert(newAddressLR == res->second);
+//                            deletedLR_.emplace(operand->second, newAddressLR);
 //                        }
-                    }
+//                        varMaps_.insert_or_assign(unop->operand(), res->second);
+//                        varMaps_.insert_or_assign(unop, res->second);
+////                        auto r = newState.find(res->second);
+////                        if(r != newState.end()) {
+////                            newState.erase(r);
+////                        }
+//                    }
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis

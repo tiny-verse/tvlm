@@ -378,7 +378,7 @@ private:
         auto ptr = single(entry);
         fncexit_ = single(exit);
         auto blockCfg = fromBB(CfgBuilder<T>::getBBs(fnc)[0].get());
-        FragmentCfg<T> * cfg = ptr->concat(blockCfg)->concat(fncexit_);
+        FragmentCfg<T> * cfg = ptr->concat(blockCfg);//->concat(fncexit_); // exit appended by return
         append(cfg);
 //        for (auto & e: allNodes) {
 //            fncCfg->addNode(e.release());
@@ -395,8 +395,7 @@ private:
     template<class T>
     FragmentCfg<T> *tvlm::IntraProceduralCfgBuilder<T>::fromInstruction(tvlm::ILInstruction *ins) {
 
-        if(dynamic_cast<::tvlm::CondJump *>(ins)) {
-            ::tvlm::CondJump * condJump = dynamic_cast<::tvlm::CondJump*>(ins);
+        if(auto condJump = dynamic_cast<::tvlm::CondJump *>(ins)) {
             auto guardCfg = single(makeStmtNode(condJump));
             auto guardedThenCfg = append(guardCfg->concat(append(fromBB(condJump->getTarget(1)))));
             if(condJump->numTargets() == 2){
@@ -404,14 +403,12 @@ private:
                 return append(*guardedThenCfg | guardedElseCfg);
             }
             return append( *guardedThenCfg | guardCfg);
-        } else if (dynamic_cast<::tvlm::Jump *>(ins)){
-            auto * jmp = dynamic_cast<::tvlm::Jump*>(ins);
+        } else if (auto jmp = dynamic_cast<::tvlm::Jump *>(ins)){
             auto jmpFrag = single(makeStmtNode(jmp));
 
             auto dest  = fromBB(jmp->getTarget(1));
             return append(jmpFrag->concat(dest));
-        }else if (dynamic_cast<::tvlm::Return *>(ins)){
-            auto * ret = dynamic_cast<::tvlm::Return*>(ins);
+        }else if (auto ret = dynamic_cast<::tvlm::Return *>(ins)){
             auto retFrag = single(makeStmtNode(ret));
             auto dest  = fncexit_;
             return append(retFrag->concat(dest));

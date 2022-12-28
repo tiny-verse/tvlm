@@ -8,6 +8,7 @@
 #include "t86/program/helpers.h"
 
 #include "tvlm/codeGeneration/FunctionalMacro.h"
+#include "common/config.h"
 
 namespace  tvlm{
 
@@ -24,7 +25,7 @@ namespace  tvlm{
 
 //        tvlm::ProgramBuilderOLD pb_;
     // /*
-        bool hardDBG_ = true;
+        bool hardDBG_;
     /*/
         bool hardDBG_ = false;/**/
 
@@ -136,6 +137,10 @@ namespace  tvlm{
             auto ret = program_.addF(instruction, ins);
 
             return ret;
+        }
+
+        void withoutRegVariant(const Instruction * ins){
+            program_.registerPlain(ins);
         }
 
         size_t getReg(const Instruction * ins, const Instruction * me){

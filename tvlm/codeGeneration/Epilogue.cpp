@@ -348,8 +348,8 @@ namespace tvlm{
         auto & selected = getSelectedInstrs(program_);
         auto it = selected.find(ins);
         if(it == selected.end()){
-            return Label::empty();
             throw "instruction not compiled";
+            return Label::empty();
         }
         return pb_.add(it->second, ins);
 
@@ -358,8 +358,10 @@ namespace tvlm{
     Label NaiveEpilogue::compiledGlobalTable(BasicBlock *globals) {
         Label tmp = pb_.currentLabel();
         for (auto * ins : getBBsInstructions(globals)) {
-            add(ins);
+//            add(ins);
+            visitChild(ins);
         }
+
         return tmp;
     }
 

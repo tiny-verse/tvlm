@@ -22,9 +22,9 @@ namespace tvlm{
     void RegisterAllocator::visit(Return *ins) {
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         if(ins->returnType()->registerType() == ResultType::StructAddress){
-
+            //TODO
         } else if (ins->returnType()->registerType() == ResultType::Double){
-
+            writingPos_= 0;setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
         }else if (ins->returnType()->registerType() == ResultType::Integer){
             writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
 
@@ -521,7 +521,7 @@ namespace tvlm{
 //                auto reg = getReg(ins, ins);
                 auto virtRegs = getAllocatedVirtualRegisters(ins);
                 writingPos_= 0;
-                setupRegister(((*virtRegs)[0]), ins, ins);
+                setupRegister(((*virtRegs)[0]), store->value(), ins);
             }else if( const auto  * load = dynamic_cast<const Load *>(ins)){
 
                 auto virtRegs = getAllocatedVirtualRegisters(ins);

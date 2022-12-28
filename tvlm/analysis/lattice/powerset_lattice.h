@@ -62,7 +62,8 @@ namespace tvlm{
     template<typename A, class Hash>
     std::set<A, Hash> CPowersetLattice<A, Hash>::lub(const std::set<A, Hash> &x, const std::set<A, Hash> &y)  {
         std::set<A, Hash>res(x);
-        res.insert(y.begin(), y.end());
+        std::set<A, Hash>tmp(y);
+        res.merge(tmp);
         return res;
     }
 
