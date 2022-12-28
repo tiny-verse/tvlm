@@ -169,6 +169,7 @@ namespace tvlm {
                 auto strType = registerType(new Type::Array(registerType(new Type::Char()), arrSize));
                 Instruction * addr = globalAdd(new tvlm::AllocG{strType, arrSize , ast});
                 stringLiterals_.insert(std::make_pair(lit, addr));
+                insToLiteral_.insert_or_assign(addr, lit);
                 return addr;
             } else {
                 return i->second;
@@ -188,7 +189,7 @@ namespace tvlm {
             Environment * global = env_.get();
             while(global->parent){ global = global->parent; }
 
-            return {std::move(stringLiterals_),
+            return {std::move(insToLiteral_),
                            std::move(functions_),
                            std::move(globals_), std::move(allocated_types_), std::move(global->names)};
         }
@@ -274,6 +275,7 @@ namespace tvlm {
         //Backend & backend_;
 
         std::unordered_map<std::string, Instruction*> stringLiterals_;
+        std::map< Instruction*,std::string> insToLiteral_;
         std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
         std::vector<std::unique_ptr<Type>> allocated_types_;
         std::unique_ptr<BasicBlock> globals_;

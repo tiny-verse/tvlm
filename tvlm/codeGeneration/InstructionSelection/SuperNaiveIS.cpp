@@ -745,38 +745,91 @@ namespace tvlm {
 
     void SuperNaiveIS::visit(ElemAddrOffset *ins) {
 
-        auto reg = getReg(ins, ins);
-//        auto regBase = getReg(ins->base(), ins);
-        int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+        if (dynamic_cast<AllocL *>(ins->base())) {
+            auto reg = getReg(ins, ins);
+//            auto regAddr = getReg(ins->address(), ins);
+            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+            auto regOffset = getReg(ins->offset(), ins);
+//            addF(LMBS tiny::t86::MOV(vFR(freg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset))LMBE, load);
+            addF( LMBS tiny::t86::MOV(vR(reg),
+                                      tiny::t86::Bp()  ) LMBE, ins);
+            addF( LMBS tiny::t86::SUB(vR(reg), baseOffset ) LMBE, ins);
+            addF( LMBS tiny::t86::ADD(vR(reg),
+                                      vR(regOffset)) LMBE, ins);
+        }else if(dynamic_cast<AllocG *>(ins->base())){
+            auto reg = getFReg(ins, ins);
+//            auto regAddr = getReg(ins->address(), ins);
+            uint64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+            auto regOffset = getReg(ins->offset(), ins);
+//            addF(LMBS tiny::t86::MOV(vFR(reg), tiny::t86::Mem(addrOffset))LMBE, ins);
+            addF( LMBS tiny::t86::MOV(vR(reg), baseOffset  ) LMBE, ins);
+            addF( LMBS tiny::t86::ADD(vR(reg),
+                                      vR(regOffset)) LMBE, ins);
 
-        auto regOffset = getReg(ins->offset(), ins);
-        addF( LMBS tiny::t86::MOV(vR(reg),
-                                  tiny::t86::Bp()  ) LMBE, ins);
-        addF( LMBS tiny::t86::SUB(vR(reg), baseOffset ) LMBE, ins);
-        addF( LMBS tiny::t86::ADD(vR(reg),
-                           vR(regOffset)) LMBE, ins);
+        }else{
+
+            auto reg = getReg(ins, ins);
+    //        auto regBase = getReg(ins->base(), ins);
+            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+
+            auto regOffset = getReg(ins->offset(), ins);
+            addF( LMBS tiny::t86::MOV(vR(reg),
+                                      tiny::t86::Bp()  ) LMBE, ins);
+            addF( LMBS tiny::t86::SUB(vR(reg), baseOffset ) LMBE, ins);
+            addF( LMBS tiny::t86::ADD(vR(reg),
+                               vR(regOffset)) LMBE, ins);
+        }
 
         //clearIntReg(ins->offset());
     }
 
     void SuperNaiveIS::visit(ElemAddrIndex *ins) {
-
-        auto reg= getReg(ins, ins);
-//        auto regBase = getReg(ins->base(), ins);
-        auto regIndex = getReg(ins->index(), ins);
-        int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
-
-        auto regOffset = getReg(ins->offset(), ins);
+        if (dynamic_cast<AllocL *>(ins->base())) {
+            auto reg = getReg(ins, ins);
+//            auto regAddr = getReg(ins->address(), ins);
+            auto regIndex = getReg(ins->index(), ins);
+            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+            auto regOffset = getReg(ins->offset(), ins);
 //        addF( LMBS tiny::t86::MOV(vR(reg),
 //                           vR(regBase)) LMBE, ins);
-        //clearIntReg(ins->offset());
-        addF( LMBS tiny::t86::MUL(vR(regOffset),
-                           vR(regIndex)) LMBE, ins);
-        addF( LMBS tiny::t86::MOV(vR(reg),
-                                  tiny::t86::Bp()  ) LMBE, ins);
-        addF( LMBS tiny::t86::ADD(vR(reg), baseOffset ) LMBE, ins);
-        addF( LMBS tiny::t86::ADD(vR(reg), regOffset ) LMBE, ins);
-        //clearIntReg(ins->index());
+            //clearIntReg(ins->offset());
+            addF(LMBS tiny::t86::MUL(vR(regOffset),
+                                     vR(regIndex))LMBE, ins);
+            addF(LMBS tiny::t86::MOV(vR(reg),
+                                     tiny::t86::Bp())LMBE, ins);
+            addF(LMBS tiny::t86::ADD(vR(reg), baseOffset)LMBE, ins);
+            addF(LMBS tiny::t86::ADD(vR(reg), regOffset)LMBE, ins);
+
+        }else if(dynamic_cast<AllocG *>(ins->base())){
+            auto reg = getFReg(ins, ins);
+            auto regIndex = getReg(ins->index(), ins);
+            uint64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+            auto regOffset = getReg(ins->offset(), ins);
+//            addF(LMBS tiny::t86::MOV(vFR(reg), tiny::t86::Mem(addrOffset))LMBE, ins);
+            addF(LMBS tiny::t86::MUL(vR(regOffset),
+                                     vR(regIndex))LMBE, ins);
+            addF( LMBS tiny::t86::MOV(vR(reg), baseOffset  ) LMBE, ins);
+            addF( LMBS tiny::t86::ADD(vR(reg),
+                                      vR(regOffset)) LMBE, ins);
+
+        }else {
+            auto reg = getReg(ins, ins);
+//        auto regBase = getReg(ins->base(), ins);
+            auto regIndex = getReg(ins->index(), ins);
+            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+
+            auto regOffset = getReg(ins->offset(), ins);
+//        addF( LMBS tiny::t86::MOV(vR(reg),
+//                           vR(regBase)) LMBE, ins);
+            //clearIntReg(ins->offset());
+            addF(LMBS tiny::t86::MUL(vR(regOffset),
+                                     vR(regIndex))LMBE, ins);
+            addF(LMBS tiny::t86::MOV(vR(reg),
+                                     tiny::t86::Bp())LMBE, ins);
+            addF(LMBS tiny::t86::ADD(vR(reg), baseOffset)LMBE, ins);
+            addF(LMBS tiny::t86::ADD(vR(reg), regOffset)LMBE, ins);
+            //clearIntReg(ins->index());
+        }
     }
 
     void SuperNaiveIS::visit(Halt *ins) {
@@ -840,11 +893,11 @@ namespace tvlm {
 //        makeGlobalTable(irb->globals_.get());
         auto globs = getProgramsGlobals(p);
         makeGlobalTable(globs);
-        for (const auto & str : p->stringLiterals() ) {
-            tiny::t86::DataLabel data = program_.addData(str.first);
-            auto reg = getReg(str.second, str.second);
-            addF(LMBS tiny::t86::MOV( vR(reg), data ) LMBE, str.second);
-        }
+//        for (const auto & str : p->stringLiterals() ) {
+//            tiny::t86::DataLabel data = program_.addData(str.second);
+//            auto reg = getReg(str.first, str.first);
+//            addF(LMBS tiny::t86::MOV( vR(reg), data ) LMBE, str.first);
+//        }
 
         //===================================FUNCTIONS=====================================
         for (auto & i : p->functions()){
@@ -957,7 +1010,7 @@ namespace tvlm {
 
     void SuperNaiveIS::compileGlobalTable(BasicBlock * globals) {
 
-        for(const auto *ins : getBBsInstructions(globals)){
+        for( auto *ins : getBBsInstructions(globals)){
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 if(i->resultType() == ResultType::Integer){
                     auto reg = getReg(ins, ins);
@@ -970,7 +1023,21 @@ namespace tvlm {
                 }
             }else if(const auto * alloc = dynamic_cast< const AllocG *>(ins)){
                 if(alloc->amount()){
-                    throw "allocG with array not implemented"; //TODO global array
+                    size_t size = alloc->size();
+                    if(auto imm  = dynamic_cast<LoadImm *>(alloc->amount())){
+                        auto strLit = program_.program_->stringLiterals().find(ins);
+                        if(strLit != program_.program_->stringLiterals().end()){
+                            tiny::t86::DataLabel data = program_.addData(strLit->second);
+                            auto reg = getReg(strLit->first, strLit->first);
+                            addF(LMBS tiny::t86::MOV( vR(reg), data ) LMBE, strLit->first);
+
+                        }
+                        //already done by str literals
+                    }else{
+                        throw "allocG with array of variable type not implemented"; //TODO global array
+
+                    }
+
                 }else{
                     regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
                 }

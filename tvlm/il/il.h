@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <list>
+#include <map>
 
 #include <memory>
 
@@ -1717,7 +1718,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             else return false;
         }
         Program()= default;
-        Program( std::unordered_map<std::string, Instruction*> && stringLiterals,
+        Program( std::map< Instruction*,std::string> && stringLiterals,
                  std::vector<std::pair<Symbol, std::unique_ptr<Function>>> && functions,
                  std::unique_ptr<BasicBlock> && globals,
                  std::vector<std::unique_ptr<tvlm::Type>> && allocated_types,
@@ -1740,7 +1741,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         const BasicBlock * globals() const {
             return globals_.get();
         }
-        const std::unordered_map<std::string, Instruction*> & stringLiterals() const{
+        const std::map< Instruction*,std::string> & stringLiterals() const{
             return stringLiterals_;
         }
         const Instruction * getGlobalVariableAddress(const Symbol & name)const {
@@ -1763,7 +1764,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         friend class CfgBuilder;
         inline  void accept(ILVisitor * v) override{ v->visit(this); };
     private:
-        std::unordered_map<std::string, Instruction*> stringLiterals_;
+        std::map< Instruction*,std::string> stringLiterals_;
         std::vector<std::pair<Symbol, std::unique_ptr<Function>>> functions_;
         std::unique_ptr<BasicBlock> globals_;
         std::vector<std::unique_ptr<tvlm::Type>> allocated_types_;

@@ -484,6 +484,12 @@ namespace tvlm{
         auto globals = getProgramsGlobals(p);
 //        enterNewBB(globals);
 
+        for (const auto & str : p->stringLiterals() ) {
+//            auto reg = getReg(str.second, str.second);
+            auto virtRegs = getAllocatedVirtualRegisters(str.first);
+            writingPos_= 0;
+            setupRegister(((*virtRegs)[0]), str.first, str.first);
+        }
 
         for(const auto *ins : getBBsInstructions(globals)){
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
@@ -505,10 +511,10 @@ namespace tvlm{
 //                if(alloc->amount()){
 //                    throw "allocG with array not implemented"; //TODO global array
 //                }else{
-////                    getReg(alloc, ins);
+//                    getReg(alloc, ins);
 //                    auto virtRegs = getAllocatedVirtualRegisters(ins);
 //                    writingPos_= 0;
-//                    setupRegister(((*virtRegs)[0]), ins, ins);
+//                    setupRegister(((*virtRegs)[0]), alloc, ins);
 //                }
                 continue;
             }else if(const auto * alloc = dynamic_cast< const AllocL *>(ins)){
@@ -585,12 +591,6 @@ namespace tvlm{
 
         }
 //        exitBB();
-        for (const auto & str : p->stringLiterals() ) {
-//            auto reg = getReg(str.second, str.second);
-            auto virtRegs = getAllocatedVirtualRegisters(str.second);
-            writingPos_= 0;
-            setupRegister(((*virtRegs)[0]), str.second, str.second);
-        }
 
         for(auto & f : getProgramsFunctions(p)){
             visitChild(f.second);

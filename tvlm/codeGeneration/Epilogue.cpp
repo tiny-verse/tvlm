@@ -278,10 +278,10 @@ namespace tvlm{
 
     void NaiveEpilogue::visit(Program *p) {
         auto globs = getProgramsGlobals(p);
-        for (const auto & str : p->stringLiterals() ) {
-            tiny::t86::DataLabel data = pb_.addData(str.first);
-            add( str.second);
-        }
+//        for (const auto & str : p->stringLiterals() ) {
+//            tiny::t86::DataLabel data = pb_.addData(str.second);
+//            visitInstrHelper( str.first);
+//        }
 
         tiny::t86::Label start = pb_.add(tiny::t86::JMP(tiny::t86::Label::empty()), nullptr);
 
@@ -360,6 +360,11 @@ namespace tvlm{
         for (auto * ins : getBBsInstructions(globals)) {
 //            add(ins);
             visitChild(ins);
+            if(auto allocG = dynamic_cast<AllocG*>(ins)){
+                if(allocG->amount()){
+                    visitInstrHelper(ins);
+                }
+            }
         }
 
         return tmp;
