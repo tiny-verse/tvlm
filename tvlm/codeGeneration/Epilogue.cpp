@@ -100,7 +100,7 @@ namespace tvlm{
 
     Epilogue::TProgram NaiveEpilogue::translate(SProgram & sprogram) {
 //        return Epilogue::translate(program);
-        visit(getProgram(program_));
+        visit(getProgram(program_).get());
 
 
 

@@ -10,6 +10,9 @@
 #include "tvlm/codeGeneration/FunctionalMacro.h"
 #include "common/config.h"
 
+
+#include "tvlm/analysis/liveness_analysisTartget.h"
+
 namespace  tvlm{
 
 
@@ -32,21 +35,25 @@ namespace  tvlm{
 
 //        Label lastIns_;
         TargetProgram program_;
+        std::unique_ptr<ColoringLiveAnalysis<>> analysis_;
+        MAP<const CfgNode<> *,std::set<CLiveRange*>>  analysisResult_;
+        std::pair<const CfgNode<> *, std::set<CLiveRange*>> findAnalysisResult(const Instruction * ins)const;
+
 //        std::unordered_map<tiny::Symbol, const Function * > functionTable_; // already in Program
 //        std::unordered_map<const Instruction*, uint64_t> globalTable_;
 //        std::vector<std::pair<Label, const BasicBlock*>> future_patch_;
         std::vector<std::pair<Label, Symbol>> unpatchedCalls_;
 
-        std::unique_ptr<RegisterAssigner> regAssigner;
+        std::unique_ptr<RegisterAssigner> regAssigner_;
     public:
         ~SuperNaiveIS() override;
-        SuperNaiveIS();
+//        SuperNaiveIS(Program * prog);
+        SuperNaiveIS(const std::shared_ptr<Program> & prog);
 
     static TargetProgram translate(TargetProgram && prog) ;
     static TargetProgram translate(ILBuilder &ilb) ;
-        TargetProgram&  finalize();
+        TargetProgram  finalize();
     protected:
-        SuperNaiveIS(Program * prog);
         void run();
         void visit(Instruction *ins) override;
         void visit(Jump *ins) override;
@@ -118,7 +125,7 @@ namespace  tvlm{
 //        }
 
         void prepareReturnValue(size_t size, const Instruction * ins){
-            regAssigner->prepareReturnValue(size, ins);
+            regAssigner_->prepareReturnValue(size, ins);
         }
 
         Label addF(const TFInstruction & instruction, const ILInstruction * ins){
@@ -145,26 +152,26 @@ namespace  tvlm{
 
         size_t getReg(const Instruction * ins, const Instruction * me){
         //    return regAssigner->getReg(ins);
-            auto reg = regAssigner->getReg(ins);
+            auto reg = regAssigner_->getReg(ins);
             auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
             return program_.registerAdd(me, std::move(virt));
         }
         size_t getExtraIntReg(const ILInstruction * ins){
-            auto reg = regAssigner->getFreeIntRegister();
+            auto reg = regAssigner_->getFreeIntRegister();
             auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
             return program_.registerAdd( ins, std::move(virt));
         }
 
         size_t getFReg(const Instruction * ins, const Instruction * me){
-            auto reg = regAssigner->getFReg(ins);
+            auto reg = regAssigner_->getFReg(ins);
             auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
             return program_.registerAdd(me, std::move(virt));
         }
         void makeLocalAllocation(int64_t size,  const Instruction * ins){
-            regAssigner->makeLocalAllocation(size,  ins);
+            regAssigner_->makeLocalAllocation(size, ins);
         }
         void makeGlobalAllocation(int64_t size, const Instruction * ins){
-            regAssigner->makeGlobalAllocation(size,  ins);
+            regAssigner_->makeGlobalAllocation(size, ins);
         }
 //        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
         void copyStruct(size_t from, Type * type,size_t to, const ILInstruction * ins );

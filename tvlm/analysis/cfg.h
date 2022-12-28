@@ -176,6 +176,13 @@ using ILInstruction = Instruction;
 template<class T>
 class CfgBuilder {
 public:
+    CfgBuilder(std::map<const CfgNode<T>*, const Instruction *> * cfg_mapping,
+               std::map<const Instruction *, const CfgNode<T>*> * instr_mapping):
+    cfg_mapping_(cfg_mapping),
+    instr_mapping_(instr_mapping)
+    {
+    }
+
     virtual FragmentCfg<T>* fromInstruction( ILInstruction* ins ) = 0;
 
     virtual GlobalCfg<T> * fromGlobals(BasicBlock * bb) = 0;
@@ -201,11 +208,22 @@ protected:
     static std::vector<std::unique_ptr<Instruction>> & getInstructions(BasicBlock * bb) {
         return bb->insns_;
     }
+    std::map<const CfgNode<T>*, const Instruction *> * cfg_mapping_;
+    std::map<const Instruction *, const CfgNode<T>*> * instr_mapping_;
+
 };
 
 template<class T>
 class IntraProceduralCfgBuilder : public CfgBuilder<T>{
 public:
+    IntraProceduralCfgBuilder(std::map<const CfgNode<T>*, const Instruction *> * cfg_mapping,
+                              std::map<const Instruction *, const CfgNode<T>*> * instr_mapping)
+    :
+    CfgBuilder<T>(cfg_mapping, instr_mapping)
+    {
+
+    }
+
     FragmentCfg<T> * fromBB(BasicBlock * bb);
 
     GlobalCfg<T> * fromGlobals(BasicBlock * bb);
@@ -221,7 +239,12 @@ private:
         if(it != allNodesMap_.end()){
             return it->second;
         }
-        return allNodesMap_[il] = append(new CfgStmtNode<T>(il));
+        allNodesMap_[il] = append(new CfgStmtNode<T>(il));
+        if(auto instr =dynamic_cast<ILInstruction * >(il)){
+            this->cfg_mapping_->insert_or_assign(allNodesMap_[il], instr);
+            this->instr_mapping_->insert_or_assign(instr, allNodesMap_[il]);
+        }
+        return allNodesMap_[il];
     }
 
 

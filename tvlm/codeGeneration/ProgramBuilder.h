@@ -39,9 +39,9 @@ namespace tvlm {
     class TargetProgram;
     class TargetProgramFriend{
     protected:
-         Program * getProgram(TargetProgram * p)const;
+        std::shared_ptr<Program>  getProgram(TargetProgram * p)const;
 
-         Program * getProgram (TargetProgram & program)const;
+         std::shared_ptr<Program> getProgram (TargetProgram & program)const;
 
          std::map<const Function * ,size_t> &
          getFuncLocalAlloc(TargetProgram & program)const;
@@ -120,8 +120,8 @@ namespace tvlm {
         friend class RegisterAllocator;
         friend TargetProgramFriend;
         virtual ~TargetProgram() = default;
-        TargetProgram():
-                program_(nullptr)
+        TargetProgram(const std::shared_ptr<Program> & prog):
+        program_(prog)
         , funcLocalAlloc_()
         , selectedInstrs_()
         , selectedFInstrs_()

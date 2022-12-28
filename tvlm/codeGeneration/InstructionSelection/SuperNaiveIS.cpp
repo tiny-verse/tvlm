@@ -8,25 +8,34 @@
 
 namespace tvlm {
 
-    SuperNaiveIS::SuperNaiveIS():
+
+//    SuperNaiveIS::SuperNaiveIS(std:: * prog):
+////    pb_(ProgramBuilderOLD()),
+////    lastIns_(Label::empty()),
+//    program_(prog)
+////    , globalTable_()
+//    , unpatchedCalls_()
+//    , analysis_(new ColoringLiveAnalysis<>(&program_))
+//    , regAssigner_(new RegisterAssigner(&program_))
+//    {
+//        tiny::config.setDefaultIfMissing("-debug", "0");
+//        hardDBG_ = std::stoul(tiny::config.get("-debug"));
+//    }
+
+    SuperNaiveIS::SuperNaiveIS(const std::shared_ptr<Program> & prog):
 //    pb_(ProgramBuilderOLD()),
 //    lastIns_(Label::empty()),
-     program_(TargetProgram())
+    program_(TargetProgram(prog))
 //    , globalTable_()
     , unpatchedCalls_()
-//                        , regAllocator(new NaiveRegisterAllocator(&pb_))
-    , regAssigner(new RegisterAssigner( &program_))
+    , analysis_(new ColoringLiveAnalysis<>(&program_))
+    , regAssigner_(new RegisterAssigner(&program_))
     {
         tiny::config.setDefaultIfMissing("-debug", "0");
         hardDBG_ = std::stoul(tiny::config.get("-debug"));
     }
 
-    SuperNaiveIS::SuperNaiveIS(Program * prog):SuperNaiveIS()
-    {
-        program_.setProgram(prog);
-    }
-
-    SuperNaiveIS::~SuperNaiveIS() =  default;
+    SuperNaiveIS::~SuperNaiveIS() = default;
 
     void SuperNaiveIS::visit(Jump *ins) {
         tiny::t86::Label jmp = addF(LMBJUMP, ins  );
@@ -73,6 +82,7 @@ namespace tvlm {
         }else{ // void
             withoutRegVariant(ins);
         }
+        //here we want to respect calling convention and spilling everything alive
             addF( LMBS tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()) LMBE , ins);
             addF( LMBS tiny::t86::POP(tiny::t86::Bp()) LMBE , ins);
             addF( LMBS tiny::t86::RET() LMBE , ins);
@@ -353,7 +363,7 @@ namespace tvlm {
                         break;
                 };
 
-                regAssigner->replaceIntReg(ins->lhs(), ins);
+                regAssigner_->replaceIntReg(ins->lhs(), ins);
                 //clearIntReg(ins->rhs());
                 return;
             }
@@ -442,14 +452,12 @@ namespace tvlm {
                 };
 
 //                regAllocator->replaceFloat(ins->lhs(), ins);
-                regAssigner->replaceFloatReg(ins->lhs(), ins);
+                regAssigner_->replaceFloatReg(ins->lhs(), ins);
                 //clearFloatReg(ins->rhs());
                 return;
 
             }
-            case ResultType::Void:
-                throw "not implemented";
-                break;
+//            case ResultType::Void:
             default:
                 throw "not implemented";
                 break;
@@ -498,7 +506,7 @@ namespace tvlm {
                         break;
                 }
 //                regAllocator->replaceInt(ins->operand(), ins);
-                regAssigner->replaceIntReg(ins->operand(), ins);
+                regAssigner_->replaceIntReg(ins->operand(), ins);
 
                 return;
             }
@@ -518,7 +526,7 @@ namespace tvlm {
                         throw "not implemented";
                 }
 //                regAllocator->replaceInt(ins->operand(), ins);
-                regAssigner->replaceIntReg(ins->operand(), ins);
+                regAssigner_->replaceIntReg(ins->operand(), ins);
                 return;
             }
             case ResultType::Void:
@@ -567,8 +575,7 @@ namespace tvlm {
     void SuperNaiveIS::visit(AllocL *ins) {
 //        auto reg = getReg(ins, ins);
 //        regAllocator->makeLocalAllocation(ins->size(), reg, ins);
-        makeLocalAllocation(ins->size(), ins); //TODO !!!! TODO TODO TODO functional local Allocation
-        return;
+        makeLocalAllocation(ins->size(), ins);
     }
 
     void SuperNaiveIS::visit(AllocG *ins) {
@@ -603,12 +610,12 @@ namespace tvlm {
                 if (dynamic_cast<AllocL *>(load->address())) {
                     auto freg = getFReg(load, load);
 //            auto regAddr = getReg(ins->address(), ins);
-                    int64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                    int64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                     addF(LMBS tiny::t86::MOV(vFR(freg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset))LMBE, load);
                 }else if(dynamic_cast<AllocG *>(load->address())){
                     auto freg = getFReg(load, load);
 //            auto regAddr = getReg(ins->address(), ins);
-                    uint64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                    uint64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                     addF(LMBS tiny::t86::MOV(vFR(freg), tiny::t86::Mem(addrOffset))LMBE, load);
 
                 } else {
@@ -645,12 +652,12 @@ namespace tvlm {
                     if (dynamic_cast<AllocL *>(load->address())) {
                         auto reg = getReg(load, load);
                         //                auto regAddr = getReg(ins->address(), ins);
-                        int64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                        int64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                         addF(LMBS tiny::t86::MOV(vR(reg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset))LMBE, load);
                     }else if(dynamic_cast<AllocG *>(load->address())){
                         auto reg = getReg(load, load);
                         //                auto regAddr = getReg(ins->address(), ins);
-                        uint64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                        uint64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                         addF(LMBS tiny::t86::MOV(vR(reg), tiny::t86::Mem(addrOffset))LMBE, load);
 
                     } else {
@@ -668,7 +675,7 @@ namespace tvlm {
 
                 //        }else if (ins->resultType() == ResultType::StructAddress){
                 //            regAllocator->replaceInt(ins->address(), ins);
-                regAssigner->replaceIntReg(load->address(), load);
+                regAssigner_->replaceIntReg(load->address(), load);
                 return;
                 break;
             }
@@ -684,17 +691,17 @@ namespace tvlm {
         switch (store->value()->resultType()) {
             case ResultType::Double: {
 //                auto regAddr = getReg(ins->address(), ins);
-                int64_t addrOffset = regAssigner->getAllocOffset(store->address());
-                auto regValue = getFReg(store->value(), store);
-                addF(LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vFR(regValue))LMBE, store);
+//                int64_t addrOffset = regAssigner_->getAllocOffset(store->address());
+//                auto regValue = getFReg(store->value(), store);
+//                addF(LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vFR(regValue))LMBE, store);
                 if (dynamic_cast<AllocL *>(store->address())) {
 
 //                  auto regAddr = getReg(ins->address(), ins);
-                    int64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                    int64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                     auto regValue = getFReg(store->value(), store);
                     addF(LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vFR(regValue))LMBE, store);
                 } else if (dynamic_cast<AllocG *>(store->address())) {
-                    uint64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                    uint64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                     auto regValue = getFReg(store->value(), store);
                     addF(LMBS tiny::t86::MOV(tiny::t86::Mem(addrOffset), vFR(regValue))LMBE, store);
                 } else {
@@ -710,11 +717,11 @@ namespace tvlm {
                 if (dynamic_cast<AllocL *>(store->address())) {
 
 //                  auto regAddr = getReg(ins->address(), ins);
-                    int64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                    int64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                     auto regValue = getReg(store->value(), store);
                     addF(LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vR(regValue))LMBE, store);
                 } else if (dynamic_cast<AllocG *>(store->address())) {
-                    uint64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                    uint64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                     auto regValue = getReg(store->value(), store);
                     addF(LMBS tiny::t86::MOV(tiny::t86::Mem((uint64_t) addrOffset), vR(regValue))LMBE, store);
                 } else {
@@ -733,14 +740,14 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(Phi *ins) {
-        regAssigner->registerPhi(ins);
+        regAssigner_->registerPhi(ins);
     }
 
     void SuperNaiveIS::visit(ElemAddrOffset *ins) {
 
         auto reg = getReg(ins, ins);
 //        auto regBase = getReg(ins->base(), ins);
-        int64_t baseOffset = regAssigner->getAllocOffset(ins->base());
+        int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
 
         auto regOffset = getReg(ins->offset(), ins);
         addF( LMBS tiny::t86::MOV(vR(reg),
@@ -757,7 +764,7 @@ namespace tvlm {
         auto reg= getReg(ins, ins);
 //        auto regBase = getReg(ins->base(), ins);
         auto regIndex = getReg(ins->index(), ins);
-        int64_t baseOffset = regAssigner->getAllocOffset(ins->base());
+        int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
 
         auto regOffset = getReg(ins->offset(), ins);
 //        addF( LMBS tiny::t86::MOV(vR(reg),
@@ -818,11 +825,11 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(Function *fce) {
-        regAssigner->resetAllocSize();
+        regAssigner_->resetAllocSize();
         for (const auto & bb : getFunctionBBs(fce)) {
             visitChild(bb);
         }
-        regAssigner->exportAlloc(fce);
+        regAssigner_->exportAlloc(fce);
 
     }
 
@@ -855,7 +862,7 @@ namespace tvlm {
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 program_.globalEmplaceValue(ins, i->valueInt());
             }else if(const auto * alloc = dynamic_cast< const AllocG *>(ins)){
-                regAssigner->makeGlobalAllocation(alloc->size(), alloc);
+                regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
                 switch(alloc->resultType()){
                     case ResultType::Double:{
                         tiny::t86::DataLabel label = program_.addData(0);
@@ -879,7 +886,7 @@ namespace tvlm {
                         break;
                 }
             }else if(const auto * alloc = dynamic_cast< const AllocL *>(ins)/**TODO*/){
-                regAssigner->makeGlobalAllocation(alloc->size(), alloc);
+                regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
                 switch(alloc->resultType()){
                     case ResultType::Double:{
                         tiny::t86::DataLabel label = program_.addData(0);
@@ -965,13 +972,13 @@ namespace tvlm {
                 if(alloc->amount()){
                     throw "allocG with array not implemented"; //TODO global array
                 }else{
-                    regAssigner->makeGlobalAllocation(alloc->size(), alloc);
+                    regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
                 }
             }else if(const auto * alloc = dynamic_cast< const AllocL *>(ins)){
                 if(alloc->amount()){
                     throw "allocG with array not implemented"; //TODO global array
                 }else{
-                    regAssigner->makeGlobalAllocation(alloc->size(), alloc);
+                    regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
                 }
             }else if(const auto * load = dynamic_cast< const Load *>(ins)){
                 switch (load->resultType()){
@@ -979,12 +986,12 @@ namespace tvlm {
                         if (dynamic_cast<AllocL *>(load->address())) {
                             auto freg = getFReg(load, load);
 //            auto regAddr = getReg(ins->address(), ins);
-                            int64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                            int64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                             addF(LMBS tiny::t86::MOV(vFR(freg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset))LMBE, load);
                         }else if(dynamic_cast<AllocG *>(load->address())){
                             auto freg = getFReg(load, load);
 //            auto regAddr = getReg(ins->address(), ins);
-                            uint64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                            uint64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                             addF(LMBS tiny::t86::MOV(vFR(freg), tiny::t86::Mem(addrOffset))LMBE, load);
 
                         } else {
@@ -1021,12 +1028,12 @@ namespace tvlm {
                             if (dynamic_cast<AllocL *>(load->address())) {
                                 auto reg = getReg(load, load);
                                 //                auto regAddr = getReg(ins->address(), ins);
-                                int64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                                int64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                                 addF(LMBS tiny::t86::MOV(vR(reg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset))LMBE, load);
                             }else if(dynamic_cast<AllocG *>(load->address())){
                                 auto reg = getReg(load, load);
                                 //                auto regAddr = getReg(ins->address(), ins);
-                                uint64_t addrOffset = regAssigner->getAllocOffset(load->address());
+                                uint64_t addrOffset = regAssigner_->getAllocOffset(load->address());
                                 addF(LMBS tiny::t86::MOV(vR(reg), tiny::t86::Mem(addrOffset))LMBE, load);
 
                             } else {
@@ -1044,7 +1051,7 @@ namespace tvlm {
 
                         //        }else if (ins->resultType() == ResultType::StructAddress){
                         //            regAllocator->replaceInt(ins->address(), ins);
-                        regAssigner->replaceIntReg(load->address(), load);
+                        regAssigner_->replaceIntReg(load->address(), load);
                         return;
                         break;
                     }
@@ -1060,17 +1067,17 @@ namespace tvlm {
                 switch (store->value()->resultType()) {
                     case ResultType::Double:{
 //                auto regAddr = getReg(ins->address(), ins);
-                        int64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                        int64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                         auto regValue = getFReg(store->value(), store);
                         addF( LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vFR(regValue)) LMBE, store);
                         if(dynamic_cast<AllocL*>(store->address())){
 
 //                  auto regAddr = getReg(ins->address(), ins);
-                            int64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                            int64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                             auto regValue = getFReg(store->value(), store);
                             addF( LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vFR(regValue)) LMBE, store);
                         }else if(dynamic_cast<AllocG*>(store->address())){
-                            uint64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                            uint64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                             auto regValue = getFReg(store->value(), store);
                             addF( LMBS tiny::t86::MOV(tiny::t86::Mem( addrOffset), vFR(regValue)) LMBE, store);
                         }else{
@@ -1086,11 +1093,11 @@ namespace tvlm {
                         if(dynamic_cast<AllocL*>(store->address())){
 
 //                  auto regAddr = getReg(ins->address(), ins);
-                            int64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                            int64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                             auto regValue = getReg(store->value(), store);
                             addF( LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vR(regValue)) LMBE, store);
                         }else if(dynamic_cast<AllocG*>(store->address())){
-                            uint64_t addrOffset = regAssigner->getAllocOffset(store->address());
+                            uint64_t addrOffset = regAssigner_->getAllocOffset(store->address());
                             auto regValue = getReg(store->value(), store);
                             addF( LMBS tiny::t86::MOV(tiny::t86::Mem((uint64_t)addrOffset), vR(regValue)) LMBE, store);
                         }else{
@@ -1115,21 +1122,22 @@ namespace tvlm {
 
 
     TargetProgram SuperNaiveIS::translate(ILBuilder &ilb) {
-        auto is = SuperNaiveIS();
-        Program *  prog = new Program(ilb.finish());
-        is.program_.setProgram(prog );
+        auto  prog = std::make_shared<Program>(ilb.finish());
+        auto is = SuperNaiveIS(prog);
         is.run();
         return std::move(is.finalize());
 //
 //        return TargetProgram(is.program_);
     }
     TargetProgram  SuperNaiveIS::translate(TargetProgram && prog) {
-        auto is = SuperNaiveIS();
-//        is.program_ = std::move(prog); //NEED to reset everything ==> keep only ILprogram
-        is.program_.setProgram(prog.program_ );
+        std::shared_ptr<Program> ILProg = prog.program_;
+        auto is = SuperNaiveIS(ILProg); //NEED to reset everything ==> keep only ILprogram
+//        is.program_ = std::move(prog);
+//        is.program_.setProgram(prog.program_ );
+//        is.analysisResult_ = is.analysis_->analyze();
 //        prog->program_ = nullptr;
         is.run();
-        return std::move(is.finalize());
+        return TargetProgram(std::move(is.finalize()));
 //
 //        return TargetProgram(is.program_);
     }
@@ -1138,16 +1146,29 @@ namespace tvlm {
 
     }
 
-    TargetProgram& SuperNaiveIS::finalize() {
+    TargetProgram SuperNaiveIS::finalize() {
 //        TargetProgram res(program_);
 
         //registers are in allocated registers
 
-        return program_;
+        return TargetProgram(std::move(program_));
     }
 
     void SuperNaiveIS::run() {
-        visit(getProgram(program_));
+        visit(getProgram(program_).get());
+    }
+
+    std::pair<const CfgNode<> *, std::set<CLiveRange *>>
+    SuperNaiveIS::findAnalysisResult(const Instruction *ins) const {
+        auto it = analysis_->instr_mapping().find(ins);
+        if(it != analysis_->instr_mapping().end()){
+               auto res = analysisResult_.find(it->second);
+               if(res != analysisResult_.end()){
+                   return *res;
+               }
+        }
+        throw CSTR("[SuperNaiveIS.cpp] cannot find instruction " << ins->name() <<" in cfg");
+        return std::pair<const CfgNode<> *, std::set<CLiveRange *>>();
     }
 
 }

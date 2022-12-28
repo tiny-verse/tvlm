@@ -5,12 +5,12 @@
 
 namespace tvlm{
 
-    Program *TargetProgramFriend::getProgram(TargetProgram *p) const {
-        return p->program_.get();
+    std::shared_ptr<Program> TargetProgramFriend::getProgram(TargetProgram *p) const {
+        return p->program_;
     }
 
-     Program *TargetProgramFriend::getProgram(TargetProgram &program) const {
-        return program.program_.get();
+    std::shared_ptr<Program> TargetProgramFriend::getProgram(TargetProgram &program) const {
+        return program.program_;
     }
 
      std::map<const Function *, size_t> &TargetProgramFriend::getFuncLocalAlloc(TargetProgram *program) const {

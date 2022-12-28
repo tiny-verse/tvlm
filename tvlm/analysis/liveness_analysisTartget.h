@@ -87,10 +87,10 @@ namespace tvlm{
     using CLiveVars = MAP<const CfgNode<T> *, std::set<CLiveRange*>>;
     ;
 
-    template<class Info>
+    template<class Info = DummyClass>
     class ColoringLiveAnalysis : public BackwardAnalysis<CLiveVars<Info>, Info>{
     protected:
-        Program * getProgram(TargetProgram * p)const {
+        std::shared_ptr<Program>  getProgram(TargetProgram * p)const {
             return TargetProgramFriend::getProgram(p);
         }
     private:
@@ -100,7 +100,7 @@ namespace tvlm{
 
         NodeState join(const CfgNode<Info> * node, CLiveVars<Info> & state);
 
-        ColoringLiveAnalysis(ProgramCfg<Info> * cfg, const Declarations & declarations, TargetProgram * program);
+        ColoringLiveAnalysis( const Declarations & declarations, TargetProgram * program);
 
         std::set<CLiveRange*> getSubtree(const CfgNode<Info> *pNode);
 
@@ -120,18 +120,14 @@ namespace tvlm{
             return std::vector<CLiveRange*>(allocatedLR_.begin(), allocatedLR_.end());
         }
 
-        std::map<const CfgNode<Info>*, const Instruction *>instr_mapping(){
-            return instr_mapping_;
-        };
     private:
         std::set<CLiveRange*> allocatedLR_;
-        std::map<const CfgNode<Info>*, const Instruction *>instr_mapping_;
         std::map<const IL*, CLiveRange *> varMaps_;
         std::map<CLiveRange *, CLiveRange *> deletedLR_; // delete key, replaced with value
+        ProgramCfg<Info> * cfg_;
         NodeState allVars_;
         CPowersetLattice<CLiveRange*> nodeLattice_;
         MapLattice<const CfgNode<Info> *, NodeState> lattice_;
-        ProgramCfg<Info> * cfg_;
         TargetProgram * program_;
         DeclarationAnalysis declAnalysis_;
 
@@ -140,7 +136,7 @@ namespace tvlm{
 
     template<class I>
     ColoringLiveAnalysis<I>::ColoringLiveAnalysis(TargetProgram *p):
-            ColoringLiveAnalysis(BackwardAnalysis<CLiveVars<I>, I>::getCfg(getProgram(p)), InstructionAnalysis(getProgram(p)).analyze(), p)
+            ColoringLiveAnalysis( InstructionAnalysis(getProgram(p).get()).analyze(), p)
     {
     }
 
@@ -603,11 +599,13 @@ namespace tvlm{
     }
 
     template<typename Info>
-    ColoringLiveAnalysis<Info>::ColoringLiveAnalysis(ProgramCfg<Info> * cfg, const Declarations &declarations, TargetProgram * program):
-            varMaps_()
-            ,allVars_([&](){
+    ColoringLiveAnalysis<Info>::ColoringLiveAnalysis( const Declarations &declarations, TargetProgram * program):
+            BackwardAnalysis<CLiveVars<Info>, Info>(),
+            varMaps_(),
+            cfg_(this->getCfg(getProgram(program).get())),
+            allVars_([&](){
                 std::set< CLiveRange*> tmp;
-                for ( auto & n : cfg->nodes()){
+                for ( auto & n : cfg_->nodes()){
                     if(auto t = dynamic_cast<Instruction *>(n->il()) ){
                         if(t->resultType() != ResultType::Void){
                             auto lr = new CLiveRange(t, t);
@@ -621,10 +619,9 @@ namespace tvlm{
             }())
             ,
             nodeLattice_(CPowersetLattice<CLiveRange*>(allVars_)),
-            lattice_(MapLattice<const CfgNode<Info>*, std::set<CLiveRange*>>(cfg->nodes(), &nodeLattice_)),
-    cfg_(cfg),
+            lattice_(MapLattice<const CfgNode<Info>*, std::set<CLiveRange*>>(cfg_->nodes(), &nodeLattice_)),
     program_(program),
-    declAnalysis_(getProgram(program_)){
+    declAnalysis_(getProgram(program_).get()){
 
     }
 } //namespace tvlm

@@ -422,6 +422,8 @@ namespace tvlm {
                     if (instr == nullptr) {
                         throw "[ColoringAllocator] - generateLiveRanges - trying to spill Function/BB ...";
                     }
+                    //spill instruction instr
+
                     BasicBlock *bb = instr->getParentBB();
 
                     switch (instr->resultType()) {

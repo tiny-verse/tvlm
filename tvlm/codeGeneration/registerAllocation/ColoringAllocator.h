@@ -92,7 +92,7 @@ namespace tvlm{
 
         //----Preparation----
             //LivenessAnalysis
-            Program * prog = getProgram(targetProgram_);
+            std::shared_ptr<Program>  prog = getProgram(targetProgram_);
             programChanged_ = false;
             bool again = true;
 //            while(again){
@@ -205,7 +205,6 @@ namespace tvlm{
         };
 
 
-//        MAP<const CfgNode<ColorInfo> *,std::unordered_set<IL*>> analysisResult_;
         MAP<const CfgNode<ColorInfo> *,std::set<CLiveRange*>> analysisResult_;
         std::map<const CfgNode<ColorInfo> * , const Instruction *> analysis_mapping_;
 

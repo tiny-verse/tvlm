@@ -92,7 +92,7 @@ namespace tvlm{
 
         virtual TargetProgram & run(){
             //implement logic of passing through the program;
-            visit(getProgram(targetProgram_));
+            visit(getProgram(targetProgram_).get());
             return targetProgram_;
         }
 

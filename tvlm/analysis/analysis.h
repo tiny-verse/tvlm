@@ -6,18 +6,31 @@ namespace tvlm {
 
 
 
-    template<class T>
+    template<class T, class I = DummyClass>
     class Analysis : public TargetProgramFriend{
+    protected:
+        Analysis():cfg_mapping_(), instr_mapping_(){}
+        std::map<const CfgNode<I>*, const Instruction *>cfg_mapping_;
+        std::map< const Instruction *, const CfgNode<I>*>instr_mapping_;
+
+
     public:
+        std::map<const CfgNode<I>*, const Instruction *>cfg_mapping(){
+            return cfg_mapping_;
+        };
+        std::map< const Instruction *, const CfgNode<I>*>instr_mapping(){
+            return instr_mapping_;
+        };
         virtual T  analyze() = 0;
         virtual ~Analysis() = default;
     };
 
     template<typename T, typename I>
-    class BackwardAnalysis : public Analysis<T> {
+    class BackwardAnalysis : public Analysis<T, I> {
     protected:
-        static ProgramCfg<I> * getCfg(Program * p){
-            auto builder = std::make_unique<IntraProceduralCfgBuilder<I>>();
+        BackwardAnalysis():Analysis<T, I>(){}
+        virtual ProgramCfg<I> * getCfg(Program * p){
+            auto builder = std::make_unique<IntraProceduralCfgBuilder<I>>(&this->cfg_mapping_, &this->instr_mapping_);
             return builder->fromProgram(p);
         }
     public:
@@ -26,13 +39,14 @@ namespace tvlm {
     };
 
     template<typename T, typename I>
-    class ForwardAnalysis : public Analysis<T> {
+    class ForwardAnalysis : public Analysis<T, I> {
     public:
         virtual ~ForwardAnalysis() = default;
         virtual T analyze() = 0;
     protected:
-        static ProgramCfg<I> * getCfg(Program * p){
-            auto builder = std::make_unique<IntraProceduralCfgBuilder<I>>();
+        ForwardAnalysis():Analysis<T, I>(){}
+         virtual ProgramCfg<I> * getCfg(Program * p){
+            auto builder = std::make_unique<IntraProceduralCfgBuilder<I>>(&this->cfg_mapping_, &this->instr_mapping_);
             return builder->fromProgram(p);
         }
     };
