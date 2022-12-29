@@ -162,18 +162,6 @@ namespace tvlm {
 
     bool ColoringAllocator::setColors() {
 
-//        std::queue<size_t> Q;
-//        while(!Q.empty()){
-//            auto pos = Q.front();Q.pop();
-//            size_t availableColor = 1;
-//
-//
-//
-//            colorPickingResult_.emplace(searchInstrs_[pos], )
-//
-//        }
-//
-        bool twoAddress = true;
         while(!colorPickingStack_.empty()){
             auto pos = colorPickingStack_.top();colorPickingStack_.pop();
             size_t availableColor = 1;
@@ -181,57 +169,6 @@ namespace tvlm {
                 bool OK = true;//reset
                 for(auto neighPos : LRincidence_[pos]){
                     auto it = colorPickingSemiResult_.find(neighPos);
-//                    if(twoAddress){
-//                        auto instr = searchInstrs_[pos];
-//                        if (auto binOp = dynamic_cast<BinOp*>(instr)){
-//                            if(binOp->lhs() == searchInstrs_[neighPos]){
-//                                auto res = colorPickingSemiResult_.find(neighPos);
-//                                if(res != colorPickingSemiResult_.end()){
-//                                    OK = true;
-//                                    availableColor = res->second;
-//                                    break;
-//                                }
-//                            }
-//                        }else if (auto unOp = dynamic_cast<UnOp*>(instr)){
-//                            if(unOp->operand() == searchInstrs_[neighPos]){
-//                                auto res = colorPickingSemiResult_.find(neighPos);
-//                                if(res != colorPickingSemiResult_.end()){
-//                                    OK = true;
-//                                    availableColor = res->second;
-//                                    break;
-//                                }
-//                            }
-//                        }else if (auto trunc = dynamic_cast<Truncate*>(instr)){
-//                            if(trunc->src() == searchInstrs_[neighPos]){
-//                                auto res = colorPickingSemiResult_.find(neighPos);
-//                                if(res != colorPickingSemiResult_.end()){
-//                                    OK = true;
-//                                    availableColor = res->second;
-//                                    break;
-//                                }
-//                            }
-//                        }else if (auto extend = dynamic_cast<Extend*>(instr)){
-//                            if(extend->src() == searchInstrs_[neighPos]){
-//                                auto res = colorPickingSemiResult_.find(neighPos);
-//                                if(res != colorPickingSemiResult_.end()){
-//                                    OK = true;
-//                                    availableColor = res->second;
-//                                    break;
-//                                }
-//                            }
-//                        }else if (auto copy = dynamic_cast<Copy*>(instr)){
-//                            if(copy->src() == searchInstrs_[neighPos]){
-//                                auto res = colorPickingSemiResult_.find(neighPos);
-//                                if(res != colorPickingSemiResult_.end()){
-//                                    OK = true;
-//                                    availableColor = res->second;
-//                                    break;
-//                                }
-//                            }
-//                        }else {
-//                            //TODO fill other two address insrtuction -- to repeat register as first argument
-//                        }
-//                    }
                     if(  it != colorPickingSemiResult_.end() &&
                         it->second == availableColor){
                         OK = false;
@@ -344,30 +281,31 @@ namespace tvlm {
 //
 //
 //            }
-            std::vector<CLiveRange*> tmpVector(t.second.begin(), t.second.end());
-
-            for ( size_t i = 0 ; i < tmpVector.size();i++) {
-                for (size_t j = i +1 ; j < tmpVector.size();j++){
-                    auto lr1 = tmpVector[i];
-                    auto lr2 = tmpVector[j];
-                    auto lr1Pos = lrIndex_.find(lr2);
-                    auto lr2Pos = lrIndex_.find(lr1);
-                    if(lr1Pos == lrIndex_.end()){
-                        throw STR( "[Coloring Allocator.cpp] cannot find index for liveRange lr1-- probably not registered " << lr1->il().size() << " with " << lr1->start());
+            std::vector<CLiveRange *> tmpVector(t.second.begin(), t.second.end());
+            if (auto ins = dynamic_cast<tvlm::Instruction *>(t.first->il())) {
+                auto lr1Pos = searchRanges_.find(ins);
+                if(ins->resultType() != ResultType::Void){
+                    if(lr1Pos == searchRanges_.end()){
+                        throw "[Coloring Allocator.cpp] cannot find Range for instruction";
                     }
-                    if(lr2Pos == lrIndex_.end()){
-                        throw STR( "[Coloring Allocator.cpp] cannot find index for liveRange lr2 -- probably not registered " << lr2->il().size() << " with " << lr2->start());
-                    }
-                    LRincidence_[lr1Pos->second].emplace(lr2Pos->second);
-                    LRincidence[lr1Pos->second].emplace(lr2Pos->second);
-                    LRincidence_[lr2Pos->second].emplace(lr1Pos->second);
-                    LRincidence[lr2Pos->second].emplace(lr1Pos->second);
+                    for (auto & lr2 : tmpVector) {
+    //                for (size_t j = i +1 ; j < tmpVector.size();j++){
+                        auto lr2Pos = lrIndex_.find(lr2);
+                        if (lr2Pos == lrIndex_.end()) {
+                            throw CSTR(
+                                    "[Coloring Allocator.cpp] cannot find index for liveRange -- probably not registered "
+                                            << lr2->il().size() << " with " << lr2->start());
+                        }
+                        LRincidence_[lr1Pos->second].emplace(lr2Pos->second);
+                        LRincidence[lr1Pos->second].emplace(lr2Pos->second);
+                        LRincidence_[lr2Pos->second].emplace(lr1Pos->second);
+                        LRincidence[lr2Pos->second].emplace(lr1Pos->second);
 
+                    }
                 }
             }
-
-
         }
+
 
         this->LRincidence_;
         //**********************************************************************************

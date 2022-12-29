@@ -235,7 +235,10 @@ namespace tvlm{
                         setupFRegister(((*virtRegs)[1]), ins->rhs(), ins);
                         setupRegister(((*virtRegs)[2]), ins, ins);
                         break;
+                    default:
+                        throw "[RegisterAllocator] in double BinOp is unknown operator" ;
                 }
+                break;
             }
             case ResultType::Void:
                 throw "not implemented";
@@ -311,14 +314,22 @@ namespace tvlm{
     }
 
     void RegisterAllocator::visit(AllocL *ins) {
-//        auto virtRegs = getAllocatedVirtualRegisters(ins);
-//        writingPos_= 0;
+        if(ins->amount()){
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        writingPos_= 0;
 //        setupRegister(((*virtRegs)[0]), ins, ins);
+            setupRegister(((*virtRegs)[0]), ins, ins);
+        }
 
     }
 
     void RegisterAllocator::visit(AllocG *ins) {
-
+        if(ins->amount()){
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        writingPos_= 0;
+//        setupRegister(((*virtRegs)[0]), ins, ins);
+            setupRegister(((*virtRegs)[0]), ins, ins);
+        }
     }
 
     void RegisterAllocator::visit(ArgAddr *ins) {
@@ -448,6 +459,7 @@ namespace tvlm{
         setupRegister(((*virtRegs)[0]), ins, ins);
 //        setupRegister(((*virtRegs)[1]), ins->base(), ins);
         setupRegister(((*virtRegs)[1]), ins->index(), ins);
+        setupRegister(((*virtRegs)[2]), ins->offset(), ins);
 
     }
 

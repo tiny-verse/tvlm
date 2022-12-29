@@ -167,11 +167,11 @@ namespace  tvlm{
             auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
             return program_.registerAdd(me, std::move(virt));
         }
-        void makeLocalAllocation(int64_t size,  const Instruction * ins){
-            regAssigner_->makeLocalAllocation(size, ins);
+        size_t makeLocalAllocation(int64_t size,  const Instruction * ins){
+            return regAssigner_->makeLocalAllocation(size, ins);
         }
-        void makeGlobalAllocation(int64_t size, const Instruction * ins){
-            regAssigner_->makeGlobalAllocation(size, ins);
+        size_t makeGlobalAllocation(int64_t size, const Instruction * ins){
+            return regAssigner_->makeGlobalAllocation(size, ins);
         }
 //        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
         void copyStruct(size_t from, Type * type,size_t to, const ILInstruction * ins );

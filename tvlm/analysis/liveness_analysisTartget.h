@@ -200,8 +200,8 @@ namespace tvlm{
 
                 if (dynamic_cast<AllocL *>(stmtNode->il())){
                     auto newState = state;
-//                    std::set<Declaration*> children = getSubtree(node);
-//                    newState.insert(children.begin(), children.end());
+                    std::set<CLiveRange*> children = getSubtree(node);
+                    newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
                     if(res!=varMaps_.end()){
                         auto r = newState.find(res->second);
@@ -213,8 +213,8 @@ namespace tvlm{
 //                    return ;
                 }else if (dynamic_cast<AllocG *>(stmtNode->il())){
                     auto newState = state;
-//                    std::set<Declaration*> children = getSubtree(node);
-//                    newState.insert(children.begin(), children.end());
+                    std::set<CLiveRange*> children = getSubtree(node);
+                    newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
                     if(res!=varMaps_.end()){
                         auto r = newState.find(res->second);
@@ -246,7 +246,7 @@ namespace tvlm{
                     return newState;
                 }else if (auto load = dynamic_cast<Load *>(stmtNode->il())){
                     auto newState = state;
-                    if(load->resultType() != ResultType::StructAddress){
+//                    if(load->resultType() != ResultType::StructAddress){
                         std::set<CLiveRange*> children = getSubtree(node);
                         newState.insert(children.begin(), children.end());
                         auto res = varMaps_.find(node->il());
@@ -257,11 +257,11 @@ namespace tvlm{
                             }
                         }
                         return newState;
-                    }else{
-                        std::set<CLiveRange*> children = getSubtree(node);
-                        newState.insert(children.begin(), children.end());
-                        combineLR(newState, load, load->address());
-                    }
+//                    }else{
+//                        std::set<CLiveRange*> children = getSubtree(node);
+//                        newState.insert(children.begin(), children.end());
+//                        combineLR(newState, load, load->address());
+//                    }
                 }else if (dynamic_cast<LoadImm *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);

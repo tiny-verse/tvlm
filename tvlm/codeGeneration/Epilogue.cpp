@@ -196,12 +196,17 @@ namespace tvlm{
     }
 
     void NaiveEpilogue::visit(AllocL *ins) {
-//        visitInstrHelper(ins);
+        if(ins->amount()){
+            visitInstrHelper(ins);
+        }
     }
 
     void NaiveEpilogue::visit(AllocG *ins) {
-//        visitInstrHelper(ins);
+        if(ins->amount()){
+            visitInstrHelper(ins);
+        }
     }
+
 
     void NaiveEpilogue::visit(ArgAddr *ins) {
         visitInstrHelper(ins);
@@ -360,11 +365,6 @@ namespace tvlm{
         for (auto * ins : getBBsInstructions(globals)) {
 //            add(ins);
             visitChild(ins);
-            if(auto allocG = dynamic_cast<AllocG*>(ins)){
-                if(allocG->amount()){
-                    visitInstrHelper(ins);
-                }
-            }
         }
 
         return tmp;

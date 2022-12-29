@@ -174,13 +174,18 @@ void tvlm::DeclarationAnalysis::visit(tvlm::LoadImm *ins) {
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::AllocL *ins) {
-
-    result_.insert(ins);
+    if(ins->amount()){
+        result_.insert(ins->amount());
+        result_.insert(ins);
+    }
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::AllocG *ins) {
-
-    result_.insert(ins);
+    if(ins->amount()){
+        result_.insert(ins->amount());
+        result_.insert(ins);
+    }
+//    result_.insert(ins);
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::ArgAddr *ins) {

@@ -573,9 +573,13 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(AllocL *ins) {
-//        auto reg = getReg(ins, ins);
 //        regAllocator->makeLocalAllocation(ins->size(), reg, ins);
-        makeLocalAllocation(ins->size(), ins);
+           auto cpy = makeLocalAllocation(ins->size(), ins);
+        if(ins->amount()){
+            auto reg = getReg(ins, ins);
+            addF(LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp()) LMBE, ins);
+            addF(LMBS tiny::t86::SUB( vR(reg), (int64_t) cpy ) LMBE , ins);
+        }
     }
 
     void SuperNaiveIS::visit(AllocG *ins) {
@@ -744,7 +748,7 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(ElemAddrOffset *ins) {
-
+        //access to structure
         if (dynamic_cast<AllocL *>(ins->base())) {
             auto reg = getReg(ins, ins);
 //            auto regAddr = getReg(ins->address(), ins);
@@ -763,20 +767,18 @@ namespace tvlm {
             auto regOffset = getReg(ins->offset(), ins);
 //            addF(LMBS tiny::t86::MOV(vFR(reg), tiny::t86::Mem(addrOffset))LMBE, ins);
             addF( LMBS tiny::t86::MOV(vR(reg), baseOffset  ) LMBE, ins);
-            addF( LMBS tiny::t86::ADD(vR(reg),
+            addF( LMBS tiny::t86::ADD(vR(reg),// Add or Sub? need same -> ADD
                                       vR(regOffset)) LMBE, ins);
 
         }else{
 
             auto reg = getReg(ins, ins);
-    //        auto regBase = getReg(ins->base(), ins);
-            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+            auto regBase = getReg(ins->base(), ins);
 
             auto regOffset = getReg(ins->offset(), ins);
             addF( LMBS tiny::t86::MOV(vR(reg),
-                                      tiny::t86::Bp()  ) LMBE, ins);
-            addF( LMBS tiny::t86::SUB(vR(reg), baseOffset ) LMBE, ins);
-            addF( LMBS tiny::t86::ADD(vR(reg),
+                                      vR(regBase)  ) LMBE, ins);
+            addF( LMBS tiny::t86::ADD(vR(reg), // Add or Sub? need same -> ADD
                                vR(regOffset)) LMBE, ins);
         }
 
@@ -784,6 +786,7 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(ElemAddrIndex *ins) {
+        // access to array
         if (dynamic_cast<AllocL *>(ins->base())) {
             auto reg = getReg(ins, ins);
 //            auto regAddr = getReg(ins->address(), ins);
@@ -792,23 +795,35 @@ namespace tvlm {
             auto regOffset = getReg(ins->offset(), ins);
 //        addF( LMBS tiny::t86::MOV(vR(reg),
 //                           vR(regBase)) LMBE, ins);
-            //clearIntReg(ins->offset());
+//            //clearIntReg(ins->offset());
+//            addF(LMBS tiny::t86::MUL(vR(regOffset),
+//                                     vR(regIndex))LMBE, ins);
+//            addF(LMBS tiny::t86::MOV(vR(reg),
+//                                     tiny::t86::Bp())LMBE, ins);
+//            addF(LMBS tiny::t86::SUB(vR(reg), baseOffset)LMBE, ins);
+//            addF(LMBS tiny::t86::ADD(vR(reg), vR(regOffset))LMBE, ins);
+//clearIntReg(ins->offset());
             addF(LMBS tiny::t86::MUL(vR(regOffset),
                                      vR(regIndex))LMBE, ins);
             addF(LMBS tiny::t86::MOV(vR(reg),
-                                     tiny::t86::Bp())LMBE, ins);
-            addF(LMBS tiny::t86::ADD(vR(reg), baseOffset)LMBE, ins);
-            addF(LMBS tiny::t86::ADD(vR(reg), regOffset)LMBE, ins);
+                                     tiny::t86::Mem(tiny::t86::Bp() - baseOffset))LMBE, ins);
+//            addF(LMBS tiny::t86::SUB(vR(reg), baseOffset)LMBE, ins);
+            addF(LMBS tiny::t86::ADD(vR(reg), vR(regOffset))LMBE, ins);
 
         }else if(dynamic_cast<AllocG *>(ins->base())){
             auto reg = getFReg(ins, ins);
             auto regIndex = getReg(ins->index(), ins);
             uint64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
             auto regOffset = getReg(ins->offset(), ins);
-//            addF(LMBS tiny::t86::MOV(vFR(reg), tiny::t86::Mem(addrOffset))LMBE, ins);
-            addF(LMBS tiny::t86::MUL(vR(regOffset),
+////            addF(LMBS tiny::t86::MOV(vFR(reg), tiny::t86::Mem(addrOffset))LMBE, ins);
+//            addF(LMBS tiny::t86::MUL(vR(regOffset),
+//                                     vR(regIndex))LMBE, ins);
+//            addF( LMBS tiny::t86::MOV(vR(reg), baseOffset  ) LMBE, ins);
+//            addF( LMBS tiny::t86::ADD(vR(reg),
+//                                      vR(regOffset)) LMBE, ins);
+addF(LMBS tiny::t86::MUL(vR(regOffset),
                                      vR(regIndex))LMBE, ins);
-            addF( LMBS tiny::t86::MOV(vR(reg), baseOffset  ) LMBE, ins);
+            addF( LMBS tiny::t86::MOV(vR(reg), tiny::t86::Mem(baseOffset)  ) LMBE, ins);
             addF( LMBS tiny::t86::ADD(vR(reg),
                                       vR(regOffset)) LMBE, ins);
 
@@ -816,18 +831,27 @@ namespace tvlm {
             auto reg = getReg(ins, ins);
 //        auto regBase = getReg(ins->base(), ins);
             auto regIndex = getReg(ins->index(), ins);
-            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
+            auto regBaseOffset = getReg(ins->base(), ins);
+//            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
 
             auto regOffset = getReg(ins->offset(), ins);
 //        addF( LMBS tiny::t86::MOV(vR(reg),
 //                           vR(regBase)) LMBE, ins);
-            //clearIntReg(ins->offset());
+//            //clearIntReg(ins->offset());
+//            addF(LMBS tiny::t86::MUL(vR(regOffset),
+//                                     vR(regIndex))LMBE, ins);
+//            addF(LMBS tiny::t86::MOV(vR(reg),
+//                                     tiny::t86::Bp())LMBE, ins);
+//            addF(LMBS tiny::t86::SUB(vR(reg), baseOffset)LMBE, ins);
+//            addF(LMBS tiny::t86::ADD(vR(reg), regOffset)LMBE, ins);
+//            //clearIntReg(ins->index());
+//            // clearIntReg(ins->offset());
             addF(LMBS tiny::t86::MUL(vR(regOffset),
                                      vR(regIndex))LMBE, ins);
             addF(LMBS tiny::t86::MOV(vR(reg),
-                                     tiny::t86::Bp())LMBE, ins);
-            addF(LMBS tiny::t86::ADD(vR(reg), baseOffset)LMBE, ins);
-            addF(LMBS tiny::t86::ADD(vR(reg), regOffset)LMBE, ins);
+                                     vR(regBaseOffset) )LMBE, ins);
+//            addF(LMBS tiny::t86::SUB(vR(reg), baseOffset)LMBE, ins);
+            addF(LMBS tiny::t86::ADD(vR(reg), vR(regOffset))LMBE, ins);
             //clearIntReg(ins->index());
         }
     }
@@ -915,28 +939,34 @@ namespace tvlm {
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 program_.globalEmplaceValue(ins, i->valueInt());
             }else if(const auto * alloc = dynamic_cast< const AllocG *>(ins)){
-                regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
-                switch(alloc->resultType()){
-                    case ResultType::Double:{
-                        tiny::t86::DataLabel label = program_.addData(0);
-                        program_.globalEmplaceAddress(alloc, label);
-                        throw "global Double compilation not implemented ";
-                        break;
+                auto cpy = regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
+                if(alloc->amount()){
+                    auto reg = getReg(ins, ins);
+//                    addF(LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp()) LMBE, ins);
+                    addF(LMBS tiny::t86::MOV( vR(reg), (int64_t) cpy ) LMBE , ins);
+                }else{
+                    switch(alloc->resultType()){
+                        case ResultType::Double:{
+                            tiny::t86::DataLabel label = program_.addData(0);
+                            program_.globalEmplaceAddress(alloc, label);
+                            throw "global Double compilation not implemented ";
+                            break;
+                        }
+                        case ResultType::Integer:{
+                            tiny::t86::DataLabel label = program_.addData(0);
+                            program_.globalEmplaceAddress(alloc, label);
+                            break;
+                        }
+                        case ResultType::StructAddress:
+                            throw "global Struct compilation not implemented ";
+                            break;
+                        case ResultType::Void:
+                            throw "global Void compilation not implemented ";
+                            break;
+                        default:
+                            throw tiny::ParserError("invalid type of global allocation", ins->ast()->location());
+                            break;
                     }
-                    case ResultType::Integer:{
-                        tiny::t86::DataLabel label = program_.addData(0);
-                        program_.globalEmplaceAddress(alloc, label);
-                        break;
-                    }
-                    case ResultType::StructAddress:
-                        throw "global Struct compilation not implemented ";
-                        break;
-                    case ResultType::Void:
-                        throw "global Void compilation not implemented ";
-                        break;
-                    default:
-                        throw tiny::ParserError("invalid type of global allocation", ins->ast()->location());
-                        break;
                 }
             }else if(const auto * alloc = dynamic_cast< const AllocL *>(ins)/**TODO*/){
                 regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
@@ -995,7 +1025,7 @@ namespace tvlm {
                 if(val == program_.globalEndValue()){
                     auto aval = program_.globalFindAddress(store->value());
                     if(aval == program_.globalEndAddress()){
-                        throw "uninitialized Global?";
+                        throw "[SuperNaiveIS]uninitialized Global?";
                     }
                 }
                 program_.globalEmplaceAddress(store->address(),  val->second);

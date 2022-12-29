@@ -83,8 +83,8 @@ namespace tvlm{
 //            }
         }
 
-        void makeLocalAllocation(int64_t size, const Instruction * ins);
-        void makeGlobalAllocation(int64_t size, const Instruction * ins);
+        size_t makeLocalAllocation(int64_t size, const Instruction * ins);
+        size_t makeGlobalAllocation(int64_t size, const Instruction * ins);
 
         int64_t getAllocOffset(const Instruction * ins) const;
 //        void allocateStructArg(const Type * type,const Instruction * ins);
