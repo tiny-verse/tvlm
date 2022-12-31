@@ -111,7 +111,7 @@ namespace tvlm{
             std::cerr << tiny::color::blue << line++ << ": " << tiny::color::green << i->toString() << std::endl;
         }
 
-        return {std::move(instrs), rawProg.data()};
+        return {std::move(instrs), getData(program_)};
     }
 
     void NaiveEpilogue::visitInstrHelper(Instruction * ins){

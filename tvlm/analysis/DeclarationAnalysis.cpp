@@ -229,14 +229,17 @@ void tvlm::DeclarationAnalysis::visit(tvlm::Phi *ins) {
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::ElemAddrOffset *ins) {
+    if (!dynamic_cast<AllocL *>(ins->base()) && !dynamic_cast<AllocG *>(ins->base())){
+        result_.insert(ins->base());
+    }
     result_.insert(ins->offset());
-    result_.insert(ins->base());
     result_.insert(ins);
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::ElemAddrIndex *ins) {
-
-    result_.insert(ins->base());
+    if (!dynamic_cast<AllocL *>(ins->base()) && !dynamic_cast<AllocG *>(ins->base())){
+        result_.insert(ins->base());
+    }
     result_.insert(ins->index());
     result_.insert(ins->offset());
 

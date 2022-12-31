@@ -122,8 +122,10 @@ namespace tvlm{
         return program.allocMapping_;
     }
 
+    std::vector<int64_t> TargetProgramFriend::getData(TargetProgram &program) const {
+        return program.data_;
 
-
+    }
 
 
 }

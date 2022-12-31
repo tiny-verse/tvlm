@@ -83,6 +83,7 @@ namespace  tvlm{
         void visit(Function *fce) override;
         void visit(Program *p) override;
 
+        void compileAlloc(Instruction::ImmSize * ins, int cpy = -1);
     private:
 //        Label visitChild(IL * il) {
 //            ILVisitor::visitChild(il);

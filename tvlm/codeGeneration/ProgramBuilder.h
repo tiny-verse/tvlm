@@ -110,6 +110,7 @@ namespace tvlm {
          std::map<const Instruction *, int64_t> &
          getAllocMapping(TargetProgram & program)const;
 
+         std::vector<int64_t> getData(TargetProgram & program)const;
 
     };
     class TargetProgram{

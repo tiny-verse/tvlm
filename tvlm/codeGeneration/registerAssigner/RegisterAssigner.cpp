@@ -25,8 +25,8 @@ namespace tvlm{
     }
 
     size_t RegisterAssigner::makeGlobalAllocation(int64_t size,  const ILInstruction *ins) {
+        auto cpy = globalAllocSize; //make cpy for lambda capture
         globalAllocSize += size;
-        auto cpy = globalAllocSize-1; //make cpy for lambda capture
         targetProgram_->registerAllocation(ins, cpy);
 //        targetProgram_->addF( LMBS tiny::t86::MOV(vR(reg), (int64_t) cpy) LMBE, ins);
         return cpy;

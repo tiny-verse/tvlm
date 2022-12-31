@@ -20,14 +20,18 @@ namespace tvlm{
     }
 
     void RegisterAllocator::visit(Return *ins) {
+        if(ins->returnValue()){
         auto virtRegs = getAllocatedVirtualRegisters(ins);
-        if(ins->returnType()->registerType() == ResultType::StructAddress){
-            //TODO
-        } else if (ins->returnType()->registerType() == ResultType::Double){
-            writingPos_= 0;setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
-        }else if (ins->returnType()->registerType() == ResultType::Integer){
-            writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
+            if(ins->returnType()->registerType() == ResultType::StructAddress){
+                //TODO
+            } else if (ins->returnType()->registerType() == ResultType::Double){
+                writingPos_= 0;setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
+            }else if (ins->returnType()->registerType() == ResultType::Integer){
+                writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
 
+            }else{
+
+            }
         }else{
 
         }
@@ -400,31 +404,29 @@ namespace tvlm{
     }
 
     void RegisterAllocator::visit(Store *ins) {
-        auto *virtRegs = getAllocatedVirtualRegisters(ins);
         writingPos_= 0;
 //        setupRegister(((*virtRegs)[0]), ins->address(), ins);
 
         switch (ins->value()->resultType()) {
             case ResultType::Double:{
+                auto *virtRegs = getAllocatedVirtualRegisters(ins);
                 setupFRegister(((*virtRegs)[0]), ins->value(), ins);
                 return;
             }
             case ResultType::StructAddress:
             case ResultType::Integer:{
                 if(dynamic_cast<AllocL*>(ins->address()) || dynamic_cast<AllocG*>(ins->address())){
-
-//                  auto regAddr = getReg(ins->address(), ins);
-//                    int64_t addrOffset = regAssigner->getAllocOffset(ins->address());
-                    setupRegister(((*virtRegs)[0]), ins->value(), ins);
-//                    auto regValue = getReg(ins->value(), ins);
-//                    addF( LMBS tiny::t86::MOV(Mem(tiny::t86::Bp() - addrOffset), vR(regValue)) LMBE, ins);
+                    if (!dynamic_cast<AllocG*>(ins->value())){
+                        auto *virtRegs = getAllocatedVirtualRegisters(ins);
+                        setupRegister(((*virtRegs)[0]), ins->value(), ins);
+                    }
                     return;
-                }else{
-//                    auto regAddr = getReg(ins->address(), ins);
+                }else {
+                    auto *virtRegs = getAllocatedVirtualRegisters(ins);
                     setupRegister(((*virtRegs)[0]), ins->address(), ins);
-                    setupRegister(((*virtRegs)[1]), ins->value(), ins);
-//                    auto regValue = getReg(ins->value(), ins);
-//                    addF( LMBS tiny::t86::MOV(Mem(vR(regAddr)), vR(regValue)) LMBE, ins);
+                    if (!dynamic_cast<AllocG*>(ins->value())){
+                        setupRegister(((*virtRegs)[1]), ins->value(), ins);
+                    }
                     return;
 
                 }
@@ -446,20 +448,46 @@ namespace tvlm{
     void RegisterAllocator::visit(ElemAddrOffset *ins) {
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         writingPos_= 0;
-        writingPos_= 0;
-        setupRegister(((*virtRegs)[0]), ins, ins);
-//        setupRegister(((*virtRegs)[1]), ins->base(), ins);
-        setupRegister(((*virtRegs)[1]), ins->offset(), ins);
+        int regpos = 0;
 
+        if (dynamic_cast<AllocL *>(ins->base())) {
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+
+        }else if(dynamic_cast<AllocG *>(ins->base())){
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+
+        }else {
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->base(), ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+
+        }
     }
 
     void RegisterAllocator::visit(ElemAddrIndex *ins) {
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         writingPos_= 0;
-        setupRegister(((*virtRegs)[0]), ins, ins);
-//        setupRegister(((*virtRegs)[1]), ins->base(), ins);
-        setupRegister(((*virtRegs)[1]), ins->index(), ins);
-        setupRegister(((*virtRegs)[2]), ins->offset(), ins);
+        int regpos = 0;
+
+        if (dynamic_cast<AllocL *>(ins->base())) {
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->index(), ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+
+        }else if(dynamic_cast<AllocG *>(ins->base())){
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->index(), ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+
+        }else {
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->index(), ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->base(), ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+
+        }
 
     }
 
@@ -814,7 +842,7 @@ namespace tvlm{
                 }
             }
         }else{//not assigned
-            auto regToAssign = getReg(currentIns);
+            auto regToAssign = getReg(ins);
             assert(regToAssign.getNumber() <= tiny::t86::Cpu::Config::instance().registerCnt());
             reg.setNumber(regToAssign.getNumber());
             addressDescriptor_[currentIns].insert(LocationEntry(regToAssign, currentIns));

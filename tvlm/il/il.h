@@ -107,7 +107,7 @@ namespace tvlm{
         }
 
         ResultType registerType() const override {
-            return ResultType::Integer;
+            return ResultType::Void;
         }
 
     private:
