@@ -1055,7 +1055,7 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                     }
                 }
             }else if(const auto * alloc = dynamic_cast< const AllocL *>(ins)/**TODO*/){
-                regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
+                regAssigner_->makeLocalAllocation(alloc->size(), alloc);
                 switch(alloc->resultType()){
                     case ResultType::Double:{
                         tiny::t86::DataLabel label = program_.addData(0);
@@ -1166,13 +1166,14 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                     }
 
                 }else{
-                    regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
+//                    regAssigner_->makeGlobalAllocation(alloc->size(), alloc); -- already in make
+
                 }
             }else if(const auto * alloc = dynamic_cast< const AllocL *>(ins)){
                 if(alloc->amount()){
                     throw "[SuperNaiveIS]allocL in globals with array not possible";
                 }else{
-                    regAssigner_->makeGlobalAllocation(alloc->size(), alloc);
+//                    regAssigner_->makeLocalAllocation(alloc->size(), alloc); //Already in make
                 }
             }else if(const auto * load = dynamic_cast< const Load *>(ins)){
                 switch (load->resultType()){
