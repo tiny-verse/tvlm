@@ -151,6 +151,14 @@ namespace tvlm {
         }
         throw "[Coloring Allocator] cannot find instruction in results";
     }
+    ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(const Instruction *currentIns) {
+        VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
+        auto it = colorPickingResult_.find(currentIns);
+        if(it != colorPickingResult_.end()){
+            return VirtualRegister(RegisterType::FLOAT, it->second);
+        }
+        throw "[Coloring Allocator] cannot find instruction in results for float";
+    }
 //
 //    RegisterAllocator::VirtualRegister ColoringAllocator::getFReg(const Instruction *currentIns) {
 //        return tvlm::RegisterAllocator::VirtualRegister(RegisterType::FLOAT, 0);
@@ -208,79 +216,13 @@ namespace tvlm {
         size_t colors = this->freeReg_.size() -1;
         programChanged_ = false;
 
-//        for (auto & t : analysisResult_) { // step -> for each cfgNode TODO go by cfg_
-//
-//            std::set<std::pair<LiveRange *, size_t>, LiveRangesComparator> tmp;
-//
-//            //instruction alone is alive for sure
-//            auto * alive = dynamic_cast<ILInstruction * >(t.first->il());
-//            if(alive &&alive->resultType() != ResultType::Void ) { //if the node is instruction
-//
-//                auto it = rangesAlive_.find(alive);
-//                if (it == rangesAlive_.end()) {
-//                    auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
-//                    tmp.emplace(newRange.get(), liveRanges_.size());
-//                    addLR(std::move(newRange));
-//                } else {
-//                    it->first->setEnd(t.first->il());
-//                    tmp.insert(*it);
-//                }
-//            }
-//            for( auto * alive_ : t.second ){
-//                if(auto * alive = dynamic_cast<ILInstruction * >(alive_->start())){ //if the node is instruction
-//                    auto it = rangesAlive_.find(alive);
-//                    if(it == rangesAlive_.end()){
-//                        auto newRange = std::make_unique<LiveRange>(alive, t.first->il());
-//                        tmp.emplace(newRange.get(), liveRanges_.size());
-//                        addLR(std::move(newRange));
-//                    }else{
-//                        it->first->setEnd(t.first->il());
-//                        tmp.insert(*it);
-//                    }
-//                }
-//            }
-//            rangesAlive_ = std::move(tmp);
-//
-//            //incidence graph build
-//            LRincidence_.resize(liveRanges_.size());
-//            LRincidence.resize(liveRanges_.size());
-//            for (auto & i : rangesAlive_) {
-//                for (auto & j : rangesAlive_) {
-//                    if(i.second != j.second ) {
-//                        LRincidence_[i.second].emplace(j.second);
-//                        LRincidence_[j.second].emplace(i.second);
-//                        LRincidence[i.second].emplace(j.second);
-//                        LRincidence[j.second].emplace(i.second);
-//                    }
-//                }
-//            }
-//
-//        }
+
         LRincidence_.resize(liveRanges_.size());
         LRincidence.resize(liveRanges_.size());
         for (auto & t : analysisResult_) { // step -> for each cfgNode TODO go by cfg_
 
 
-//
-//            if(auto ins = dynamic_cast<tvlm::Instruction*>(t.first->il())){
-//                auto lrPos = searchRanges_.find(ins);
-//                if(ins->resultType() != ResultType::Void && lrPos == searchRanges_.end()){
-//                    throw "[Coloring Allocator.cpp] cannot find Range for instruction";
-//                }
-//                    for (auto * LR : t.second) {
-//                        auto otherPos = lrIndex_.find(LR);
-//                        if(otherPos == lrIndex_.end()){
-//                            throw "[Coloring Allocator.cpp] cannot find index for liveRange -- probably not registered";
-//                        }
-//                        LRincidence_[lrPos->second].emplace(otherPos->second);
-//                        LRincidence_[otherPos->second].emplace(lrPos->second);
-//                        LRincidence[lrPos->second].emplace(otherPos->second);
-//                        LRincidence[otherPos->second].emplace(lrPos->second);
-//
-//                    }
-//
-//
-//            }
+
             std::vector<CLiveRange *> tmpVector(t.second.begin(), t.second.end());
             if (auto ins = dynamic_cast<tvlm::Instruction *>(t.first->il())) {
                 auto lr1Pos = searchRanges_.find(ins);
@@ -288,19 +230,23 @@ namespace tvlm {
                     if(lr1Pos == searchRanges_.end()){
                         throw "[Coloring Allocator.cpp] cannot find Range for instruction";
                     }
+                    const std::unique_ptr<CLiveRange> & lr1 = liveRanges_.at(lr1Pos->second);
                     for (auto & lr2 : tmpVector) {
-    //                for (size_t j = i +1 ; j < tmpVector.size();j++){
-                        auto lr2Pos = lrIndex_.find(lr2);
-                        if (lr2Pos == lrIndex_.end()) {
-                            throw CSTR(
-                                    "[Coloring Allocator.cpp] cannot find index for liveRange -- probably not registered "
-                                            << lr2->il().size() << " with " << lr2->start());
-                        }
-                        LRincidence_[lr1Pos->second].emplace(lr2Pos->second);
-                        LRincidence[lr1Pos->second].emplace(lr2Pos->second);
-                        LRincidence_[lr2Pos->second].emplace(lr1Pos->second);
-                        LRincidence[lr2Pos->second].emplace(lr1Pos->second);
+                        if(lr2->type() == lr1->type()){
 
+//                          for (size_t j = i +1 ; j < tmpVector.size();j++){
+                            auto lr2Pos = lrIndex_.find(lr2);
+                            if (lr2Pos == lrIndex_.end()) {
+                                throw CSTR(
+                                        "[Coloring Allocator.cpp] cannot find index for liveRange -- probably not registered "
+                                                << lr2->il().size() << " with " << lr2->start());
+                            }
+                            LRincidence_[lr1Pos->second].emplace(lr2Pos->second);
+                            LRincidence[lr1Pos->second].emplace(lr2Pos->second);
+                            LRincidence_[lr2Pos->second].emplace(lr1Pos->second);
+                            LRincidence[lr2Pos->second].emplace(lr1Pos->second);
+
+                        }
                     }
                 }
             }
@@ -366,7 +312,29 @@ namespace tvlm {
 
                     switch (instr->resultType()) {
 
-                        case ResultType::Double:
+                        case ResultType::Double:{
+
+                            //spilling IntegerTypeRegister
+
+                            alloc = bb->inject(new AllocL(Type::Double().size(), instr->ast()));//begining of BB
+                            alloc->setName(STR("inject " << instr->name() << ":F"));
+
+
+                            for (auto *u: instr->usages()) {
+                                BasicBlock *bbu = u->getParentBB();
+                                Instruction *newLoad = bbu->injectBefore(
+                                        new Load(alloc, instr->resultType(), instr->ast()), u);
+                                u->replaceWith(instr, newLoad);
+                                newLoad->setName(STR(newLoad->name() << " by " << instr->name() << ":F"));
+
+                            }
+
+                            auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
+                            nStore->setName(STR(nStore->name() << " by " << instr->name()<< ":F"));
+
+
+                            break;
+                        }
                         case ResultType::Integer:
                         case ResultType::StructAddress: {
 

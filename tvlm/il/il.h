@@ -655,7 +655,7 @@ namespace tvlm{
             operator_{oper},
             lhs_{lhs},
             rhs_{rhs} {
-
+            assert(lhs->resultType() == rhs->resultType());
             lhs->registerUsage(this);
             rhs->registerUsage(this);
         }

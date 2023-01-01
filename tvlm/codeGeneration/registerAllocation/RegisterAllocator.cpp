@@ -362,7 +362,9 @@ namespace tvlm{
         writingPos_= 0;
         if(ins->resultType() == ResultType::Double){
             setupFRegister(((*virtRegs)[0]), ins, ins);
-//            setupRegister(((*virtRegs)[1]), ins->address(), ins);
+            if(!dynamic_cast<AllocL *>(ins->address()) && !dynamic_cast<AllocG *>(ins->address())){
+                setupRegister(((*virtRegs)[1]), ins->address(), ins);
+            }
             return;
         }else if (ins->resultType() == ResultType::Integer){
 
@@ -409,8 +411,17 @@ namespace tvlm{
 
         switch (ins->value()->resultType()) {
             case ResultType::Double:{
-                auto *virtRegs = getAllocatedVirtualRegisters(ins);
-                setupFRegister(((*virtRegs)[0]), ins->value(), ins);
+                if(dynamic_cast<AllocL*>(ins->address()) || dynamic_cast<AllocG*>(ins->address())){
+                    auto *virtRegs = getAllocatedVirtualRegisters(ins);
+                    setupFRegister(((*virtRegs)[0]), ins->value(), ins);
+                    return;
+                }else {
+                    auto *virtRegs = getAllocatedVirtualRegisters(ins);
+                    setupRegister(((*virtRegs)[0]), ins->address(), ins);
+                    setupFRegister(((*virtRegs)[1]), ins->value(), ins);
+                    return;
+
+                }
                 return;
             }
             case ResultType::StructAddress:
@@ -822,7 +833,7 @@ namespace tvlm{
                         VirtualRegister freeVirtReg = getReg(currentIns);
                         Register freeReg = freeVirtReg.getNumber();
                         restore(freeVirtReg, loc, currentIns);
-                        addressDescriptor_[ins].emplace(LocationEntry(freeVirtReg, ins));
+                        addressDescriptor_[ins].emplace(freeVirtReg, ins);
                         registerDescriptor_[freeVirtReg].emplace(ins);
 
                         reg.setNumber(freeReg.index());
@@ -853,7 +864,50 @@ namespace tvlm{
 
     void
     RegisterAllocator::setupFRegister(VirtualRegisterPlaceholder & reg, const Instruction *ins, const Instruction * currentIns) {
+        auto location = addressDescriptor_.find(ins);
+        if(location != addressDescriptor_.end()){
+//            for (auto & loc : location->second) { //priority in ordered set will manage to do it
+//                if(loc.loc() == Location::Register){
+//                    reg->setNumber(loc.regIndex().getNumber());
+//                    return;
+//                }
+//            }
+            for (auto & loc : location->second) {
+                switch(loc.loc()) {
+                    case Location::Register:
+                        reg.setNumber(loc.regIndex().getNumber());
+                        return;
+                    case Location::Memory: {
+                        VirtualRegister freeVirtReg = getReg(currentIns);
+                        Register freeReg = freeVirtReg.getNumber();
+                        restore(freeVirtReg, loc, currentIns);
+                        addressDescriptor_[ins].emplace(freeVirtReg, ins);
+                        registerDescriptor_[freeVirtReg].emplace(ins);
 
+                        reg.setNumber(freeReg.index());
+                        return;
+                    }
+                    case Location::Stack: {
+
+
+                        VirtualRegister freeVirtReg = getFReg(currentIns);
+                        Register freeReg = freeVirtReg.getNumber();
+
+                        restore(freeVirtReg, loc, currentIns);addressDescriptor_[currentIns].emplace( freeVirtReg, currentIns);
+                        registerDescriptor_[freeVirtReg].emplace(currentIns);
+                        reg.setNumber(freeReg.index());
+                        return;
+                    }
+                }
+            }
+        }else{//not assigned
+            auto regToAssign = getFReg(ins);
+            assert(regToAssign.getNumber() <= tiny::t86::Cpu::Config::instance().floatRegisterCnt());
+            reg.setNumber(regToAssign.getNumber());
+            addressDescriptor_[currentIns].insert(LocationEntry(regToAssign, currentIns));
+            registerDescriptor_[regToAssign].emplace(currentIns);
+            return;
+        }
     }
 
     void RegisterAllocator::replaceInRegister(const Instruction * replace, const Instruction * with) {

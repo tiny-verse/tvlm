@@ -8,18 +8,27 @@
 #include "cfg.h"
 #include "DeclarationAnalysis.h"
 
+
+namespace tvlm{
+
 class CLiveRange {
     using IL = ::tvlm::IL;
 protected:
-    CLiveRange(const std::set<IL *>& il, IL * start, IL * end):
-            il_(il),
-            start_(start),
-            end_(end){
-
-    }
+//    CLiveRange(const std::set<IL *>& il,ResultType & type, IL * start, IL * end):
+//            il_(il),
+//            type_(type),
+//            start_(start),
+//            end_(end){
+//        assert(il_.size() > 0);
+//        for(auto * i : il_){
+//            auto ins = dynamic_cast<Instruction*>(i);
+//            assert(ins && ins->resultType() == type_)
+//        }
+//    }
 public:
     CLiveRange(Instruction * il, IL * end):
     il_({il}),
+    type_(il->resultType()),
     start_(end),
     end_(end){
 
@@ -30,6 +39,9 @@ public:
     }
 
     CLiveRange * merge( CLiveRange * other) { // always care for merge order
+        if(type() != other->type()){
+            throw "[livenessAnalysisTarget]merging LiveRange of different types";
+        }
         if(il_ != other->il_){
             il_.merge( other->il_);
         }
@@ -50,6 +62,9 @@ public:
     void setEnd(IL *end){
         end_ = end;
     }
+    ResultType type()const{
+        return type_;
+    }
 
     const std::set<IL *>& il() const {
         return il_;
@@ -62,6 +77,7 @@ public:
     }
 private:
     std::set<IL *> il_;
+    ResultType type_;
     IL * start_;
     IL * end_;
 };
@@ -80,7 +96,6 @@ private:
 //    }
 //};
 
-namespace tvlm{
     using Instruction = ::tvlm::Instruction;
 
     template<class T>

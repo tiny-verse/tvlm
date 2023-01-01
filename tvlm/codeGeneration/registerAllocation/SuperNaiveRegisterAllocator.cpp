@@ -73,6 +73,22 @@ namespace tvlm {
         return res;
     }
 
+    SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getFReg( const Instruction * currentIns) {
+        VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
+        if(freeFReg_.size() > 0){
+            res = freeFReg_.front();
+            freeFReg_.pop();
+
+            regQueue_.push_back(res);
+        }else {
+            VirtualRegisterPlaceholder ress = getRegToSpill();
+            spill( ress, currentIns);
+            res = ress;
+            regQueue_.push_back(res);
+        }
+        return res;
+    }
+
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getLastRegister(const Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         if(!freeReg_.empty()){
@@ -115,20 +131,5 @@ namespace tvlm {
 
     }
 
-    SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getFReg( const Instruction * currentIns) {
-        VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
-        if(freeFReg_.size() > 0){
-            res = freeFReg_.front();
-            freeFReg_.pop();
-
-            regQueue_.push_back(res);
-        }else {
-            VirtualRegisterPlaceholder ress = getRegToSpill();
-            spill( ress, currentIns);
-            res = ress;
-            regQueue_.push_back(res);
-        }
-        return res;
-    }
 
 }

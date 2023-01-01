@@ -182,27 +182,27 @@ namespace tvlm{
 //
 //        FRegister getFreeFloatRegister() override;
 
-        class LiveRangesComparator
-        {
-            // this member is required to let container be aware that
-            // comparator is capable of dealing with types other than key
-        public: using is_transparent = std::true_type;
-
-        public: bool operator()(const ILInstruction * left, const std::pair<LiveRange *, size_t> & right) const
-            {
-                return left < right.first->start();
-            }
-
-        public: bool operator()(const std::pair<LiveRange *, size_t> & left, const ILInstruction * right) const
-            {
-                return left.first->start() < right;
-            }
-
-        public: bool operator()(const std::pair<LiveRange *, size_t> &  left, const std::pair<LiveRange *, size_t> &  right) const
-            {
-                return left.first->start() < right.first->start();
-            }
-        };
+//        class LiveRangesComparator
+//        {
+//            // this member is required to let container be aware that
+//            // comparator is capable of dealing with types other than key
+//        public: using is_transparent = std::true_type;
+//
+//        public: bool operator()(const ILInstruction * left, const std::pair<LiveRange *, size_t> & right) const
+//            {
+//                return left < right.first->start();
+//            }
+//
+//        public: bool operator()(const std::pair<LiveRange *, size_t> & left, const ILInstruction * right) const
+//            {
+//                return left.first->start() < right;
+//            }
+//
+//        public: bool operator()(const std::pair<LiveRange *, size_t> &  left, const std::pair<LiveRange *, size_t> &  right) const
+//            {
+//                return left.first->start() < right.first->start();
+//            }
+//        };
 
 
         MAP<const CfgNode<ColorInfo> *,std::set<CLiveRange*>> analysisResult_;
@@ -216,7 +216,7 @@ namespace tvlm{
 //        std::vector<Instruction *> searchInstrs_; // size_t -> index to liveRanges
         std::map<size_t, std::set<Instruction *>> searchInstrs_; // size_t -> index to liveRanges
         std::vector<std::unique_ptr<CLiveRange>> liveRanges_;
-        std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
+//        std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
         std::vector<std::set<size_t>> LRincidence_;
 
         std::map<const Instruction *, size_t> spillIndexes_; //size_t -> index in liveRanges_ //both: 1st where to spill ; 2nd: what to spill
@@ -232,6 +232,7 @@ namespace tvlm{
 
         VirtualRegister getRegToSpill();
         VirtualRegister getReg(const Instruction *currentIns) override;
+        VirtualRegister getFReg(const Instruction *currentIns) override;
 //
 //        VirtualRegister getFReg(const Instruction *currentIns) override;
 
