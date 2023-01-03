@@ -218,6 +218,7 @@ namespace tvlm{
         std::vector<std::unique_ptr<CLiveRange>> liveRanges_;
 //        std::set<std::pair<LiveRange*, size_t>, LiveRangesComparator> rangesAlive_; // size_t -> index to liveRanges
         std::vector<std::set<size_t>> LRincidence_;
+        std::set<Instruction *> unusedInstructions_;
 
         std::map<const Instruction *, size_t> spillIndexes_; //size_t -> index in liveRanges_ //both: 1st where to spill ; 2nd: what to spill
         std::stack<size_t> colorPickingStack_; //size_t -> index in liveRanges_
@@ -231,7 +232,7 @@ namespace tvlm{
         bool setColors();
 
         VirtualRegister getRegToSpill();
-        VirtualRegister getReg(const Instruction *currentIns) override;
+        VirtualRegister getReg(const Instruction *ins) override;
         VirtualRegister getFReg(const Instruction *currentIns) override;
 //
 //        VirtualRegister getFReg(const Instruction *currentIns) override;

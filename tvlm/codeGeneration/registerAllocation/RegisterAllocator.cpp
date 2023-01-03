@@ -141,7 +141,9 @@ namespace tvlm{
 //        spillCallReg(); //TODO implement calling convention
         callingConvCallerSave(ins);
 
-        updateCallPatchPositions(ins);
+//        updateCallPatchPositions(ins); // not a staticCall
+            setupRegister(((*virtRegs)[regPos++]), ins->f(), ins);
+
 //        tiny::t86::Label callLabel = addF(
 //                LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
 //                , ins );

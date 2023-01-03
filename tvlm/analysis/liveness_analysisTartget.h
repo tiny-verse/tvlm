@@ -647,7 +647,8 @@ private:
                 std::set< CLiveRange*> tmp;
                 for ( auto & n : cfg_->nodes()){
                     if(auto t = dynamic_cast<Instruction *>(n->il()) ){
-                        if(t->resultType() != ResultType::Void){
+                        if(t->resultType() != ResultType::Void && !t->usages().empty()){
+                            // instruction without usage does not need to be alive
                             auto lr = new CLiveRange(t, t);
                             allocatedLR_.emplace(lr);
                             tmp.emplace(lr);

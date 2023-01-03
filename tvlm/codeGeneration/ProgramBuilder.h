@@ -281,6 +281,11 @@ namespace tvlm {
             }
 
         std::shared_ptr<Program> program_;
+
+        void interceptInstruction(const Instruction * which, std::list<TFInstruction> && with){
+            selectedFInstrs_[which] = std::move(with);
+        }
+
     private:
         std::map<const Function * ,size_t> funcLocalAlloc_;
         std::map<const ILInstruction*, std::vector<TInstruction*>> selectedInstrs_;

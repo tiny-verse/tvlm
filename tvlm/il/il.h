@@ -299,6 +299,10 @@ namespace tvlm{
         }
 
 
+        const std::vector<Instruction *> &  usages()const {
+            return used_;
+        }
+
         std::vector<Instruction *> & usages() {
             return used_;
         }

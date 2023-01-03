@@ -2,6 +2,7 @@
 
 #include "t86/program/helpers.h"
 #include "t86/instruction.h"
+#include "tvlm/tvlm/codeGeneration/FunctionalMacro.h"
 
 
 namespace tvlm{
@@ -301,8 +302,9 @@ namespace tvlm{
         tiny::t86::Label prolog = pb_.currentLabel();//t86::Label(lastInstruction_index +1);
         for(auto & f : functionTable_){
             const Instruction * fnc_addr = p->getGlobalVariableAddress( f.first);
-//            instructionToEmplace.emplace(fnc_addr, new LoadImm((int64_t)f.second.address(), nullptr));
-            program_.globalEmplaceAddress(fnc_addr, f.second.address());
+            uint64_t value = f.second.address();
+//            instructionToEmplace_.emplace(fnc_addr,  ); //new LoadImm((int64_t)f.second.address(), nullptr));
+            program_.interceptInstruction(fnc_addr, {LMBS  tiny::t86::MOV(vR(0), value) LMBE});
         }
         compiledGlobalTable(globs);
 

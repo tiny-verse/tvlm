@@ -143,12 +143,18 @@ namespace tvlm {
 
 
 
-    ColoringAllocator::VirtualRegister ColoringAllocator::getReg(const Instruction *currentIns) {
+    ColoringAllocator::VirtualRegister ColoringAllocator::getReg(const Instruction *ins) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
-        auto it = colorPickingResult_.find(currentIns);
+        auto it = colorPickingResult_.find(ins);
         if(it != colorPickingResult_.end()){
-            auto res = VirtualRegister(RegisterType::INTEGER, it->second);
+            res = VirtualRegister(RegisterType::INTEGER, it->second);
             eraseFreeReg(res);
+            return res;
+        }else if (ins->usages().empty()){
+            res = freeReg_.front();
+            freeReg_.erase(freeReg_.begin());
+
+            regQueue_.push_back(res);
             return res;
         }
         throw "[Coloring Allocator] cannot find instruction in results";
@@ -229,7 +235,7 @@ namespace tvlm {
 
             if (auto ins = dynamic_cast<tvlm::Instruction *>(t.first->il())) {
                 auto lr1Pos = searchRanges_.find(ins);
-                if(ins->resultType() != ResultType::Void){
+                if(ins->resultType() != ResultType::Void && !ins->usages().empty()){
                     if(lr1Pos == searchRanges_.end()){
                         throw "[Coloring Allocator.cpp] cannot find Range for instruction";
                     }
@@ -252,6 +258,8 @@ namespace tvlm {
 
                         }
                     }
+                }else if(ins->usages().empty()){
+                    unusedInstructions_.emplace(ins);
                 }
             }
         }

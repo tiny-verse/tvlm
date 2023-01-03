@@ -195,8 +195,9 @@ namespace tvlm {
 ////        regAllocator->spillCallReg();
 //        //call
 //        tiny::t86::Label callLabel = add(tiny::t86::CALL{tiny::t86::Label::empty()}, ins);
+        auto addrCallReg = getReg(ins->f(), ins);
         tiny::t86::Label callLabel = addF(
-                LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
+                LMBS tiny::t86::CALL{vR(addrCallReg)} LMBE
                 , ins );
 
         // -** manage return Value
@@ -222,7 +223,7 @@ namespace tvlm {
 
         addF( LMBS tiny::t86::ADD(tiny::t86::Sp(), argSize) LMBE, ins); // instead of popping function args
 //
-        program_.registerCall(ins, callLabel, ins->f()->name());
+//        program_.registerCall(ins, callLabel, ins->f()->name()); // no need to patch address from register .. need to mem intercept
 //        lastIns_ = ret; //return ret;
 
     }
@@ -1129,8 +1130,14 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
         for( auto *ins : getBBsInstructions(globals)){
             if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 if(i->resultType() == ResultType::Integer){
+
+                    auto it = program_.globalFindValue(ins);
+                    if(it == program_.globalEndValue()){
+                        throw CSTR("[SuperNaiveIS] missing value from LoadImm instruction" << ins->name() );
+                    }
                     auto reg = getReg(ins, ins);
-                    addF( LMBS tiny::t86::MOV( vR(reg), i->valueInt()) LMBE, ins);
+                    size_t value = it->second;
+                    addF( LMBS tiny::t86::MOV( vR(reg), value) LMBE, ins);
                 }else if (i->resultType() == ResultType::Double){
                     auto freg=getFReg(ins, ins);
                     addF( LMBS tiny::t86::MOV( vFR(freg), i->valueFloat()) LMBE, ins);
