@@ -48,23 +48,18 @@ namespace tvlm{
         int regPos = 0;
 
         //        //args /*-> prepare values
-        if(!ins->args().empty()){
-            virtRegs = getAllocatedVirtualRegisters(ins);
-        }
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
-            if((*it).second->registerType() == ResultType::StructAddress) {
+            if( (*it).second->registerType() == ResultType::StructAddress ||
+                (*it).second->registerType() == ResultType::Integer){
+                if(virtRegs == nullptr){
+                    virtRegs = getAllocatedVirtualRegisters(ins);
+                }
                 setupRegister(((*virtRegs)[regPos++]), it->first, ins);
-//                allocateStructArg(it->second, it->first);
-            }else if((*it).second->registerType() == ResultType::Integer){
-//                auto argReg = getReg(it->first, ins);
-                setupRegister(((*virtRegs)[regPos++]), it->first, ins);
-//                clearIntReg(it->first);
             }else if ((*it).second->registerType() == ResultType::Double){
-//                auto argFReg = getFReg(it->first, ins);
-
+                if(virtRegs == nullptr){
+                    virtRegs = getAllocatedVirtualRegisters(ins);
+                }
                 setupFRegister(((*virtRegs)[regPos++]), it->first, ins);
-//                addF(LMBS tiny::t86::FPUSH(vFR(argFReg)) LMBE, ins);
-//                clearFloatReg(it->first);
             }
         }
         //        //prepare return Value //*-> preparation in RA -- memory and register in RA
@@ -75,9 +70,7 @@ namespace tvlm{
         callingConvCallerSave(ins);
 
         updateCallPatchPositions(ins);
-//        tiny::t86::Label callLabel = addF(
-//                LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
-//                , ins );
+//        tiny::t86::Label callLabel = ...
         writingPos_++;
 
 

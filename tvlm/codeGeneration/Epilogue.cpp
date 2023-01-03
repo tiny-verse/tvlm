@@ -318,7 +318,26 @@ namespace tvlm{
         pb_.add(
                 tiny::t86::DBG(
                         [](tiny::t86::Cpu & cpu){
-                            printAllRegisters(cpu,std::cerr);
+                            auto & os = std::cerr;
+                            os << "Pc: " << cpu.getRegister(tiny::t86::Pc()) << '\n';
+                            os << "Sp: " << cpu.getRegister(tiny::t86::Sp()) << '\n';
+                            os << "Bp: " << cpu.getRegister(tiny::t86::Bp()) << '\n';
+                            os << "Flags: " << cpu.getRegister(tiny::t86::Flags()) << '\n';
+                            auto max = cpu.registersCount() < cpu.floatRegistersCount() ? cpu.floatRegistersCount() : cpu.registersCount();
+                            for (std::size_t i = 0; i < max; ++i) {
+                                if(i < cpu.registersCount()){
+                                    os << "Reg(" << i << "): " << cpu.getRegister(tiny::t86::Reg(i)) << "\t\t";
+
+                                }else{
+                                    os << "\t\t\t\t";
+                                }
+
+                                if(i < cpu.floatRegistersCount()){
+                                    os << "FReg(" << i << "): " << cpu.getFloatRegister(tiny::t86::FReg(i));
+                                }
+                                os << '\n';
+                            }
+                            os << std::flush;
                         }
                 ), nullptr
                 );
