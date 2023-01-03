@@ -49,11 +49,11 @@ namespace tvlm{
 
         //        //args /*-> prepare values
         if(!ins->args().empty()){
-            auto virtRegs = getAllocatedVirtualRegisters(ins);
-
+            virtRegs = getAllocatedVirtualRegisters(ins);
         }
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
             if((*it).second->registerType() == ResultType::StructAddress) {
+                setupRegister(((*virtRegs)[regPos++]), it->first, ins);
 //                allocateStructArg(it->second, it->first);
             }else if((*it).second->registerType() == ResultType::Integer){
 //                auto argReg = getReg(it->first, ins);
