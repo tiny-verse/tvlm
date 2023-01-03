@@ -686,7 +686,9 @@ namespace tvlm{
 
         bool memset = false, stackset = false;
         if(regDesc != registerDescriptor_.end() && ! regDesc->second.empty()){ //only if in reg is something
-            for (auto itRegDesc = regDesc->second.begin();itRegDesc != regDesc->second.end();) {    //remove Register descriptor and find Stack Descriptor for each instruction in this register
+            for (auto itRegDesc = regDesc->second.begin();itRegDesc != regDesc->second.end();) {
+                //remove Register descriptor and find Stack Descriptor for each instruction in this register
+                //insert data to address desc for each change
                 // if not found ADD it
                 auto * ins = *itRegDesc;
                 auto addr = addressDescriptor_.find(ins);
@@ -702,6 +704,7 @@ namespace tvlm{
                             newPosition = memLoc->memAddress();
                             memset = true;
                         }
+                        //todo add address Descriptor
                     }else {
                         if(!stackset){
                             stackset = true;
@@ -713,6 +716,7 @@ namespace tvlm{
                                 addr->second.insert(newStackPlace);
                             }
                         }
+                        addressDescriptor_[ins].emplace(newStackPlace);
                     }
 
                     regLoc = findLocation(addr->second, Location::Register);
@@ -726,37 +730,37 @@ namespace tvlm{
                 itRegDesc = regDesc->second.erase(itRegDesc); // remove reg-descriptor from this register
             }
 
-            if(memset){
-                VirtualRegister lastReg = getLastRegister(currentIns);
-                //spill Code IntReg
-                Register lReg = Register(lastReg.getNumber());
-                targetProgram_.addF_insert(LMBS tiny::t86::MOV( lReg, tiny::t86::Bp())LMBE, currentIns, writingPos_++);
-                targetProgram_.addF_insert(LMBS tiny::t86::SUB( lReg, (int64_t) newPosition)LMBE, currentIns, writingPos_++);
-                if(regToSpill.getType() == RegisterType::INTEGER){
-                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), Register(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
-                }else if (regToSpill.getType() == RegisterType::FLOAT){
-                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), FRegister(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
+                if(memset){
+                    VirtualRegister lastReg = getLastRegister(currentIns);
+                    //spill Code IntReg
+                    Register lReg = Register(lastReg.getNumber());
+                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( lReg, tiny::t86::Bp())LMBE, currentIns, writingPos_++);
+                    targetProgram_.addF_insert(LMBS tiny::t86::SUB( lReg, (int64_t) newPosition)LMBE, currentIns, writingPos_++);
+                    if(regToSpill.getType() == RegisterType::INTEGER){
+                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), Register(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
+                    }else if (regToSpill.getType() == RegisterType::FLOAT){
+                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), FRegister(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
+                    }else{
+                        throw "[RA] spill: register type not handled (in memory spill)";
+                    }
+                    releaseRegister(lastReg);
+                }else if (stackset){
+    //spill Code
+                    VirtualRegister lastReg = getLastRegister(currentIns);
+                    Register lReg = Register(lastReg.getNumber());
+                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( lReg, tiny::t86::Bp())LMBE, currentIns, writingPos_++);
+                    targetProgram_.addF_insert(LMBS tiny::t86::SUB( lReg, (int64_t)newPosition)LMBE, currentIns, writingPos_++);
+                    if(regToSpill.getType() == RegisterType::INTEGER){
+                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), Register(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
+                    }else if (regToSpill.getType() == RegisterType::FLOAT){
+                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), FRegister(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
+                    }else{
+                        throw "[RA] spill: register type not handled (in stack spill)";
+                    }
+                    releaseRegister(lastReg);
                 }else{
-                    throw "[RA] spill: register type not handled (in memory spill)";
+                    throw "[RA] error - couldn't pick mem nor stack place to spill";
                 }
-                releaseRegister(lastReg);
-            }else if (stackset){
-//spill Code
-                VirtualRegister lastReg = getLastRegister(currentIns);
-                Register lReg = Register(lastReg.getNumber());
-                targetProgram_.addF_insert(LMBS tiny::t86::MOV( lReg, tiny::t86::Bp())LMBE, currentIns, writingPos_++);
-                targetProgram_.addF_insert(LMBS tiny::t86::SUB( lReg, (int64_t)newPosition)LMBE, currentIns, writingPos_++);
-                if(regToSpill.getType() == RegisterType::INTEGER){
-                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), Register(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
-                }else if (regToSpill.getType() == RegisterType::FLOAT){
-                    targetProgram_.addF_insert(LMBS tiny::t86::MOV( tiny::t86::Mem(lReg), FRegister(regToSpill.getNumber()))LMBE, currentIns, writingPos_++);
-                }else{
-                    throw "[RA] spill: register type not handled (in stack spill)";
-                }
-                releaseRegister(lastReg);
-            }else{
-                throw "[RA] error - couldn't pick mem nor stack place to spill";
-            }
 
             return true;
         }else if ( regDesc->second.empty()) {
@@ -789,27 +793,30 @@ namespace tvlm{
                         targetProgram_.addF_insert(LMBS tiny::t86::MOV( Register(whereTo.getNumber()), tiny::t86::Mem(from.memAddress())) LMBE,currentIns, writingPos_);
                         break;
                 }
+                break;
             case RegisterType::FLOAT:
                 switch (from.loc()) {
                     case Location::Register:
                         if(whereTo.getNumber() != from.regIndex().getNumber()){
-                            targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), Register(from.regIndex().getNumber()) ) LMBE,currentIns, writingPos_++);
+                            targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), FRegister(from.regIndex().getNumber()) ) LMBE,currentIns, writingPos_++);
                         }
                         break;
                     case Location::Stack:{
 
-                        VirtualRegister freeRegVirt = getReg(currentIns);
+//                        VirtualRegister freeRegVirt = getReg(currentIns);
+                        VirtualRegister freeRegVirt = VirtualRegisterPlaceholder(RegisterType::INTEGER, 0);
                         Register freeReg = freeRegVirt.getNumber();
                         targetProgram_.addF_insert(LMBS tiny::t86::MOV( freeReg, tiny::t86::Bp()) LMBE,currentIns, writingPos_++);
                         targetProgram_.addF_insert(LMBS tiny::t86::SUB( freeReg, from.stackOffset()) LMBE,currentIns, writingPos_++);
-                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), tiny::t86::Mem( Register(whereTo.getNumber()))) LMBE,currentIns, writingPos_++);
+                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), tiny::t86::Mem( freeReg )) LMBE,currentIns, writingPos_++);
 
                         break;
                     }
                     case Location::Memory:
-                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), tiny::t86::Mem(from.memAddress())) LMBE,currentIns, writingPos_);
+                        targetProgram_.addF_insert(LMBS tiny::t86::MOV( FRegister(whereTo.getNumber()), tiny::t86::Mem(from.memAddress())) LMBE,currentIns, writingPos_++);
                         break;
                 }
+                break;
         }
     }
 
@@ -817,11 +824,65 @@ namespace tvlm{
 
     void RegisterAllocator::setupRegister(VirtualRegisterPlaceholder & reg, const Instruction * ins,  const Instruction *currentIns) {
         auto location = addressDescriptor_.find(ins);
-        if(location != addressDescriptor_.end()){
+        if(location != addressDescriptor_.end() && !location->second.empty()){
 //            for (auto & loc : location->second) { //priority in ordered set will manage to do it
 //                if(loc.loc() == Location::Register){
 //                    reg->setNumber(loc.regIndex().getNumber());
 //                    return;
+//                }
+//            }
+//            if(auto load = dynamic_cast<const Load*>(ins)){
+//                if(load->resultType() == ResultType::Integer){
+//
+//                    if(auto allocL = dynamic_cast<AllocL*>(load->address())){
+//
+//                        VirtualRegister freeVirtReg = getReg(ins);
+//                        Register freeReg = freeVirtReg.getNumber();
+//                        auto stackLoc = targetProgram_.allocMapping_.find(allocL);
+//                        if(stackLoc == targetProgram_.allocMapping_.end()){
+//                            throw "[RegisterAllocator]cannot find allocL";
+//                        }
+//                        size_t loc = stackLoc->second;
+//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Bp())LMBE ,currentIns, writingPos_++);
+//                        targetProgram_.addF_insert( LMBS tiny::t86::SUB( freeReg, loc)LMBE ,currentIns, writingPos_++);
+//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Mem(freeReg))LMBE ,currentIns, writingPos_++);
+//                        reg.setNumber(freeReg.index());
+//
+//                    }else if (auto allocG = dynamic_cast<AllocG*>(load->address())){
+//                        VirtualRegister freeVirtReg = getReg(ins);
+//                        Register freeReg = freeVirtReg.getNumber();
+//                        auto stackLoc = targetProgram_.allocMapping_.find(allocG);
+//                        if(stackLoc == targetProgram_.allocMapping_.end()){
+//                            throw "[RegisterAllocator]cannot find allocG";
+//                        }
+//                        size_t loc = stackLoc->second;
+//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Bp())LMBE ,currentIns, writingPos_++);
+//                        targetProgram_.addF_insert( LMBS tiny::t86::SUB( freeReg, loc)LMBE ,currentIns, writingPos_++);
+//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Mem(freeReg))LMBE ,currentIns, writingPos_++);
+//                        reg.setNumber(freeReg.index());
+//
+//                    }else if (auto argAddr = dynamic_cast<ArgAddr*>(load->address())){
+//                        VirtualRegister freeVirtReg = getReg(argAddr);
+//                        auto allocDesc = addressDescriptor_.find(argAddr);
+//                        if(allocDesc == addressDescriptor_.end() || allocDesc->second.empty()){
+//                            throw "[Register Allocator] cannot find argAddr in registers";
+//                        }
+//
+//
+//                        restore(freeVirtReg, *allocDesc->second.begin(),currentIns);
+//                        VirtualRegister loadVirtReg = getReg(load);
+//                        Register freeReg = freeVirtReg.getNumber();
+//                        Register loadReg = loadVirtReg.getNumber();
+//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( loadReg, tiny::t86::Mem(freeReg))LMBE ,currentIns, writingPos_++);
+//                        reg.setNumber(loadReg.index());
+//
+//                    }else{
+//                        //probably argAddr, Elem, ...
+//                    }
+//                }else if (load->resultType() == ResultType::Double){
+//                    throw "not implemented 656833535";
+//                }else {
+//                    throw "not implemented 665352535";
 //                }
 //            }
             for (auto & loc : location->second) {
@@ -845,8 +906,8 @@ namespace tvlm{
                         VirtualRegister freeVirtReg = getReg(currentIns);
                         Register freeReg = freeVirtReg.getNumber();
 
-                        restore(freeVirtReg, loc, currentIns);addressDescriptor_[currentIns].emplace( freeVirtReg, currentIns);
-                        registerDescriptor_[freeVirtReg].emplace(currentIns);
+                        restore(freeVirtReg, loc, currentIns);addressDescriptor_[currentIns].emplace( freeVirtReg, ins);
+                        registerDescriptor_[freeVirtReg].emplace(ins);
                         reg.setNumber(freeReg.index());
                         return;
                     }
@@ -986,4 +1047,5 @@ namespace tvlm{
             }
         }
     }
+
 }

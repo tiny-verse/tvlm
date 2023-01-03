@@ -10,12 +10,16 @@ namespace tvlm {
             RegisterAllocator(std::move(tp))
     {
         size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
-        for(size_t i = 1 ; i < regSize ; i++){
-            freeReg_.emplace(VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
+        auto it = freeReg_.begin();
+        for(size_t i = _regOffset__ ; i < regSize ; i++){
+            it = freeReg_.emplace(it, VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
+            it++;
         }
         size_t fregSize = tiny::t86::Cpu::Config::instance().floatRegisterCnt();
-        for(size_t i = 1; i < fregSize ; i++){
-            freeFReg_.emplace(VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
+        auto itF = freeFReg_.begin();
+        for(size_t i = _regOffset__; i < fregSize ; i++){
+            itF= freeFReg_.emplace(itF, VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
+            itF++;
         }
 
 
@@ -61,7 +65,7 @@ namespace tvlm {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         if(freeReg_.size() > 1){
             res = freeReg_.front();
-            freeReg_.pop();
+            freeReg_.erase(freeReg_.begin());
 
             regQueue_.push_back(res);//TODO
         }else {
@@ -75,9 +79,9 @@ namespace tvlm {
 
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getFReg( const Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
-        if(freeFReg_.size() > 0){
+        if(!freeFReg_.empty()){
             res = freeFReg_.front();
-            freeFReg_.pop();
+            freeFReg_.erase(freeReg_.begin());
 
             regQueue_.push_back(res);
         }else {
@@ -91,20 +95,37 @@ namespace tvlm {
 
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getLastRegister(const Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
-        if(!freeReg_.empty()){
-            res = freeReg_.front();
-            freeReg_.pop();
-        }else {
-            throw "no free register";
-        }
+//        if(!freeReg_.empty()){
+//            res = freeReg_.front();
+//            freeReg_.erase(freeReg_.begin());
+//        }else {
+//            throw "no free register";
+//        }
         return res;
     }
 
     void SuperNaiveRegisterAllocator::releaseRegister(const VirtualRegister & reg) {
-        freeReg_.push(reg);
-        auto it = std::find(regQueue_.begin(), regQueue_.end(),reg);
-        if(it != regQueue_.end()){
-            regQueue_.erase(it);
+        if(reg.getType() == RegisterType::INTEGER ){
+            if( reg.getNumber() > _regOffset__){
+
+                freeReg_.emplace(freeReg_.begin(), reg);
+                auto it = std::find(regQueue_.begin(), regQueue_.end(),reg);
+                if(it != regQueue_.end()){
+                    regQueue_.erase(it);
+                }
+            }
+        }else if(reg.getType() == RegisterType::FLOAT ){
+            if( reg.getNumber() > _regOffset__){
+
+                freeFReg_.emplace(freeFReg_.begin(), reg);
+                auto it = std::find(regQueue_.begin(), regQueue_.end(),reg);
+                if(it != regQueue_.end()){
+                    regQueue_.erase(it);
+                }
+            }
+        }else {
+
+            throw "[SuperNaiveRegisterAllocator]not Implemented 1656435";
         }
     }
 
@@ -130,6 +151,27 @@ namespace tvlm {
 
 
     }
+
+    void SuperNaiveRegisterAllocator::eraseFreeReg(VirtualRegisterPlaceholder &reg) {
+
+            if (reg.getType() == RegisterType::INTEGER){
+                auto it = std::find(freeReg_.begin(), freeReg_.end(), reg);
+                if(it != freeReg_.end()){
+                    freeReg_.erase(it);
+                }
+
+            }else if(reg.getType() == RegisterType::FLOAT){
+                auto it = std::find(freeFReg_.begin(), freeFReg_.end(), reg);
+                if(it != freeFReg_.end()){
+                    freeFReg_.erase(it);
+                }
+
+            }else {
+                throw "[Register Allocator] unknown RegisterType";
+            }
+
+
+        }
 
 
 }

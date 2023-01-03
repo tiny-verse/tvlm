@@ -147,7 +147,9 @@ namespace tvlm {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         auto it = colorPickingResult_.find(currentIns);
         if(it != colorPickingResult_.end()){
-            return VirtualRegister(RegisterType::INTEGER, it->second);
+            auto res = VirtualRegister(RegisterType::INTEGER, it->second);
+            eraseFreeReg(res);
+            return res;
         }
         throw "[Coloring Allocator] cannot find instruction in results";
     }
@@ -155,7 +157,9 @@ namespace tvlm {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
         auto it = colorPickingResult_.find(currentIns);
         if(it != colorPickingResult_.end()){
-            return VirtualRegister(RegisterType::FLOAT, it->second);
+            auto res = VirtualRegister(RegisterType::FLOAT, it->second);
+            eraseFreeReg(res);
+            return res;
         }
         throw "[Coloring Allocator] cannot find instruction in results for float";
     }

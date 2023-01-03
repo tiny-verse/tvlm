@@ -45,6 +45,7 @@ namespace tvlm{
 
     protected:
         void releaseRegister(const VirtualRegister & reg);
+        void eraseFreeReg(VirtualRegisterPlaceholder & reg);
 
         VirtualRegister getLastRegister(const Instruction *currentIns) override;
 
@@ -52,12 +53,12 @@ namespace tvlm{
 void removeFromRegisterDescriptor(const Instruction * ins);
 
 
-
+        size_t _regOffset__ = 1;
         std::list<VirtualRegister>regQueue_;
 
 //        TargetProgramBuilder pb_;
-        std::queue<VirtualRegister> freeReg_;
-        std::queue<VirtualRegister> freeFReg_;
+        std::list<VirtualRegister> freeReg_;
+        std::list<VirtualRegister> freeFReg_;
 //        std::map<VirtualRegister*, LocationEntry> regMapping_;
 //        std::map<VirtualRegister*, LocationEntry> spillMapping_;
 

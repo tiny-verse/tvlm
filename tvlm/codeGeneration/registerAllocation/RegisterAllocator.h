@@ -136,7 +136,8 @@ namespace tvlm{
 
         virtual VirtualRegister getLastRegister(const Instruction * currentIns) = 0;
         virtual void releaseRegister(const VirtualRegister & reg) = 0;
-        void updateJumpPatchPositions(const Instruction *ins);
+
+       void updateJumpPatchPositions(const Instruction *ins);
         void updateCallPatchPositions(const Instruction *ins);
         void setupRegister( VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);
         void setupFRegister(VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);

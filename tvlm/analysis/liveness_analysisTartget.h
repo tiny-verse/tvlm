@@ -392,6 +392,7 @@ private:
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
+//                    if()
                     combineLR(newState, binop, binop->lhs());
 //                    auto lhs = varMaps_.find(binop->lhs());
 //                    auto res = varMaps_.find(binop);

@@ -35,9 +35,10 @@ namespace  tvlm{
 
 //        Label lastIns_;
         TargetProgram program_;
-        std::unique_ptr<ColoringLiveAnalysis<>> analysis_;
-        MAP<const CfgNode<> *,std::set<CLiveRange*>>  analysisResult_;
-        std::pair<const CfgNode<> *, std::set<CLiveRange*>> findAnalysisResult(const Instruction * ins)const;
+
+//        std::unique_ptr<ColoringLiveAnalysis<>> analysis_;
+//        MAP<const CfgNode<> *,std::set<CLiveRange*>>  analysisResult_;
+//        std::pair<const CfgNode<> *, std::set<CLiveRange*>> findAnalysisResult(const Instruction * ins)const;
 
 //        std::unordered_map<tiny::Symbol, const Function * > functionTable_; // already in Program
 //        std::unordered_map<const Instruction*, uint64_t> globalTable_;

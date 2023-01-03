@@ -28,7 +28,7 @@ namespace tvlm {
     program_(TargetProgram(prog))
 //    , globalTable_()
     , unpatchedCalls_()
-    , analysis_(new ColoringLiveAnalysis<>(&program_))
+//    , analysis_(new ColoringLiveAnalysis<>(&program_))
     , regAssigner_(new RegisterAssigner(&program_))
     {
         tiny::config.setDefaultIfMissing("-debug", "0");
@@ -590,7 +590,6 @@ namespace tvlm {
 }
 
     void SuperNaiveIS::visit(AllocL *ins) {
-//        regAllocator->makeLocalAllocation(ins->size(), reg, ins);
        auto cpy = makeLocalAllocation(ins->size(), ins);
         if(ins->amount()){
             compileAlloc(ins, cpy);
@@ -607,7 +606,7 @@ namespace tvlm {
 //        size_t offset = countArgOffset(ins->args(), ins->index());
         size_t offset =  ins->index();
         addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp() ) LMBE, ins);
-        addF( LMBS tiny::t86::ADD(vR(reg), offset  + 2) LMBE, ins);
+        addF( LMBS tiny::t86::ADD(vR(reg), offset  + 2) LMBE, ins); // TODO for adresses calling conv +3
         if( ins->type()->registerType() == ResultType::StructAddress){
             addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(vR(reg))) LMBE, ins);
         }
@@ -1353,18 +1352,18 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
         visit(getProgram(program_).get());
     }
 
-    std::pair<const CfgNode<> *, std::set<CLiveRange *>>
-    SuperNaiveIS::findAnalysisResult(const Instruction *ins) const {
-        auto it = analysis_->instr_mapping().find(ins);
-        if(it != analysis_->instr_mapping().end()){
-               auto res = analysisResult_.find(it->second);
-               if(res != analysisResult_.end()){
-                   return *res;
-               }
-        }else{
-            throw CSTR("[SuperNaiveIS.cpp] cannot find instruction " << ins->name() <<" in cfg");
-        }
-        return std::pair<const CfgNode<> *, std::set<CLiveRange *>>();
-    }
+//    std::pair<const CfgNode<> *, std::set<CLiveRange *>>
+//    SuperNaiveIS::findAnalysisResult(const Instruction *ins) const {
+//        auto it = analysis_->instr_mapping().find(ins);
+//        if(it != analysis_->instr_mapping().end()){
+//               auto res = analysisResult_.find(it->second);
+//               if(res != analysisResult_.end()){
+//                   return *res;
+//               }
+//        }else{
+//            throw CSTR("[SuperNaiveIS.cpp] cannot find instruction " << ins->name() <<" in cfg");
+//        }
+//        return std::pair<const CfgNode<> *, std::set<CLiveRange *>>();
+//    }
 
 }
