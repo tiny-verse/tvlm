@@ -123,7 +123,8 @@ void tvlm::DeclarationAnalysis::visit(tvlm::Return *ins) {
 
 void tvlm::DeclarationAnalysis::visit(tvlm::CallStatic *ins) {
 
-    result_.insert((IL *) program_->getGlobalVariableAddress(ins->f()->name()));
+//    result_.insert((IL *) program_->getGlobalVariableAddress(ins->f()->name()));
+        // is injected or can be found no need to stay in register//
     for (auto & arg : ins->args()) {
         result_.insert(arg.first);
     }

@@ -44,10 +44,14 @@ namespace tvlm{
     void RegisterAllocator::visit(CallStatic *ins) {
 
         writingPos_ = 0;
-        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        std::vector<VirtualRegisterPlaceholder> * virtRegs = nullptr;
         int regPos = 0;
 
         //        //args /*-> prepare values
+        if(!ins->args().empty()){
+            auto virtRegs = getAllocatedVirtualRegisters(ins);
+
+        }
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
             if((*it).second->registerType() == ResultType::StructAddress) {
 //                allocateStructArg(it->second, it->first);
@@ -81,13 +85,21 @@ namespace tvlm{
 
         size_t returnValueRegister = 0;
         if(ins->f()->getType()->registerType() == ResultType::StructAddress){
+            if(virtRegs == nullptr){
+                virtRegs = getAllocatedVirtualRegisters(ins);
+            }
 //            prepareReturnValue(ins->f()->getType()->size(), ins);
             setupRegister(((*virtRegs)[regPos++]), ins, ins);
         } else if (ins->f()->getType()->registerType() == ResultType::Double){
+            if(virtRegs == nullptr){
+                virtRegs = getAllocatedVirtualRegisters(ins);
+            }
             setupFRegister(((*virtRegs)[regPos++]), ins, ins);
 
         }else if (ins->f()->getType()->registerType() == ResultType::Integer) {
-//            returnValueRegister = getReg(ins, ins);
+            if(virtRegs == nullptr){
+                 virtRegs = getAllocatedVirtualRegisters(ins);
+            }
             setupRegister(((*virtRegs)[regPos++]), ins, ins);
 
 
@@ -200,7 +212,7 @@ namespace tvlm{
     void RegisterAllocator::visit(BinOp *ins) {
 
         auto virtRegs = getAllocatedVirtualRegisters(ins);
-        switch (ins->resultType()) {
+        switch (ins->lhs()->resultType()) {
             case ResultType::StructAddress:
             case ResultType::Integer: {
                 writingPos_= 0;
@@ -358,45 +370,32 @@ namespace tvlm{
     }
 
     void RegisterAllocator::visit(Load *ins) {
-        auto virtRegs = getAllocatedVirtualRegisters(ins);
+        std::vector<VirtualRegisterPlaceholder>* virtRegs = nullptr;
         writingPos_= 0;
         if(ins->resultType() == ResultType::Double){
+            virtRegs =  getAllocatedVirtualRegisters(ins);
             setupFRegister(((*virtRegs)[0]), ins, ins);
             if(!dynamic_cast<AllocL *>(ins->address()) && !dynamic_cast<AllocG *>(ins->address())){
                 setupRegister(((*virtRegs)[1]), ins->address(), ins);
             }
             return;
         }else if (ins->resultType() == ResultType::Integer){
-
-            auto it = targetProgram_.globalFindAddress(ins->address());
-            if(it != targetProgram_.globalEndAddress()) {
+            virtRegs =  getAllocatedVirtualRegisters(ins);
+            if (dynamic_cast<Type::Array *>(ins->type())) { // TODO
                 setupRegister(((*virtRegs)[0]), ins, ins);
+                setupRegister(((*virtRegs)[0]), ins->address(), ins);
                 return;
-            }
-            if(dynamic_cast<AllocL*>(ins->address()) || dynamic_cast<AllocG*>(ins->address())){
-                setupRegister(((*virtRegs)[0]), ins, ins);
-//                auto reg = getReg(ins, ins);
-                //                auto regAddr = getReg(ins->address(), ins);
-//                int64_t addrOffset = regAssigner->getAllocOffset(ins->address());
-//                addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset)) LMBE, ins);
-            return;
-            }else{
-//                auto reg = getReg(ins, ins);
-                setupRegister(((*virtRegs)[0]), ins, ins);
-//                auto regAddr = getReg(ins->address(), ins);
-                setupRegister(((*virtRegs)[1]), ins->address(), ins);
-//                    int64_t addrOffset = regAssigner->getAllocOffset(ins->address());
-//                addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(vR(regAddr))) LMBE, ins);
 
-            return;
+            } else {
+                if (dynamic_cast<AllocL *>(ins->address())) {
+                    setupRegister(((*virtRegs)[0]), ins, ins);
+                }else if(dynamic_cast<AllocG *>(ins->address())){
+                    setupRegister(((*virtRegs)[0]), ins, ins);
+                } else {
+                    setupRegister(((*virtRegs)[0]), ins, ins);
+                    setupRegister(((*virtRegs)[1]), ins->address(), ins);
+                }
             }
-//            if(dynamic_cast<Type::Array *>(ins->type())){
-//                setupRegister(((*virtRegs)[0]), ins, 0);
-//                setupRegister(((*virtRegs)[1]), ins->address(), 1);
-//            }else{
-            setupRegister(((*virtRegs)[0]), ins, ins);
-//            setupRegister(((*virtRegs)[1]), ins->address(), ins);
-//            }
             return;
         }else if (ins->resultType() == ResultType::StructAddress){
             replaceInRegister(ins->address(), ins);

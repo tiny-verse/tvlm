@@ -667,8 +667,9 @@ namespace tvlm{
                 case BinOpType::GTE:
                 case BinOpType::EQ:
                 case BinOpType::NEQ:
-                case BinOpType::AND:
-                case BinOpType::OR:
+//                case BinOpType::AND:
+//                case BinOpType::OR:
+//                case BinOpType::XOR:
                 return true;
             default:
                 return false;

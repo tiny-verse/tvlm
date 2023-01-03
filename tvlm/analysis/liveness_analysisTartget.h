@@ -146,6 +146,29 @@ private:
         TargetProgram * program_;
         DeclarationAnalysis declAnalysis_;
 
+        bool canBinOpCombine(BinOp * binOp) {
+
+            if( binOp->lhs()->resultType() == ResultType::Integer ||
+                binOp->lhs()->resultType() == ResultType::StructAddress){
+                return true;
+            }else if(binOp->lhs()->resultType() == ResultType::Double){
+                switch (binOp->opType()){
+                    case BinOpType::LT:
+                    case BinOpType::LTE:
+                    case BinOpType::GT:
+                    case BinOpType::GTE:
+                    case BinOpType::EQ:
+                    case BinOpType::NEQ:
+                    case BinOpType::AND:
+                    case BinOpType::OR:
+                        return false;
+                    default:
+                        return true;
+                }
+            }
+            return false;
+
+        }
     };
 //************************************************************************************************************
 
@@ -289,8 +312,7 @@ private:
                         }
                     }
                     return newState;
-                }else if (dynamic_cast<Return *>(stmtNode->il())){
-                    auto ret  = dynamic_cast<Return *>(stmtNode->il());
+                }else if (auto ret =dynamic_cast<Return *>(stmtNode->il())){
                     auto newState = state;
                     auto res = varMaps_.find(ret->returnValue());
                     if(res != varMaps_.end()){
@@ -392,8 +414,10 @@ private:
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
-//                    if()
-                    combineLR(newState, binop, binop->lhs());
+                    bool canCombine = canBinOpCombine(binop);
+                    if(canCombine){
+                        combineLR(newState, binop, binop->lhs());
+                    }
 //                    auto lhs = varMaps_.find(binop->lhs());
 //                    auto res = varMaps_.find(binop);
 //                    if(lhs != varMaps_.end() && res!=varMaps_.end() ){
@@ -489,6 +513,20 @@ private:
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
+                }else if (dynamic_cast<CallStatic *>(stmtNode->il())){
+                    auto newState = state;
+                    std::set<CLiveRange*> children = getSubtree(node);
+                    newState.insert(children.begin(), children.end());
+                    auto res = varMaps_.find(node->il());
+                    if(res!=varMaps_.end()){
+                        auto r = newState.find(res->second);
+                        if(r != newState.end()) {
+                            newState.erase(r);
+                        }
+                    }
+                    return newState;
+
+                    return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<ElemAddrIndex *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
@@ -518,20 +556,6 @@ private:
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<StructAssign *>(stmtNode->il())){
-                    auto newState = state;
-                    std::set<CLiveRange*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
-                    auto res = varMaps_.find(node->il());
-                    if(res!=varMaps_.end()){
-                        auto r = newState.find(res->second);
-                        if(r != newState.end()) {
-                            newState.erase(r);
-                        }
-                    }
-                    return newState;
-
-                    return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<CallStatic *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());

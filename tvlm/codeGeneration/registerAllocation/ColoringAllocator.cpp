@@ -227,7 +227,6 @@ namespace tvlm {
 
 
 
-            std::vector<CLiveRange *> tmpVector(t.second.begin(), t.second.end());
             if (auto ins = dynamic_cast<tvlm::Instruction *>(t.first->il())) {
                 auto lr1Pos = searchRanges_.find(ins);
                 if(ins->resultType() != ResultType::Void){
@@ -235,6 +234,7 @@ namespace tvlm {
                         throw "[Coloring Allocator.cpp] cannot find Range for instruction";
                     }
                     const std::unique_ptr<CLiveRange> & lr1 = liveRanges_.at(lr1Pos->second);
+                    std::vector<CLiveRange *> tmpVector(t.second.begin(), t.second.end());
                     for (auto & lr2 : tmpVector) {
                         if(lr2->type() == lr1->type()){
 

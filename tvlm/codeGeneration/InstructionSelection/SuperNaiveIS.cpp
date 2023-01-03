@@ -98,6 +98,7 @@ namespace tvlm {
 //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
             if((*it).second->registerType() == ResultType::StructAddress) {
+                auto argReg = getReg(it->first, ins);
 //                allocateStructArg(it->second, it->first);
             }else if((*it).second->registerType() == ResultType::Integer){
                 auto argReg = getReg(it->first, ins);
@@ -165,6 +166,7 @@ namespace tvlm {
 //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
             if((*it).second->registerType() == ResultType::StructAddress) {
+                auto argReg = getReg(it->first, ins);
 //                allocateStructArg(it->second, it->first);
             }else if((*it).second->registerType() == ResultType::Integer){
                 auto argReg = getReg(it->first, ins);
@@ -285,8 +287,7 @@ namespace tvlm {
     }
 
     void SuperNaiveIS::visit(BinOp *ins) {
-
-        switch (ins->resultType()) {
+        switch (ins->lhs()->resultType()) {
             case ResultType::StructAddress:
             case ResultType::Integer:{
 
