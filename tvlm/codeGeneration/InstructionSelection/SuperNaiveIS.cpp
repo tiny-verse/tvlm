@@ -648,7 +648,10 @@ namespace tvlm {
                 }
                 return;
                 break;
-            }case ResultType::Integer: {
+            }
+
+            case ResultType::StructAddress:
+            case ResultType::Integer: {
 //        }else if (ins->resultType() == ResultType::Integer){
 
 //                auto it = program_.globalFindValue(ins->address()); TODO how with globals
@@ -692,14 +695,14 @@ namespace tvlm {
                 return;
                 break;
             }
-            case ResultType::StructAddress: {
-
-                //        }else if (ins->resultType() == ResultType::StructAddress){
-                //            regAllocator->replaceInt(ins->address(), ins);
-                regAssigner_->replaceIntReg(load->address(), load);
-                return;
-                break;
-            }
+//            {
+//
+//                //        }else if (ins->resultType() == ResultType::StructAddress){
+//                //            regAllocator->replaceInt(ins->address(), ins);
+//                regAssigner_->replaceIntReg(load->address(), load);
+//                return;
+//                break;
+//            }
 
             default:
                 throw "not implemented Load ResultType or not supported";
