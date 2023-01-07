@@ -435,9 +435,10 @@ namespace tvlm {
 
                     auto loc = addressDescriptor_.find(instr);
                     if(loc != addressDescriptor_.end()){
-                        for (auto & l : loc->second) {
-                            if(l.loc() == Location::Register){
-                                this->spill(l.regIndex(),currIns);
+                        size_t i = 0;
+                        for (auto l = loc->second.begin() ;l != loc->second.end() && i < loc->second.size();l++,i++) {
+                            if(l->loc() == Location::Register){
+                                this->spill(l->regIndex(),currIns);
 
 
 

@@ -25,6 +25,8 @@ namespace tvlm{
             if(ins->returnType()->registerType() == ResultType::StructAddress){
                 writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
                 setupRegister(((*virtRegs)[1]), ins,ins);
+                releaseRegister((*virtRegs)[1]); // don't need it anymore
+
             } else if (ins->returnType()->registerType() == ResultType::Double){
                 writingPos_= 0;setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
             }else if (ins->returnType()->registerType() == ResultType::Integer){
@@ -512,6 +514,7 @@ namespace tvlm{
         setupRegister(((*virtRegs)[0]), ins->srcVal(), ins);
         setupRegister(((*virtRegs)[1]), ins->dstAddr(), ins);
         setupRegister(((*virtRegs)[2]), ins, ins);
+        releaseRegister((*virtRegs)[2]); // don't need it anymore
     }
 
     void RegisterAllocator::visit(BasicBlock *bb) {
