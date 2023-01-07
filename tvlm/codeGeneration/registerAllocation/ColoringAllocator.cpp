@@ -151,9 +151,10 @@ namespace tvlm {
             eraseFreeReg(res);
             return res;
         }else if (ins->usages().empty()){
-            res = freeReg_.front();
-            freeReg_.erase(freeReg_.begin());
-
+            if(freeReg_.empty()){
+                res = freeReg_.front();
+                freeReg_.erase(freeReg_.begin());
+            }
             regQueue_.push_back(res);
             return res;
         }
@@ -380,6 +381,7 @@ namespace tvlm {
                             auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
                             nStore->setName(STR(nStore->name() << " by " << instr->name()));
 
+                            alloc->registerUsage(nStore);
 
                             break;
                         }

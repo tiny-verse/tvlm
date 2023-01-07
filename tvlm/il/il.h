@@ -269,6 +269,7 @@ namespace tvlm{
             }
             with->used_ = used_;
         }
+        //read as this is used in instruction [usage]
         virtual void registerUsage(Instruction * usage){
             used_.push_back(usage);
         };
@@ -444,6 +445,7 @@ namespace tvlm{
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(amount_ == sub){
                 amount_ = toReplace;
+                toReplace->registerUsage(this);
             }
         }
 
@@ -778,6 +780,7 @@ namespace tvlm{
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(address_ == sub){
                 address_ = toReplace;
+                toReplace->registerUsage(this);
             }
         }
 
@@ -827,9 +830,11 @@ namespace tvlm{
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(address_ == sub){
                 address_ = toReplace;
+                toReplace->registerUsage(this);
             }
             if(value_ == sub){
                 value_ = toReplace;
+                toReplace->registerUsage(this);
             }
         }
         ~StoreAddress() override= default;
@@ -908,6 +913,7 @@ namespace tvlm{
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(returnValue_ == sub){
                 returnValue_ = toReplace;
+                toReplace->registerUsage(this);
             }
         }
 
@@ -980,6 +986,7 @@ namespace tvlm{
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             if(cond_ == sub){
                 cond_ = toReplace;
+                toReplace->registerUsage(this);
             }
         }
     protected:
@@ -1018,6 +1025,7 @@ namespace tvlm{
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             if(src_ == sub){
                 src_ = toReplace;
+                toReplace->registerUsage(this);
             }
         }
         ~SrcInstruction() override = default;
@@ -1097,6 +1105,7 @@ namespace tvlm{
             for (auto & i : contents_) {
                 if(i.second == sub)
                     i.second = toReplace;
+                toReplace->registerUsage(this);
             }
         }
         ~PhiInstruction() override = default;
@@ -1147,9 +1156,11 @@ namespace tvlm{
       void replaceWith(Instruction *sub, Instruction *toReplace) override{
         if(srcVal_ == sub){
             srcVal_ = toReplace;
+            toReplace->registerUsage(this);
         }
         if(dstAddr_ == sub){
             dstAddr_ = toReplace;
+            toReplace->registerUsage(this);
         }
       }
 
@@ -1220,9 +1231,11 @@ namespace tvlm{
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             if(base_ == sub) {
                 base_ = toReplace;
+                toReplace->registerUsage(this);
             }
             if(offset_ == sub){
                 offset_ = toReplace;
+                toReplace->registerUsage(this);
             }
 
         }
@@ -1266,12 +1279,15 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     void replaceWith(Instruction *sub, Instruction *toReplace) override{
         if(base_ == sub){
             base_ = toReplace;
+            toReplace->registerUsage(this);
         }
         if(offset_ == sub){
             offset_ = toReplace;
+            toReplace->registerUsage(this);
         }
         if(index_ == sub){
             index_ = toReplace;
+            toReplace->registerUsage(this);
         }
     }
     protected:
@@ -1347,6 +1363,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             for (auto & a : args_) {
                 if(a.first == sub){
                     a.first = toReplace;
+                    toReplace->registerUsage(this);
                 }
             }
         }
@@ -1388,10 +1405,12 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(f_ == sub){
                 f_ = toReplace;
+                toReplace->registerUsage(this);
             }
             for (auto & a : args_) {
                 if(a.first == sub){
                     a.first = toReplace;
+                    toReplace->registerUsage(this);
                 }
             }
         }
