@@ -43,7 +43,8 @@ namespace tvlm{
         size_t getFReg(const Instruction * ins, const Instruction * me){
             auto it = assignedFloatRegisters_.find(ins);
             if(it != assignedFloatRegisters_.end()){
-                return it->second.index();
+                auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, it->second.index());
+                return targetProgram_->registerAdd(me, std::move(virt));
             }else{
                 auto reg =  getFreeFloatRegister();
                 assignedFloatRegisters_.emplace(ins, reg);

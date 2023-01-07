@@ -378,7 +378,7 @@ namespace tvlm{
                 setupRegister(((*virtRegs)[1]), ins->address(), ins);
             }
             return;
-        }else if (ins->resultType() == ResultType::Integer){
+        }else if (ins->resultType() == ResultType::Integer || ins->resultType() == ResultType::StructAddress){
             virtRegs =  getAllocatedVirtualRegisters(ins);
             if (dynamic_cast<Type::Array *>(ins->type())) { // TODO
                 setupRegister(((*virtRegs)[0]), ins, ins);
@@ -397,8 +397,8 @@ namespace tvlm{
             }
             return;
         }else if (ins->resultType() == ResultType::StructAddress){
-            replaceInRegister(ins->address(), ins);
-            return;
+//            replaceInRegister(ins->address(), ins);
+//            return;
         }
         throw "ERROR[RA] failed load";
     }

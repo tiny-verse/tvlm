@@ -183,7 +183,8 @@ namespace tvlm {
 
         size_t returnValueRegister = 0;
         if(ins->retType()->registerType()== ResultType::StructAddress){
-            prepareReturnValue(ins->retType()->size(), ins, ins);
+            returnValueRegister = prepareReturnValue(ins->retType()->size(), ins, ins);
+            addF( LMBS tiny::t86::MOV( tiny::t86::Reg(0), vR(returnValueRegister)) LMBE, ins);
         } else if (ins->retType()->registerType() == ResultType::Double){
             returnValueRegister = getFReg(ins, ins);
         }else if (ins->retType()->registerType() == ResultType::Integer) {
@@ -207,7 +208,9 @@ namespace tvlm {
         }else if (ins->retType()->registerType() == ResultType::Integer){
 //            auto reg = getReg(ins, ins);
             addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
-        } else if(ins->retType()->registerType() == ResultType::Void){
+        } else if(ins->retType()->registerType() == ResultType::StructAddress){
+            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
+        }else if(ins->retType()->registerType() == ResultType::Void){
 
         }
 //
@@ -609,7 +612,7 @@ namespace tvlm {
         size_t offset =  ins->index();
         addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Bp() ) LMBE, ins);
         addF( LMBS tiny::t86::ADD(vR(reg), offset  + 2) LMBE, ins); // TODO for adresses calling conv +3
-        addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(vR(reg))) LMBE, ins);
+//        addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(vR(reg))) LMBE, ins);
 
     }
     void SuperNaiveIS::visit(PutChar *ins) {
