@@ -64,10 +64,10 @@ namespace tvlm {
 
         if(ins->returnType()->registerType() == ResultType::StructAddress){
 //            auto reg = getReg(ins);
-            auto returnReg = getReg(ins->returnValue(), ins);
-            addF( LMBS tiny::t86::MOV( vR(returnReg),tiny::t86::Bp() ) LMBE , ins);
-            addF( LMBS tiny::t86::ADD( vR(returnReg), 1 ) LMBE , ins);
-          copyStruct(returnReg, ins->returnType(), tiny::t86::Reg(0) , ins);
+            size_t returnReg = getAllocAddrReg(ins->returnValue(), ins);
+//            addF( LMBS tiny::t86::MOV( vR(returnReg),tiny::t86::Bp() ) LMBE , ins);
+//            addF( LMBS tiny::t86::ADD( vR(returnReg), 1 ) LMBE , ins);
+            copyStruct(returnReg, ins->returnType(), tiny::t86::Reg(0) , ins);
             // TODO fail to get info which is passing register Reg0 or stackplace or else
 
         }else if (ins->returnType()->registerType() == ResultType::Double){
@@ -99,6 +99,7 @@ namespace tvlm {
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
             if((*it).second->registerType() == ResultType::StructAddress) {
                 auto argReg = getReg(it->first, ins);
+                addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
 //                allocateStructArg(it->second, it->first);
             }else if((*it).second->registerType() == ResultType::Integer){
                 auto argReg = getReg(it->first, ins);
@@ -115,7 +116,10 @@ namespace tvlm {
 
         size_t returnValueRegister = 0;
         if(ins->f()->getType()->registerType() == ResultType::StructAddress){
-            prepareReturnValue(ins->f()->getType()->size(), ins);
+            returnValueRegister = prepareReturnValue(ins->f()->getType()->size(), ins, ins);
+//            returnValueRegister = getReg(ins, ins);
+            addF( LMBS tiny::t86::MOV( tiny::t86::Reg(0), vR(returnValueRegister)) LMBE, ins);
+
         } else if (ins->f()->getType()->registerType() == ResultType::Double){
             returnValueRegister = getFReg(ins, ins);
         }else if (ins->f()->getType()->registerType() == ResultType::Integer) {
@@ -131,6 +135,7 @@ namespace tvlm {
                 LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
                 , ins );
 
+        program_.registerCall(ins, callLabel, ins->f()->name());
         // -** manage return Value
         if(ins->f()->getType()->registerType() == ResultType::Double){
 //            auto freg = getFReg(ins, ins);
@@ -139,22 +144,17 @@ namespace tvlm {
 //            auto reg = getReg(ins, ins);
             addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
         } else if(ins->f()->getType()->registerType() == ResultType::StructAddress){
-
+            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
         }
 //
         //CountArgSize;
         int argSize  = 0;
         for (auto & a :ins->args()) {
-            if(a.second->registerType() == ResultType:: Double){
-                argSize +=1;
-            }else{
-                argSize ++;
-            }
+            argSize += a.second->size();
         }
 
         addF( LMBS tiny::t86::ADD(tiny::t86::Sp(), argSize) LMBE, ins); // instead of popping function args
 //
-        program_.registerCall(ins, callLabel, ins->f()->name());
 //        lastIns_ = ret; //return ret;
     }
 
@@ -183,7 +183,7 @@ namespace tvlm {
 
         size_t returnValueRegister = 0;
         if(ins->retType()->registerType()== ResultType::StructAddress){
-            prepareReturnValue(ins->retType()->size(), ins);
+            prepareReturnValue(ins->retType()->size(), ins, ins);
         } else if (ins->retType()->registerType() == ResultType::Double){
             returnValueRegister = getFReg(ins, ins);
         }else if (ins->retType()->registerType() == ResultType::Integer) {
@@ -836,20 +836,20 @@ namespace tvlm {
             auto reg = getReg(ins, ins);
 //            auto regAddr = getReg(ins->address(), ins);
             int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
-            auto regOffset = getReg(ins->offset(), ins);
 //            addF(LMBS tiny::t86::MOV(vFR(freg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset))LMBE, load);
             addF( LMBS tiny::t86::MOV(vR(reg),
                                       tiny::t86::Bp()  ) LMBE, ins);
             addF( LMBS tiny::t86::SUB(vR(reg), baseOffset ) LMBE, ins);
+            auto regOffset = getReg(ins->offset(), ins);
             addF( LMBS tiny::t86::ADD(vR(reg),
                                       vR(regOffset)) LMBE, ins);
         }else if(dynamic_cast<AllocG *>(ins->base())){
             auto reg = getReg(ins, ins);
 //            auto regAddr = getReg(ins->address(), ins);
             int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
-            auto regOffset = getReg(ins->offset(), ins);
 //            addF(LMBS tiny::t86::MOV(vFR(reg), tiny::t86::Mem(addrOffset))LMBE, ins);
             addF( LMBS tiny::t86::MOV(vR(reg), baseOffset  ) LMBE, ins);
+            auto regOffset = getReg(ins->offset(), ins);
             addF( LMBS tiny::t86::ADD(vR(reg),// Add or Sub? need same -> ADD
                                       vR(regOffset)) LMBE, ins);
 
@@ -857,10 +857,10 @@ namespace tvlm {
 
             auto reg = getReg(ins, ins);
             auto regBase = getReg(ins->base(), ins);
-
-            auto regOffset = getReg(ins->offset(), ins);
             addF( LMBS tiny::t86::MOV(vR(reg),
                                       vR(regBase)  ) LMBE, ins);
+
+            auto regOffset = getReg(ins->offset(), ins);
             addF( LMBS tiny::t86::ADD(vR(reg), // Add or Sub? need same -> ADD
                                vR(regOffset)) LMBE, ins);
         }
@@ -871,7 +871,6 @@ namespace tvlm {
     void SuperNaiveIS::visit(ElemAddrIndex *ins) {
         // access to array
         if (dynamic_cast<AllocL *>(ins->base())) {
-            auto reg = getReg(ins, ins);
 //            auto regAddr = getReg(ins->address(), ins);
             auto regIndex = getReg(ins->index(), ins);
             int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
@@ -888,13 +887,13 @@ namespace tvlm {
 //clearIntReg(ins->offset());
             addF(LMBS tiny::t86::MUL(vR(regOffset),
                                      vR(regIndex))LMBE, ins);
+            auto reg = getReg(ins, ins);
             addF(LMBS tiny::t86::MOV(vR(reg),
                                      tiny::t86::Mem(tiny::t86::Bp() - baseOffset))LMBE, ins);
 //            addF(LMBS tiny::t86::SUB(vR(reg), baseOffset)LMBE, ins);
             addF(LMBS tiny::t86::ADD(vR(reg), vR(regOffset))LMBE, ins);
 
         }else if(dynamic_cast<AllocG *>(ins->base())){
-            auto reg = getFReg(ins, ins);
             auto regIndex = getReg(ins->index(), ins);
             uint64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
             auto regOffset = getReg(ins->offset(), ins);
@@ -906,15 +905,14 @@ namespace tvlm {
 //                                      vR(regOffset)) LMBE, ins);
 addF(LMBS tiny::t86::MUL(vR(regOffset),
                                      vR(regIndex))LMBE, ins);
+            auto reg = getReg(ins, ins);
             addF( LMBS tiny::t86::MOV(vR(reg), tiny::t86::Mem(baseOffset)  ) LMBE, ins);
             addF( LMBS tiny::t86::ADD(vR(reg),
                                       vR(regOffset)) LMBE, ins);
 
         }else {
-            auto reg = getReg(ins, ins);
 //        auto regBase = getReg(ins->base(), ins);
             auto regIndex = getReg(ins->index(), ins);
-            auto regBaseOffset = getReg(ins->base(), ins);
 //            int64_t baseOffset = regAssigner_->getAllocOffset(ins->base());
 
             auto regOffset = getReg(ins->offset(), ins);
@@ -931,6 +929,8 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
 //            // clearIntReg(ins->offset());
             addF(LMBS tiny::t86::MUL(vR(regOffset),
                                      vR(regIndex))LMBE, ins);
+            auto reg = getReg(ins, ins);
+            auto regBaseOffset = getReg(ins->base(), ins);
             addF(LMBS tiny::t86::MOV(vR(reg),
                                      vR(regBaseOffset) )LMBE, ins);
 //            addF(LMBS tiny::t86::SUB(vR(reg), baseOffset)LMBE, ins);
@@ -947,12 +947,12 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
     void SuperNaiveIS::copyStruct(size_t from, Type *type, size_t to, const Instruction * ins) {
 
 //        auto tmpReg = regAssigner->getFreeIntRegister();
-        auto tmpReg = getExtraIntReg(ins);
+        auto tmpReg = getReg(ins, ins);
 
         Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
         for (int i = 0; i < strct->size(); ++i) {
             addF( LMBS tiny::t86::MOV( vR(tmpReg), tiny::t86::Mem( vR(from) + i )) LMBE, ins);
-            addF( LMBS tiny::t86::MOV(tiny::t86::Mem(vR(to) + i), tmpReg) LMBE, ins);
+            addF( LMBS tiny::t86::MOV(tiny::t86::Mem(vR(to) + i), vR(tmpReg)) LMBE, ins);
         }
 
 //        clearTmpIntRegister(tmpReg); tmpReg = -15654;
@@ -960,21 +960,22 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
     void SuperNaiveIS::copyStruct(size_t from, Type *type, Register to, const Instruction * ins) {
 
 //        auto tmpReg = regAssigner->getFreeIntRegister();
-        auto tmpReg = getExtraIntReg(ins);
+        auto tmpReg = getReg(ins, ins);
 
         Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
         for (int i = 0; i < strct->size(); ++i) {
             addF( LMBS tiny::t86::MOV( vR(tmpReg), tiny::t86::Mem( vR(from) + i )) LMBE, ins);
-            addF( LMBS tiny::t86::MOV(tiny::t86::Mem(to + i), tmpReg) LMBE, ins);
+            addF( LMBS tiny::t86::MOV(tiny::t86::Mem(to + i), vR(tmpReg)) LMBE, ins);
         }
 
 //        clearTmpIntRegister(tmpReg); tmpReg = -15654;
     }
 
+
     void SuperNaiveIS::visit(StructAssign *ins) {
-        auto regVal = getReg(ins->srcVal(), ins);
-        auto dstVal = getReg(ins->dstAddr(), ins);
-        copyStruct(regVal, ins->type(),dstVal , ins);
+        size_t srcVal = getAllocAddrReg(ins->srcVal(), ins);
+        size_t dstVal = getAllocAddrReg(ins->dstAddr(), ins);
+        copyStruct(srcVal, ins->type(),dstVal , ins);
     }
 
     void SuperNaiveIS::visit(BasicBlock *bb) {
@@ -1154,8 +1155,8 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                         auto strLit = program_.program_->stringLiterals().find(ins);
                         if(strLit != program_.program_->stringLiterals().end()){
 //                            tiny::t86::DataLabel data = program_.addData(strLit->second);
-                            auto data = getGlobalTable(program_).find(alloc);
-                            if(data != getGlobalTable(program_).end()){
+                            auto data = getGlobalTable(&program_).find(alloc);
+                            if(data != getGlobalTable(&program_).end()){
                                 auto reg = getReg(strLit->first, strLit->first);
                                 int64_t dataValue = data->second;
                                 addF(LMBS tiny::t86::MOV( vR(reg), dataValue ) LMBE, strLit->first);
@@ -1360,7 +1361,7 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
     }
 
     void SuperNaiveIS::run() {
-        visit(getProgram(program_).get());
+        visit(getProgram(&program_).get());
     }
 
 //    std::pair<const CfgNode<> *, std::set<CLiveRange *>>

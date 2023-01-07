@@ -13,12 +13,10 @@ namespace tvlm{
     public:
         virtual ~SuperNaiveRegisterAllocator() = default;
         SuperNaiveRegisterAllocator( TargetProgram && tp);
+        SuperNaiveRegisterAllocator( SuperNaiveRegisterAllocator && all) = default;
 
 
-
-
-
-    private:
+    protected:
         void visit( Label & label){ // helper for run()
 //            if(auto instr = pb_.instructions_.at(label).first){
 //                if(auto jump = dynamic_cast<tiny::t86::JMP * >(instr)){

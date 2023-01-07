@@ -112,8 +112,8 @@ void tvlm::ColoringDeclarationAnalysis::visit(tvlm::Jump *ins) {
 
 void tvlm::ColoringDeclarationAnalysis::visitHelper(const Instruction * ins){
 
-    auto it = getAllocatedRegisters(*program_).find(ins);
-    if(it!= getAllocatedRegisters(*program_).end()){
+    auto it = getAllocatedRegisters(program_).find(ins);
+    if(it!= getAllocatedRegisters(program_).end()){
 
         for (auto & i : it->second){
             result_.insert(&i);

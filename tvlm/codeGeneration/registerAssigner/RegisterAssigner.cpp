@@ -34,8 +34,8 @@ namespace tvlm{
 
 
     int64_t RegisterAssigner::getAllocOffset(const Instruction * ins) const{
-        auto it = getAllocMapping(*targetProgram_).find(ins);
-        if(it != getAllocMapping(*targetProgram_).end()){
+        auto it = getAllocMapping(targetProgram_).find(ins);
+        if(it != getAllocMapping(targetProgram_).end()){
             return it->second;
         }
         throw "[RegAssigner] cannot get allocation offset for non-registered Instruction";
@@ -112,20 +112,25 @@ namespace tvlm{
     resetAllocSize();
     }
 
-    void RegisterAssigner::prepareReturnValue(size_t size, const Instruction *ret) {
+    //returns gerister in which the address of value should be placed
+    size_t RegisterAssigner::prepareReturnValue(size_t size, const Instruction *ret, const Instruction * me) {
+        size_t regTmp;
         if(size == 0){
-            auto regTmp  = getReg(ret);  // tmpAddress prepared for return Value
+            regTmp  = getReg(ret, me);  // tmpAddress prepared for return Value
 //            targetProgram_->addF( LMBS tiny::t86::PUSH(regTmp) LMBE,ret ); only imaginary  ... move stack pointer is enough ( we dont have value in tmpReg
             targetProgram_->addF( LMBS tiny::t86::SUB(tiny::t86::Sp(), 1) LMBE,ret ); functionLocalAllocSize++; // Caller allocs place(on stack) for return value
 //            clearIntRegister(regTmp);
+            targetProgram_->addF( LMBS tiny::t86::MOV(vR(regTmp) ,tiny::t86::Bp()) LMBE, ret);
+            targetProgram_->addF( LMBS tiny::t86::SUB(vR(regTmp), (int64_t)functionLocalAllocSize) LMBE, ret);
         }else{
+            regTmp  = getReg(ret, me);  // tmpAddress prepared for return Value
+            targetProgram_->addF( LMBS tiny::t86::MOV(vR(regTmp) ,tiny::t86::Bp()) LMBE, ret);
+            targetProgram_->addF( LMBS tiny::t86::SUB(vR(regTmp), (int64_t)functionLocalAllocSize) LMBE, ret);
             functionLocalAllocSize += size;
-            auto regTmp  = getReg(ret);  // tmpAddress prepared for return Value
-            targetProgram_->addF( LMBS tiny::t86::MOV(regTmp ,tiny::t86::Bp()) LMBE, ret);
-            targetProgram_->addF( LMBS tiny::t86::SUB(regTmp, (int64_t)functionLocalAllocSize) LMBE, ret);
-            targetProgram_->addF( LMBS tiny::t86::PUSH(regTmp) LMBE, ret);
+//            targetProgram_->addF( LMBS tiny::t86::PUSH(vR(regTmp)) LMBE, ret);
 //            clearIntRegister(regTmp);
         }
+        return regTmp;
     }
 
 }

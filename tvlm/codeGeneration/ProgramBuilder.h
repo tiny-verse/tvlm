@@ -39,12 +39,9 @@ namespace tvlm {
     class TargetProgram;
     class TargetProgramFriend{
     protected:
+        virtual ~TargetProgramFriend() = default;
         std::shared_ptr<Program>  getProgram(TargetProgram * p)const;
 
-         std::shared_ptr<Program> getProgram (TargetProgram & program)const;
-
-         std::map<const Function * ,size_t> &
-         getFuncLocalAlloc(TargetProgram & program)const;
 
          std::map<const Function * ,size_t> &
          getFuncLocalAlloc(TargetProgram * program)const;
@@ -80,37 +77,45 @@ namespace tvlm {
          std::map<const Instruction *, int64_t> &
          getAllocMapping(TargetProgram * program)const;
 
-         std::map<const ILInstruction*, std::vector<TInstruction*>> &
-         getSelectedInstrs(TargetProgram & program)const;
+         //need copy
+         std::vector<int64_t> getData(TargetProgram * program)const;
 
-         std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> &
-         getJump_patches(TargetProgram & program)const ;
-
-         std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> &
-         getCall_patches(TargetProgram & program)const ;
-
-         std::map<const Instruction *, uint64_t> &
-         getGlobalTable(TargetProgram & program)const;
-
-         std::map<const Instruction *, std::vector<VirtualRegisterPlaceholder>> &
-         getAllocatedRegisters(TargetProgram & program)const;
-
-         std::map<const Instruction *, std::list<std::function<tvlm::TInstruction *(std::vector<VirtualRegisterPlaceholder> &)>>> &
-         getSelectedFInstrs(TargetProgram & program)const;
-
-         std::vector<std::pair<std::pair<const Instruction *, tiny::t86::Label>, tiny::Symbol>> &
-         getUnpatchedFCalls(TargetProgram & program)const;
-
-         std::map<const Instruction *, std::vector<size_t>> &
-         getCallPos(TargetProgram & program)const;
-
-         std::map<const Instruction *, std::vector<size_t>> &
-         getJumpPos(TargetProgram & program)const;
-
-         std::map<const Instruction *, int64_t> &
-         getAllocMapping(TargetProgram & program)const;
-
-         std::vector<int64_t> getData(TargetProgram & program)const;
+//        std::shared_ptr<Program> getProgram (TargetProgram & program)const;
+//
+//        std::map<const Function * ,size_t> &
+//        getFuncLocalAlloc(TargetProgram & program)const;
+//
+//         std::map<const ILInstruction*, std::vector<TInstruction*>> &
+//         getSelectedInstrs(TargetProgram & program)const;
+//
+//         std::vector<std::pair<std::pair<const ILInstruction *, Label>, const BasicBlock*>> &
+//         getJump_patches(TargetProgram & program)const ;
+//
+//         std::vector<std::pair<std::pair<const ILInstruction *, Label>, Symbol>> &
+//         getCall_patches(TargetProgram & program)const ;
+//
+//         std::map<const Instruction *, uint64_t> &
+//         getGlobalTable(TargetProgram & program)const;
+//
+//         std::map<const Instruction *, std::vector<VirtualRegisterPlaceholder>> &
+//         getAllocatedRegisters(TargetProgram & program)const;
+//
+//         std::map<const Instruction *, std::list<std::function<tvlm::TInstruction *(std::vector<VirtualRegisterPlaceholder> &)>>> &
+//         getSelectedFInstrs(TargetProgram & program)const;
+//
+//         std::vector<std::pair<std::pair<const Instruction *, tiny::t86::Label>, tiny::Symbol>> &
+//         getUnpatchedFCalls(TargetProgram & program)const;
+//
+//         std::map<const Instruction *, std::vector<size_t>> &
+//         getCallPos(TargetProgram & program)const;
+//
+//         std::map<const Instruction *, std::vector<size_t>> &
+//         getJumpPos(TargetProgram & program)const;
+//
+//         std::map<const Instruction *, int64_t> &
+//         getAllocMapping(TargetProgram & program)const;
+//
+//         std::vector<int64_t> getData(TargetProgram & program)const;
 
     };
     class TargetProgram{
@@ -118,9 +123,30 @@ namespace tvlm {
         using Register = tiny::t86::Register;
         using FRegister = tiny::t86::FloatRegister;
 
+        TargetProgram() {
+
+        }
+
         friend class RegisterAllocator;
         friend TargetProgramFriend;
-        virtual ~TargetProgram() = default;
+        virtual ~TargetProgram(){
+//                    funcLocalAlloc_.~map();
+//            selectedInstrs_.~map();
+//                    selectedFInstrs_.~map();
+//            alocatedRegisters_.~map();
+//                    alocatedTMPRegisters_.~vector();
+//            jump_patches_.~vector();
+//                    jumpPos_.~map();
+//            callPos_.~map();
+//                    call_patches_.~vector();
+//            globalTableAddress_.~map();
+//                    globalTableValue_.~map();
+//            unpatchedFCalls_.~vector();
+//                    data_.~vector();
+//            allocMapping_.~map();
+//
+//            program_.~shared_ptr();
+        }
         TargetProgram(const std::shared_ptr<Program> & prog):
         program_(prog)
         , funcLocalAlloc_()
@@ -139,7 +165,6 @@ namespace tvlm {
 
         }
         TargetProgram( TargetProgram && prog) = default;
-        TargetProgram(const TargetProgram & prog) = default;
         TargetProgram & operator=(TargetProgram && prog) = default;
 //        :
 //        program_(prog.program_)

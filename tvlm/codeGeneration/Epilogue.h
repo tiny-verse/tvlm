@@ -20,7 +20,7 @@ public:
 
     }
 
-     virtual TProgram translate( SProgram & program) = 0;
+     virtual TProgram translate( SProgram && program) = 0;
 
 
 protected:
@@ -30,13 +30,13 @@ protected:
 
 class NaiveEpilogue : public Epilogue, public ILVisitor{
 public:
-    TProgram  translate(SProgram & program) override;
-    TProgram translate() {
-        return std::move(translate(program_));
-    }
+    TProgram  translate(SProgram && program) override;
+//    TProgram translate() {
+//        return std::move(translate(program_));
+//    }
 
-    ~NaiveEpilogue() override = default;
-    NaiveEpilogue(SProgram & program):program_(program), lastIns_(Label::empty()){}
+    virtual ~NaiveEpilogue() = default;
+    NaiveEpilogue():program_(), lastIns_(Label::empty()){}
 protected:
     void visitInstrHelper(Instruction *ins);
     Label add(const Instruction * ins);
@@ -58,7 +58,7 @@ protected:
 //        }
     }
     int64_t getFuncAlloc(Function * fnc){
-        auto alloc = getFuncLocalAlloc(program_);
+        auto alloc = getFuncLocalAlloc(&program_);
         auto it = alloc.find(fnc);
         if(it == alloc.end()){
             throw "function not found in localAlloc";

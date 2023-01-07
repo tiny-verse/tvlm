@@ -486,7 +486,7 @@ namespace tvlm{
             selected.program_->print(printer);
             std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
             selected = std::move(SuperNaiveIS::translate(std::move(selected)));
-            auto newregAllocator = std::move(ColoringAllocator(std::move(selected)));
+            auto newregAllocator = ColoringAllocator(std::move(selected));
             selected = std::move(newregAllocator.run());
             again = newregAllocator.changedProgram();
 
@@ -495,7 +495,7 @@ namespace tvlm{
         again = regAllocator.changedProgram();
         std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
 
-        auto epiloged = NaiveEpilogue(selected).translate();
+        auto epiloged = NaiveEpilogue().translate(std::move(selected));
         return epiloged;
 //            return tvlm::ILTiler::translate(il);
 //        return NaiveIS::translate(il);

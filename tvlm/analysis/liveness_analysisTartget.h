@@ -186,6 +186,12 @@ private:
         auto children = declAnalysis_.result();
         children.erase(node->il());
         for (const auto * ch : children) {
+            //allocL and allocG can be counted so no need to have a LiveRange
+            if (dynamic_cast<const AllocG *>(ch) != nullptr) {
+                continue;
+            } else if (dynamic_cast<const AllocL *>(ch) != nullptr) {
+                continue;
+            }
             auto lr = varMaps_.find(ch);
             if(lr != varMaps_.end()){
                    lr->second->setEnd(node->il());
@@ -643,11 +649,14 @@ private:
             BackwardAnalysis<CLiveVars<Info>, Info>(),
             varMaps_(),
             cfg_(this->getCfg(getProgram(program).get())),
-            allVars_([&](){
+            allVars_([&, program](){
                 std::set< CLiveRange*> tmp;
                 for ( auto & n : cfg_->nodes()){
                     if(auto t = dynamic_cast<Instruction *>(n->il()) ){
-                        if(t->resultType() != ResultType::Void && !t->usages().empty()){
+                        auto & allocs =TargetProgramFriend::getAllocatedRegisters(program);
+                        auto ins = allocs.find(t);
+                        bool hasRegister = ins != allocs.end();
+                        if(hasRegister && !t->usages().empty()){
                             // instruction without usage does not need to be alive
                             auto lr = new CLiveRange(t, t);
                             allocatedLR_.emplace(lr);

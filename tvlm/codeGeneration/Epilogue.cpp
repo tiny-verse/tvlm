@@ -99,9 +99,10 @@ namespace tvlm{
 
 
 
-    Epilogue::TProgram NaiveEpilogue::translate(SProgram & sprogram) {
+    Epilogue::TProgram NaiveEpilogue::translate(SProgram && sprogram) {
 //        return Epilogue::translate(program);
-        visit(getProgram(program_).get());
+        program_ = std::move(sprogram);
+        visit(getProgram(&program_).get());
 
 
 
@@ -112,13 +113,13 @@ namespace tvlm{
             std::cerr << tiny::color::blue << line++ << ": " << tiny::color::green << i->toString() << std::endl;
         }
 
-        return {std::move(instrs), getData(program_)};
+        return {std::move(instrs), getData(&program_)};
     }
 
     void NaiveEpilogue::visitInstrHelper(Instruction * ins){
-        auto registers = getAllocatedRegisters(program_).find(ins);
+        auto registers = getAllocatedRegisters(&program_).find(ins);
         std::vector<VirtualRegisterPlaceholder> regs;
-        if(registers == getAllocatedRegisters(program_).end()){
+        if(registers == getAllocatedRegisters(&program_).end()){
  //           return;
 //            throw "instruction failed to compile -> no registers allocated"; // Jump will never have
             regs = std::vector<VirtualRegisterPlaceholder>();
@@ -126,8 +127,8 @@ namespace tvlm{
             regs = registers->second;
         }
 
-        auto finstruction = getSelectedFInstrs(program_).find(ins);
-        if(finstruction == getSelectedFInstrs(program_).end()){
+        auto finstruction = getSelectedFInstrs(&program_).find(ins);
+        if(finstruction == getSelectedFInstrs(&program_).end()){
             throw "instruction failed to compile -> no selectedInstruction";
             return;
         }
@@ -139,7 +140,7 @@ namespace tvlm{
 //            if(selected == getSelectedInstrs(program_).end()){
 //                getSelectedInstrs(program_)[ins] = std::vector<TInstruction *>();
 //            }
-            getSelectedInstrs(program_)[ins].emplace_back(compiled);
+            getSelectedInstrs(&program_)[ins].emplace_back(compiled);
         }
         lastIns_ = add(ins);
         for(int c = 0; c < finsns.size();c++){
@@ -147,7 +148,7 @@ namespace tvlm{
         }
         return;
 //--------------------------------------------------
-        auto selected = getSelectedInstrs(program_);
+        auto selected = getSelectedInstrs(&program_);
         auto it = selected.find(ins);
         if(it != selected.end()){
 //            for (auto * inss :it->second) {
@@ -346,7 +347,7 @@ namespace tvlm{
 
 
 
-        for (const auto & toPatch: getJump_patches(program_)) {
+        for (const auto & toPatch: getJump_patches(&program_)) {
             auto it = compiledBB_.find(toPatch.second);
             if(it == compiledBB_.end()){
                 throw "wat now? - I can't jump on invalid BB....";
@@ -355,7 +356,7 @@ namespace tvlm{
         }
 
         //===================================PATCHING Calls=====================================
-        auto & tmp = getCall_patches(program_);
+        auto & tmp = getCall_patches(&program_);
         std::cout << "call patches size: " << tmp.size() << std::endl;
         for( auto & toPatch : tmp ){
             auto it = functionTable_.find(toPatch.second);
@@ -371,7 +372,7 @@ namespace tvlm{
     }
 
     Label NaiveEpilogue::add(const Instruction *ins) {
-        auto & selected = getSelectedInstrs(program_);
+        auto & selected = getSelectedInstrs(&program_);
         auto it = selected.find(ins);
         if(it == selected.end()){
             throw "instruction not compiled";

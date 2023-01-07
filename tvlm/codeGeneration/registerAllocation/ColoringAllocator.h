@@ -77,29 +77,31 @@ namespace tvlm{
     public:
         ColoringAllocator(TargetProgram && prog):
         SuperNaiveRegisterAllocator(std::move(prog)),
+        la_(new ColoringLiveAnalysis<>(&targetProgram_)),
         programChanged_(false){
         }
+        ColoringAllocator(ColoringAllocator && alloc) = default;
 
         bool changedProgram()const{
             return programChanged_;
         }
-        TargetProgram & run(TargetProgram &&  prog){
+        TargetProgram  run(TargetProgram &&  prog){
             targetProgram_ = std::move(prog);
-            return this->run();
+            return std::move(this->run());
         }
 
-        TargetProgram & run()override{
+        TargetProgram run()override{
 
         //----Preparation----
             //LivenessAnalysis
-            std::shared_ptr<Program>  prog = getProgram(targetProgram_);
+            std::shared_ptr<Program>  prog = getProgram(&targetProgram_);
             programChanged_ = false;
             bool again = true;
 //            while(again){
 
-                auto la =  new ColoringLiveAnalysis<ColorInfo>(&targetProgram_);
-                analysisResult_ = la->analyze(); //TODO check memory allocation
-                auto tmp = la->getLiveRanges();
+//                auto la =  new ColoringLiveAnalysis<ColorInfo>(&targetProgram_);
+                analysisResult_ = la_->analyze(); //TODO check memory allocation
+                auto tmp = la_->getLiveRanges();
                 for (auto * i : tmp) {
                     addLR(std::move(std::unique_ptr<CLiveRange>(i)));
                 }
@@ -116,19 +118,29 @@ namespace tvlm{
 
             //implement logic of passing through the program;
             if(programChanged_){
-                delete la;
-                return targetProgram_;
+                return std::move(targetProgram_);
             }
 
             setColors();
 
 
 
-            delete la;
-            return RegisterAllocator::run();
+            RegisterAllocator::visit(getProgram(&targetProgram_).get());;
+            return std::move(targetProgram_);
 
         }
-
+        virtual ~ColoringAllocator(){
+//             analysisResult_.~MAP();
+//            searchInstrs_.~map();
+//            searchRanges_.~map();
+//            liveRanges_.~vector();
+//            unusedInstructions_.~set();
+//            LRincidence_.~vector();
+//            spillIndexes_.~map();
+//            colorPickingStack_.~stack();
+//            colorPickingResult_.~map();
+//            colorPickingSemiResult_.~map();
+        }
 
 //        void ReassignRegisters(ILBuilder & ilb /*or ProgramBuilderOLD and res of analysis*/){
 //            auto prog = ilb.finish();
@@ -204,9 +216,8 @@ namespace tvlm{
 //            }
 //        };
 
-
-        MAP<const CfgNode<ColorInfo> *,std::set<CLiveRange*>> analysisResult_;
-        std::map<const CfgNode<ColorInfo> * , const Instruction *> analysis_mapping_;
+        std::unique_ptr<ColoringLiveAnalysis<>> la_;
+        MAP<const CfgNode<> *,std::set<CLiveRange*>> analysisResult_;
 
 
         void addLR(std::unique_ptr<CLiveRange> && lr);
@@ -234,6 +245,7 @@ namespace tvlm{
         VirtualRegister getRegToSpill();
         VirtualRegister getReg(const Instruction *ins) override;
         VirtualRegister getFReg(const Instruction *currentIns) override;
+        void callingConvCallerSave(const Instruction *currIns) override;
 //
 //        VirtualRegister getFReg(const Instruction *currentIns) override;
 

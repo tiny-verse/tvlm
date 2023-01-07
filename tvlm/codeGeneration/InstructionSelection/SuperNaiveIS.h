@@ -126,8 +126,8 @@ namespace  tvlm{
 //            return program_.add(instruction, ins);
 //        }
 
-        void prepareReturnValue(size_t size, const Instruction * ins){
-            regAssigner_->prepareReturnValue(size, ins);
+        size_t prepareReturnValue(size_t size, const Instruction * ins, const Instruction * me){
+            return regAssigner_->prepareReturnValue(size, ins, me);
         }
 
         Label addF(const TFInstruction & instruction, const ILInstruction * ins){
@@ -173,9 +173,7 @@ namespace  tvlm{
 
         size_t getReg(const Instruction * ins, const Instruction * me){
         //    return regAssigner->getReg(ins);
-            auto reg = regAssigner_->getReg(ins);
-            auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
-            return program_.registerAdd(me, std::move(virt));
+            return regAssigner_->getReg(ins, me);
         }
         size_t getExtraIntReg(const ILInstruction * ins){
             auto reg = regAssigner_->getFreeIntRegister();
@@ -184,9 +182,43 @@ namespace  tvlm{
         }
 
         size_t getFReg(const Instruction * ins, const Instruction * me){
-            auto reg = regAssigner_->getFReg(ins);
-            auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
-            return program_.registerAdd(me, std::move(virt));
+            return regAssigner_->getFReg(ins, me);
+        }
+
+        size_t getAllocAddrReg(const Instruction * ins, const Instruction * currentIns){
+            //    return regAssigner->getReg(ins);
+            size_t res;
+            if(auto allocl = dynamic_cast<const AllocL*>(ins)){
+                res = regAssigner_->getReg(ins, currentIns);
+                int64_t baseOffset = regAssigner_->getAllocOffset(ins);
+                addF(LMBS tiny::t86::MOV(vR(res), tiny::t86::Bp()) LMBE, currentIns);
+                addF(LMBS tiny::t86::SUB(vR(res), baseOffset) LMBE, currentIns);
+            }else if (auto allocg =dynamic_cast<const AllocG*>(ins)){
+                res = regAssigner_->getReg(ins, currentIns);
+                int64_t baseOffset = regAssigner_->getAllocOffset(ins);
+                addF(LMBS tiny::t86::MOV(vR(res),baseOffset) LMBE, currentIns);
+            }else{
+                return  regAssigner_->getReg(ins,currentIns);
+
+            }
+            return res;
+        }
+
+        size_t getAllocAddrFReg(const Instruction * ins, const Instruction * currentIns){
+            size_t res;
+            if(auto allocl = dynamic_cast<const AllocL*>(ins)){
+                res = regAssigner_->getFReg(ins, currentIns);
+                int64_t baseOffset = regAssigner_->getAllocOffset(ins);
+                addF(LMBS tiny::t86::MOV(vR(res), tiny::t86::Bp()) LMBE, currentIns);
+                addF(LMBS tiny::t86::SUB(vR(res), baseOffset) LMBE, currentIns);
+            }else if (auto allocg =dynamic_cast<const AllocG*>(ins)){
+                res = regAssigner_->getFReg(ins, currentIns);
+                int64_t baseOffset = regAssigner_->getAllocOffset(ins);
+                addF(LMBS tiny::t86::MOV(vR(res),baseOffset) LMBE, currentIns);
+            }else{
+                return regAssigner_->getFReg(ins,currentIns);
+            }
+            return res;
         }
         size_t makeLocalAllocation(int64_t size,  const Instruction * ins){
             return regAssigner_->makeLocalAllocation(size, ins);
@@ -197,7 +229,6 @@ namespace  tvlm{
 //        void copyStruct(const Register & from, Type * type, const Register & to, const ILInstruction * ins );
         void copyStruct(size_t from, Type * type,size_t to, const ILInstruction * ins );
         void copyStruct(size_t from, Type * type,Register to, const ILInstruction * ins );
-
         void makeGlobalTable(BasicBlock *globals);
 
         void compileGlobalTable(BasicBlock *globals);

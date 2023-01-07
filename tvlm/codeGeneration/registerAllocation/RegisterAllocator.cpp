@@ -23,7 +23,8 @@ namespace tvlm{
         if(ins->returnValue()){
         auto virtRegs = getAllocatedVirtualRegisters(ins);
             if(ins->returnType()->registerType() == ResultType::StructAddress){
-                //TODO
+                writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
+                setupRegister(((*virtRegs)[1]), ins,ins);
             } else if (ins->returnType()->registerType() == ResultType::Double){
                 writingPos_= 0;setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
             }else if (ins->returnType()->registerType() == ResultType::Integer){
@@ -137,6 +138,7 @@ namespace tvlm{
 //        updateCallPatchPositions(ins); // not a staticCall
             setupRegister(((*virtRegs)[regPos++]), ins->f(), ins);
 
+        updateCallPatchPositions(ins);
 //        tiny::t86::Label callLabel = addF(
 //                LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
 //                , ins );
@@ -457,15 +459,19 @@ namespace tvlm{
 
         if (dynamic_cast<AllocL *>(ins->base())) {
             setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            writingPos_++;
+            writingPos_++;
             setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
 
         }else if(dynamic_cast<AllocG *>(ins->base())){
             setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            writingPos_++;
             setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
 
         }else {
             setupRegister(((*virtRegs)[regpos++]), ins, ins);
             setupRegister(((*virtRegs)[regpos++]), ins->base(), ins);
+            writingPos_++;
             setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
 
         }
@@ -477,20 +483,22 @@ namespace tvlm{
         int regpos = 0;
 
         if (dynamic_cast<AllocL *>(ins->base())) {
-            setupRegister(((*virtRegs)[regpos++]), ins, ins);
             setupRegister(((*virtRegs)[regpos++]), ins->index(), ins);
             setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+            writingPos_++;
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
 
         }else if(dynamic_cast<AllocG *>(ins->base())){
-            setupRegister(((*virtRegs)[regpos++]), ins, ins);
             setupRegister(((*virtRegs)[regpos++]), ins->index(), ins);
             setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+            writingPos_++;
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
 
         }else {
-            setupRegister(((*virtRegs)[regpos++]), ins, ins);
             setupRegister(((*virtRegs)[regpos++]), ins->index(), ins);
-            setupRegister(((*virtRegs)[regpos++]), ins->base(), ins);
             setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+            setupRegister(((*virtRegs)[regpos++]), ins, ins);
+            setupRegister(((*virtRegs)[regpos++]), ins->base(), ins);
 
         }
 
@@ -705,7 +713,7 @@ namespace tvlm{
                             if(stackLoc != addr->second.end()){ //use old stack loc
                                 newPosition = stackLoc->stackOffset();
                             }else{ // create new stack loc
-                                newStackPlace = LocationEntry(getFuncLocalAlloc(targetProgram_)[currenFunction_]++,  regLoc->ins());
+                                newStackPlace = LocationEntry(getFuncLocalAlloc(&targetProgram_)[currenFunction_]++,  regLoc->ins());
                                 newPosition = newStackPlace.stackOffset();
                                 addr->second.insert(newStackPlace);
                             }
@@ -911,8 +919,8 @@ namespace tvlm{
             auto regToAssign = getReg(ins);
             assert(regToAssign.getNumber() <= tiny::t86::Cpu::Config::instance().registerCnt());
             reg.setNumber(regToAssign.getNumber());
-            addressDescriptor_[currentIns].insert(LocationEntry(regToAssign, currentIns));
-            registerDescriptor_[regToAssign].emplace(currentIns);
+            addressDescriptor_[ins].insert(LocationEntry(regToAssign, ins));
+            registerDescriptor_[regToAssign].emplace(ins);
             return;
         }
     }
@@ -989,14 +997,14 @@ namespace tvlm{
     }
 
     void RegisterAllocator::updateJumpPatchPositions(const Instruction * ins) {
-        for ( size_t pos : getJumpPos(targetProgram_)[ins]) {
-            getJump_patches(targetProgram_)[pos].first.second = Label( getJump_patches(targetProgram_)[pos].first.second.address() + writingPos_);
+        for ( size_t pos : getJumpPos(&targetProgram_)[ins]) {
+            getJump_patches(&targetProgram_)[pos].first.second = Label( getJump_patches(&targetProgram_)[pos].first.second.address() + writingPos_);
         }
     }
     void RegisterAllocator::updateCallPatchPositions(const Instruction * ins) {
-        for ( auto & pos : getCallPos(targetProgram_)[ins]) {
+        for ( auto & pos : getCallPos(&targetProgram_)[ins]) {
 //            targetProgram_.call_patches_[pos].first.second = Label( targetProgram_.call_patches_[pos].first.second.address() + writingPos_);
-            getUnpatchedFCalls(targetProgram_)[pos].first.second = Label( getUnpatchedFCalls(targetProgram_)[pos].first.second.address() + writingPos_);
+            getUnpatchedFCalls(&targetProgram_)[pos].first.second = Label( getUnpatchedFCalls(&targetProgram_)[pos].first.second.address() + writingPos_);
         }
     }
 
@@ -1030,13 +1038,13 @@ namespace tvlm{
     std::vector<VirtualRegisterPlaceholder> *
     RegisterAllocator::getAllocatedVirtualRegisters(const Instruction *ins) {
 //            return targetProgram_.alocatedRegisters_[ins];
-        auto it = getAllocatedRegisters(targetProgram_).find(ins);
-        if ( it != getAllocatedRegisters(targetProgram_).end()){
+        auto it = getAllocatedRegisters(&targetProgram_).find(ins);
+        if ( it != getAllocatedRegisters(&targetProgram_).end()){
             return  &(it->second);
         }else{
             throw "trying to find allocated registers for ins that was not compiled";
-            if(getSelectedFInstrs(targetProgram_).find(ins) != getSelectedFInstrs(targetProgram_).end()){
-                return  &(getAllocatedRegisters(targetProgram_)[ins]);
+            if(getSelectedFInstrs(&targetProgram_).find(ins) != getSelectedFInstrs(&targetProgram_).end()){
+                return  &(getAllocatedRegisters(&targetProgram_)[ins]);
             }else{
             }
         }

@@ -19,7 +19,7 @@ namespace tvlm{
 //        explicit RegisterAssigner(ProgramBuilderOLD * pb);
         explicit RegisterAssigner( TargetProgram * targetProg);
 
-        Register getReg(const Instruction * ins){
+        size_t getReg(const Instruction * ins, const Instruction * me){
 //        size_t getReg(const Instruction * ins){
             auto it = assignedIntRegisters_.find(ins);
             if(it != assignedIntRegisters_.end()){
@@ -28,22 +28,27 @@ namespace tvlm{
 //                    throw "RegAssigner: this shouldn't happen";
 //                }
 //                allocReg.
-                return it->second;
+                auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, it->second.index());
+                return targetProgram_->registerAdd(me, std::move(virt));
             }else{
                 auto reg = getFreeIntRegister();
                 assignedIntRegisters_.emplace(ins, reg);
-                return reg;
+//                return reg;
+                auto virt =  VirtualRegisterPlaceholder(RegisterType::INTEGER, reg.index());
+                return targetProgram_->registerAdd(me, std::move(virt));
             }
 
+
         }
-        FRegister getFReg(const Instruction * ins){
+        size_t getFReg(const Instruction * ins, const Instruction * me){
             auto it = assignedFloatRegisters_.find(ins);
             if(it != assignedFloatRegisters_.end()){
-                return it->second;
+                return it->second.index();
             }else{
                 auto reg =  getFreeFloatRegister();
                 assignedFloatRegisters_.emplace(ins, reg);
-                return reg;
+                auto virt =  VirtualRegisterPlaceholder(RegisterType::FLOAT, reg.index());
+                return targetProgram_->registerAdd(me, std::move(virt));
             }
 
         }
@@ -90,8 +95,8 @@ namespace tvlm{
 //        void allocateStructArg(const Type * type,const Instruction * ins);
 //        void correctStackAlloc(size_t patch);
 
-        void prepareReturnValue(size_t size,const Instruction * ret);
-        void spillCallReg();
+        size_t prepareReturnValue(size_t size,const Instruction * ret, const Instruction * me);
+//        void spillCallReg();
 
         void registerPhi(const Phi *phi);
 //        virtual void prepareReturnValue(size_t size, const ILInstruction * ret);

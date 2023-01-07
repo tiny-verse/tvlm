@@ -88,12 +88,13 @@ namespace tvlm{
     public:
         virtual ~RegisterAllocator() = default;
         RegisterAllocator( TargetProgram  && tp);
+        RegisterAllocator( RegisterAllocator  && rA) = default;
 
 
-        virtual TargetProgram & run(){
+        virtual TargetProgram run(){
             //implement logic of passing through the program;
-            visit(getProgram(targetProgram_).get());
-            return targetProgram_;
+            visit(getProgram(&targetProgram_).get());
+            return std::move(targetProgram_);
         }
 
     protected:
@@ -155,7 +156,7 @@ namespace tvlm{
         std::map<VirtualRegister, std::set<const Instruction*>> registerDescriptor_;
         size_t writingPos_; //position for insertion of code (spill or load code)
 
-        void callingConvCallerSave(const Instruction *ins);
+        virtual void callingConvCallerSave(const Instruction *ins);
         void callingConvCalleeRestore(const Instruction *ins);
 
         //:/Helpers

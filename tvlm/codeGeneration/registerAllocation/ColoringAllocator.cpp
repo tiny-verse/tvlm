@@ -157,6 +157,9 @@ namespace tvlm {
             regQueue_.push_back(res);
             return res;
         }
+        if(dynamic_cast<const AllocG*>(ins) || dynamic_cast<const AllocL*>(ins)){
+            return SuperNaiveRegisterAllocator::getReg(ins);
+        }
         throw "[Coloring Allocator] cannot find instruction in results";
     }
     ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(const Instruction *currentIns) {
@@ -235,14 +238,23 @@ namespace tvlm {
 
             if (auto ins = dynamic_cast<tvlm::Instruction *>(t.first->il())) {
                 auto lr1Pos = searchRanges_.find(ins);
-                if(ins->resultType() != ResultType::Void && !ins->usages().empty()){
+                auto hasAllocation = TargetProgramFriend::getAllocatedRegisters(&targetProgram_).find(ins);
+                bool hasRegister = hasAllocation !=  TargetProgramFriend::getAllocatedRegisters(&targetProgram_).end();
+                if(hasRegister && !ins->usages().empty()){
                     if(lr1Pos == searchRanges_.end()){
                         throw "[Coloring Allocator.cpp] cannot find Range for instruction";
                     }
                     const std::unique_ptr<CLiveRange> & lr1 = liveRanges_.at(lr1Pos->second);
                     std::vector<CLiveRange *> tmpVector(t.second.begin(), t.second.end());
                     for (auto & lr2 : tmpVector) {
-                        if(lr2->type() == lr1->type()){
+                        bool sameType = false;
+                        if(lr2->type() == lr1->type() ||
+                            (lr2->type() == ResultType::StructAddress && lr1->type() == ResultType::Integer) ||
+                            (lr1->type() == ResultType::StructAddress && lr2->type() == ResultType::Integer)
+                            ){
+                            sameType = true;
+                        }
+                        if(sameType){
 
 //                          for (size_t j = i +1 ; j < tmpVector.size();j++){
                             auto lr2Pos = lrIndex_.find(lr2);
@@ -406,4 +418,37 @@ namespace tvlm {
         lrIndex_.emplace(lr.get(), liveRanges_.size());
         liveRanges_.push_back(std::move(lr));
     }
+
+    void ColoringAllocator::callingConvCallerSave(const Instruction *currIns) {
+
+        auto cfgs = la_->instr_mapping().find(currIns);
+        if(cfgs == la_->instr_mapping().end()){
+            throw "[ColoringAllocator] cannot find Call instr in analysis";
+        }
+        auto toSpill = analysisResult_.find(cfgs->second);
+        if(toSpill == analysisResult_.end()){
+            throw "[ColoringAllocator] cannot find Call instr in analysis results";
+        }
+        for (auto & lr : toSpill->second) {
+            for (auto * il : lr->il()) {
+                if(auto * instr = dynamic_cast<Instruction *>(il)){
+
+                    auto loc = addressDescriptor_.find(instr);
+                    if(loc != addressDescriptor_.end()){
+                        for (auto & l : loc->second) {
+                            if(l.loc() == Location::Register){
+                                this->spill(l.regIndex(),currIns);
+
+
+
+                            }
+                        }
+                    }
+                }else{
+                    // we don't care we want to spill from register
+                }
+            }
+        }
+    }
+
 }
