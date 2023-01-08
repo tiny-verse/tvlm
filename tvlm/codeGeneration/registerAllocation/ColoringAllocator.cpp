@@ -143,12 +143,16 @@ namespace tvlm {
 
 
 
-    ColoringAllocator::VirtualRegister ColoringAllocator::getReg(const Instruction *ins) {
+    ColoringAllocator::VirtualRegister ColoringAllocator::getReg(Instruction *ins) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         auto it = colorPickingResult_.find(ins);
         if(it != colorPickingResult_.end()){
             res = VirtualRegister(RegisterType::INTEGER, it->second);
             eraseFreeReg(res);
+            bool global = false;
+            if(*ins->name().begin() == 'g'){global = true;}
+            ins->setAllocName(generateInstrName(res, global));
+//            ins->setName(generateInstrName(res, global));
             return res;
         }else if (ins->usages().empty()){
             if(freeReg_.empty()){
@@ -156,6 +160,11 @@ namespace tvlm {
                 freeReg_.erase(freeReg_.begin());
             }
             regQueue_.push_back(res);
+
+            bool global = false;
+            if(*ins->name().begin() == 'g'){global = true;}
+            ins->setAllocName(generateInstrName(res, global));
+//            ins->setName(generateInstrName(res, global));
             return res;
         }
         if(dynamic_cast<const AllocG*>(ins) || dynamic_cast<const AllocL*>(ins)){
@@ -163,12 +172,16 @@ namespace tvlm {
         }
         throw "[Coloring Allocator] cannot find instruction in results";
     }
-    ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(const Instruction *currentIns) {
+    ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(Instruction *currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
         auto it = colorPickingResult_.find(currentIns);
         if(it != colorPickingResult_.end()){
             res = VirtualRegister(RegisterType::FLOAT, it->second);
             eraseFreeReg(res);
+            bool global = false;
+            if(*currentIns->name().begin() == 'g'){global = true;}
+            currentIns->setAllocName(generateInstrName(res, global));
+//            currentIns->setName(generateInstrName(res, global));
             return res;
         }
         throw "[Coloring Allocator] cannot find instruction in results for float";

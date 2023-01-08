@@ -34,8 +34,8 @@ namespace tvlm{
         //:/ INTERFACE
         void registerMemLocation( const Store * ins, const Instruction * currentIns);
 
-        VirtualRegister getReg(const Instruction * currentIns) override;
-        VirtualRegister getFReg(const Instruction * currentIns) override;
+        VirtualRegister getReg( Instruction * currentIns) override;
+        VirtualRegister getFReg( Instruction * currentIns) override;
 //        VirtualRegister getFreeFRegister(const Instruction * currentIns);
 
         // :/ ---------------------

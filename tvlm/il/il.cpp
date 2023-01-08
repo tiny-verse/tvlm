@@ -13,6 +13,12 @@ namespace tvlm {
 
     }
 
+    void Instruction::Terminator1::printAlloc(tiny::ASTPrettyPrinter &p) const {
+        Instruction::printAlloc(p);
+        p << p.keyword << allocName() << " " << p.identifier << target_->name();
+
+    }
+
     Instruction::Terminator1::Terminator1(BasicBlock *target, const ASTBase *ast, const std::string &instrName,
                                           Opcode opcode) :
             Terminator{ast, instrName, opcode},
@@ -32,6 +38,15 @@ namespace tvlm {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier;
         printRegister(p, cond_);
+        for(auto & t : targets_){
+            p << p.identifier << t->name() << " ";
+        }
+    }
+
+    void Instruction::Terminator2::printAlloc(tiny::ASTPrettyPrinter &p) const {
+        Instruction::printAlloc(p);
+        p << p.keyword << allocName() << " " << p.identifier;
+        printAllocRegister(p, cond_);
         for(auto & t : targets_){
             p << p.identifier << t->name() << " ";
         }
@@ -74,6 +89,25 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         p << p.keyword << instrName_ << " ";
         for(auto & i : contents_ ){
             printRegister(p, i.second);
+            p <<  "<--" << i.first->name() << ", ";
+
+        }
+    };
+
+    void Instruction::DirectCallInstruction::printAlloc(tiny::ASTPrettyPrinter &p) const {
+        Instruction::printAlloc(p);
+        p << p.keyword << allocName() << " " << p.identifier << f_->name().name();
+        p << p.symbol << " (";
+        for (auto & i : args_)
+            printAllocRegister(p, i.first);
+        p << p.symbol << ")";
+    }
+
+    void Instruction::PhiInstruction::printAlloc(tiny::ASTPrettyPrinter &p) const {
+        Instruction::printAlloc(p);
+        p << p.keyword << allocName() << " ";
+        for(auto & i : contents_ ){
+            printAllocRegister(p, i.second);
             p <<  "<--" << i.first->name() << ", ";
 
         }
@@ -200,6 +234,34 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         printRegister(p, dstAddr_);
         p << p.keyword << "= " ;
         printRegister(p, srcVal_);
+        p << p.keyword << "( of size: " << p.numberLiteral << type_->size() << p.keyword << ")" ;
+    }
+
+    void Instruction::ElemIndexInstruction::printAlloc(tiny::ASTPrettyPrinter &p) const {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " " ;
+            printAllocRegister(p, base_);
+            p << p.keyword<<  "+ ";
+            printAllocRegister(p, index_);
+//            p << p.keyword<<  "x " << p.numberLiteral << offset_.size();
+            p << p.keyword<<  "x " << p.numberLiteral;
+            printAllocRegister(p, offset_);
+    }
+
+    void Instruction::ElemOffsetInstruction::printAlloc(tiny::ASTPrettyPrinter &p) const {
+        Instruction::printAlloc(p);
+        p << p.keyword << allocName() << " " ;
+        printAllocRegister(p, base_);
+//        p << p.keyword<<  "+ " << p.numberLiteral << offset_.size();
+        p << p.keyword<<  "+ "; printAllocRegister(p, offset_);
+    }
+
+    void Instruction::StructAssignInstruction::printAlloc(tiny::ASTPrettyPrinter &p) const {
+        Instruction::printAlloc(p);
+        p << p.keyword << allocName() << " " ;
+        printAllocRegister(p, dstAddr_);
+        p << p.keyword << "= " ;
+        printAllocRegister(p, srcVal_);
         p << p.keyword << "( of size: " << p.numberLiteral << type_->size() << p.keyword << ")" ;
     }
 

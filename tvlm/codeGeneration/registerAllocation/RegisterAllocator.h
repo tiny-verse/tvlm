@@ -132,16 +132,16 @@ namespace tvlm{
         void spillAll(const Instruction * currentIns);
         void restore(const VirtualRegister & whereTo, const LocationEntry & from, const Instruction * currentIns);
 
-        virtual VirtualRegister getReg(const Instruction * currentIns) = 0;
-        virtual VirtualRegister getFReg(const Instruction * currentIns) = 0;
+        virtual VirtualRegister getReg( Instruction * currentIns) = 0;
+        virtual VirtualRegister getFReg( Instruction * currentIns) = 0;
 
         virtual VirtualRegister getLastRegister(const Instruction * currentIns) = 0;
         virtual void releaseRegister(const VirtualRegister & reg) = 0;
 
        void updateJumpPatchPositions(const Instruction *ins);
         void updateCallPatchPositions(const Instruction *ins);
-        void setupRegister( VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);
-        void setupFRegister(VirtualRegisterPlaceholder & reg, const Instruction * ins, const Instruction * currentIns);
+        void setupRegister( VirtualRegisterPlaceholder & reg, Instruction * ins, Instruction * currentIns);
+        void setupFRegister(VirtualRegisterPlaceholder & reg, Instruction * ins, Instruction * currentIns);
         void replaceInRegister(const Instruction * replace, const Instruction * with);
 
 
@@ -162,7 +162,21 @@ namespace tvlm{
         //:/Helpers
         std::set<LocationEntry>::iterator findLocation(std::set<LocationEntry> & set1, Location location);
         std::vector<VirtualRegisterPlaceholder> * getAllocatedVirtualRegisters(const Instruction * ins);
-
+        std::string generateInstrName(VirtualRegister & reg, bool global = false){
+            std::string prefix;
+            if(global){
+                prefix = "g";
+            }else{
+                prefix = "r";
+            }
+            if(reg.getType() == RegisterType::FLOAT){
+                prefix += "d";
+            }else if (reg.getType() == RegisterType::INTEGER){
+                prefix += "i";
+            }
+            prefix += std::to_string(reg.getNumber());
+            return prefix;
+        }
     };
 
 }

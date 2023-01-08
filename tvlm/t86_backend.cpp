@@ -483,6 +483,7 @@ namespace tvlm{
         auto printer = tiny::ASTPrettyPrinter(ss);
         bool again = regAllocator.changedProgram();
         while(again){
+            ss.str("");
             selected.program_->print(printer);
             std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
             selected = std::move(SuperNaiveIS::translate(std::move(selected)));
@@ -491,10 +492,14 @@ namespace tvlm{
             again = newregAllocator.changedProgram();
 
         }
+        ss.str("");
         selected.program_->print(printer);
-        again = regAllocator.changedProgram();
         std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
 
+        std::cerr << "-----------------------------------------------\n\n\n" << std::endl;
+        ss.str("");
+        selected.program_->printAlloc(printer);
+        std::cerr << tiny::color::lightBlue << "Alloc Print" <<  ":\n" << ss.str() << std::endl;
         auto epiloged = NaiveEpilogue().translate(std::move(selected));
         return epiloged;
 //            return tvlm::ILTiler::translate(il);

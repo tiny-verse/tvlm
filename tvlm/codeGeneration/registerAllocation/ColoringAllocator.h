@@ -243,8 +243,8 @@ namespace tvlm{
         bool setColors();
 
         VirtualRegister getRegToSpill() override;
-        VirtualRegister getReg(const Instruction *ins) override;
-        VirtualRegister getFReg(const Instruction *currentIns) override;
+        VirtualRegister getReg( Instruction *ins) override;
+        VirtualRegister getFReg( Instruction *currentIns) override;
         void callingConvCallerSave(const Instruction *currIns) override;
 //
 //        VirtualRegister getFReg(const Instruction *currentIns) override;

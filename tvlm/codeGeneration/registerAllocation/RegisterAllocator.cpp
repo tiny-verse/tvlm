@@ -547,8 +547,8 @@ namespace tvlm{
             setupRegister(((*virtRegs)[0]), str.first, str.first);
         }
 
-        for(const auto *ins : getBBsInstructions(globals)){
-            if(const auto * i = dynamic_cast<const  LoadImm *>(ins)){
+        for(auto *ins : getBBsInstructions(globals)){
+            if(auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 if(i->resultType() == ResultType::Integer){
 
 //                    auto reg = getReg(ins, ins);
@@ -827,7 +827,7 @@ namespace tvlm{
 
 
 
-    void RegisterAllocator::setupRegister(VirtualRegisterPlaceholder & reg, const Instruction * ins,  const Instruction *currentIns) {
+    void RegisterAllocator::setupRegister(VirtualRegisterPlaceholder & reg, Instruction * ins,   Instruction *currentIns) {
         auto location = addressDescriptor_.find(ins);
         if(location != addressDescriptor_.end() && !location->second.empty()){
 //            for (auto & loc : location->second) { //priority in ordered set will manage to do it
@@ -892,9 +892,18 @@ namespace tvlm{
 //            }
             for (auto & loc : location->second) {
                 switch(loc.loc()) {
-                    case Location::Register:
+                    case Location::Register:{
+
                         reg.setNumber(loc.regIndex().getNumber());
+
+
+                        bool global = false;
+                        if(*ins->name().begin() == 'g'){global = true;}
+                        ins->setAllocName(generateInstrName(reg, global));
+//            ins->setName(generateInstrName(res, global));
+
                         return;
+                    }
                     case Location::Memory: {
                         VirtualRegister freeVirtReg = getReg(currentIns);
                         Register freeReg = freeVirtReg.getNumber();
@@ -903,6 +912,10 @@ namespace tvlm{
                         registerDescriptor_[freeVirtReg].emplace(ins);
 
                         reg.setNumber(freeReg.index());
+                        bool global = false;
+                        if(*ins->name().begin() == 'g'){global = true;}
+                        ins->setAllocName(generateInstrName(reg, global));
+//            ins->setName(generateInstrName(res, global));
                         return;
                     }
                     case Location::Stack: {
@@ -914,6 +927,10 @@ namespace tvlm{
                         restore(freeVirtReg, loc, currentIns);addressDescriptor_[currentIns].emplace( freeVirtReg, ins);
                         registerDescriptor_[freeVirtReg].emplace(ins);
                         reg.setNumber(freeReg.index());
+                        bool global = false;
+                        if(*ins->name().begin() == 'g'){global = true;}
+                        ins->setAllocName(generateInstrName(reg, global));
+//            ins->setName(generateInstrName(res, global));
                         return;
                     }
                 }
@@ -929,7 +946,7 @@ namespace tvlm{
     }
 
     void
-    RegisterAllocator::setupFRegister(VirtualRegisterPlaceholder & reg, const Instruction *ins, const Instruction * currentIns) {
+    RegisterAllocator::setupFRegister(VirtualRegisterPlaceholder & reg, Instruction *ins, Instruction * currentIns) {
         auto location = addressDescriptor_.find(ins);
         if(location != addressDescriptor_.end()){
 //            for (auto & loc : location->second) { //priority in ordered set will manage to do it

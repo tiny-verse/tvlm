@@ -33,6 +33,7 @@ namespace tvlm{
         virtual bool operator==(const IL * il) const = 0;
     protected:
         friend class ILVisitor;
+        friend class TargetProgram;
         IL * parent_;
     };
     class Instruction;
@@ -283,12 +284,22 @@ namespace tvlm{
         std::string const & name() const {
             return name_;
         }
+        std::string const & allocName() const {
+            if(allocName_.empty()) {
+                return name_;
+            }
+            return allocName_;
+        }
         const ASTBase  * ast()const {
             return ast_;
         }
 
         void setName(std::string const & value) {
             name_ = value;
+        }
+
+        void setAllocName(std::string const & value) {
+            allocName_ = value;
         }
 
         void setParentBB(BasicBlock * parent ){
@@ -312,6 +323,12 @@ namespace tvlm{
         virtual void print(tiny::ASTPrettyPrinter & p) const {
             if (resultType_ != ResultType::Void) {
                 printRegister(p, this);
+                p << p.symbol << "= ";
+            }
+        }
+        virtual void printAlloc(tiny::ASTPrettyPrinter & p) const {
+            if (resultType_ != ResultType::Void) {
+                printAllocRegister(p, this);
                 p << p.symbol << "= ";
             }
         }
@@ -407,9 +424,17 @@ namespace tvlm{
             p << p.identifier << reg->name() << p.symbol << ": " << p.keyword;
             printResultType(p, reg->resultType_);
         }
+        void printAllocRegister(tiny::ASTPrettyPrinter & p, Instruction const * reg) const {
+            p << p.identifier << reg->allocName() << p.symbol << ": " << p.keyword;
+            printResultType(p, reg->resultType_);
+        }
 
         static void printRegisterAddress(tiny::ASTPrettyPrinter & p, Instruction const * reg) {
             p << p.symbol << "[" << p.identifier << reg->name() << p.symbol << "] ";
+        }
+
+        static void printAllocRegisterAddress(tiny::ASTPrettyPrinter & p, Instruction const * reg) {
+            p << p.symbol << "[" << p.identifier << reg->allocName() << p.symbol << "] ";
         }
 
         std::vector<Instruction *> used_;
@@ -420,6 +445,7 @@ namespace tvlm{
 
         ResultType resultType_;
         std::string name_;
+        std::string allocName_;
         BasicBlock * parentBB_;
 
     }; // tinyc::il::Instruction
@@ -456,6 +482,15 @@ namespace tvlm{
             if(amount_){
                 p << p.keyword << " x ";
                 printRegister(p, amount_);
+            }
+        };
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " "<< p.numberLiteral << size() << p.keyword << " (size: " << size_ <<   ")";
+            if(amount_){
+                p << p.keyword << " x ";
+                printAllocRegister(p, amount_);
             }
         };
         Instruction * amount()const {
@@ -518,6 +553,10 @@ namespace tvlm{
             Instruction::print(p);
             p << p.keyword << instrName_ << " " << p.numberLiteral << index_;
         };
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " " << p.numberLiteral << index_;
+        };
 
         ~ImmIndex() override = default;
     protected:
@@ -556,6 +595,11 @@ namespace tvlm{
         void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " " << p.numberLiteral << (resultType() == ResultType::Integer ? value_.i : value_.f);
+        };
+
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " " << p.numberLiteral << (resultType() == ResultType::Integer ? value_.i : value_.f);
         };
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
@@ -647,6 +691,14 @@ namespace tvlm{
             printRegister(p, rhs_);
         };
 
+
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << resolve_operator();
+            printAllocRegister(p, lhs_);
+            printAllocRegister(p, rhs_);
+        };
+
         ~BinaryOperator() override= default;
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override;
@@ -733,6 +785,12 @@ namespace tvlm{
             printRegister(p, operand_);
         };
 
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << resolve_operator() << " ";
+            printAllocRegister(p, operand_);
+        };
+
         ~UnaryOperator() override{}
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override;
@@ -773,6 +831,12 @@ namespace tvlm{
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
             printRegisterAddress(p, address_);
+        };
+
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " ";
+            printAllocRegisterAddress(p, address_);
         };
 
         ~LoadAddress() override= default;
@@ -826,6 +890,12 @@ namespace tvlm{
             p << p.keyword << instrName_ << " ";
             printRegisterAddress(p, address_);
             printRegister(p, value_);
+        };
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " ";
+            printAllocRegisterAddress(p, address_);
+            printAllocRegister(p, value_);
         };
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(address_ == sub){
@@ -881,6 +951,10 @@ namespace tvlm{
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
         }
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " ";
+        }
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -922,6 +996,11 @@ namespace tvlm{
             p << p.keyword << instrName_ << " ";
             if(returnValue_) printRegister(p, returnValue_);
         }
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            tvlm::Instruction::Terminator0::printAlloc(p);
+            p << p.keyword << allocName() << " ";
+            if(returnValue_) printAllocRegister(p, returnValue_);
+        }
 
         ~Returnator() override= default;
     protected:
@@ -949,6 +1028,8 @@ namespace tvlm{
         BasicBlock * getTarget(size_t i) const override { return i == 1 ? target_ : nullptr; }
 
         void print(tiny::ASTPrettyPrinter & p) const override ;
+
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override ;
 
     protected:
     public:
@@ -983,6 +1064,7 @@ namespace tvlm{
 //            targets_.push_back(target);
 //        }
         void print(tiny::ASTPrettyPrinter & p) const override;
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override;
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             if(cond_ == sub){
                 cond_ = toReplace;
@@ -1022,6 +1104,11 @@ namespace tvlm{
             p << p.keyword << instrName_ << " ";
             printRegister(p, src_);
         }
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " ";
+            printAllocRegister(p, src_);
+        }
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             if(src_ == sub){
                 src_ = toReplace;
@@ -1058,6 +1145,10 @@ namespace tvlm{
         void print(tinyc::ASTPrettyPrinter & p) const override{
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
+        }
+        void printAlloc(tinyc::ASTPrettyPrinter & p) const override{
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " ";
         }
 
         ~VoidInstruction() override = default;
@@ -1098,6 +1189,7 @@ namespace tvlm{
         }
 
         void print(tiny::ASTPrettyPrinter & p) const override;
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override;
         std::unordered_map<BasicBlock*, Instruction *> contents()const{
             return contents_;
         }
@@ -1139,6 +1231,7 @@ namespace tvlm{
 
 
       void print(tiny::ASTPrettyPrinter & p) const override;
+      void printAlloc(tiny::ASTPrettyPrinter & p) const override;
 
       ~StructAssignInstruction() override = default;
 
@@ -1222,6 +1315,7 @@ namespace tvlm{
         }
 
         void print(tiny::ASTPrettyPrinter & p) const override;
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override;
 
         ~ElemOffsetInstruction() override = default;
 
@@ -1253,7 +1347,7 @@ namespace tvlm{
         Instruction * offset_;
     }; // Instruction::ElemOffsetInstruction
 
-class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
+    class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     public:
         std::vector<Instruction*> children() const override{
             return {base_, offset_, index_};
@@ -1268,6 +1362,8 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         }
 
     void print(tiny::ASTPrettyPrinter & p) const override;
+
+    void printAlloc(tiny::ASTPrettyPrinter & p) const override;
 
     ~ElemIndexInstruction() override = default;
         Instruction * offset()const {
@@ -1359,6 +1455,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
 
         ~DirectCallInstruction() override = default;
         void print(tiny::ASTPrettyPrinter & p) const override;
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override;
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             for (auto & a : args_) {
                 if(a.first == sub){
@@ -1421,6 +1518,15 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             p << p.symbol << "(";
             for (auto & i : args_)
                 printRegister(p, i.first);
+            p << p.symbol << ")";
+        };
+        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
+            Instruction::printAlloc(p);
+            p << p.keyword << allocName() << " ";
+            printAllocRegisterAddress(p, f_);
+            p << p.symbol << "(";
+            for (auto & i : args_)
+                printAllocRegister(p, i.first);
             p << p.symbol << ")";
         };
 
@@ -1611,6 +1717,17 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             p.dedent();
             p.newline();
         }
+        void printAlloc(tiny::ASTPrettyPrinter & p) const {
+            p << p.identifier << name() << p.symbol << ":";
+            p.indent();
+            p.newline();
+            for (auto & i : insns_) {
+                i->printAlloc(p);
+                p.newline();
+            }
+            p.dedent();
+            p.newline();
+        }
 
         std::string const & name() const {
             return name_;
@@ -1642,6 +1759,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
         void accept(ILVisitor * v) override{ v->visit(this); };
 
         friend class ILVisitor;
+        friend class TargetProgram;
         template<class T>
         friend class tvlm::CfgBuilder;
     private:
@@ -1707,6 +1825,18 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             p.dedent();
 
         }
+        void printAlloc(tiny::ASTPrettyPrinter & p) const {
+
+            p << p.comment << "function: " ; //<< il_->type()->toString();
+            p.newline();
+            p << p.identifier << name_ << p.symbol << ":";
+            p.indent();
+            p.newline();
+            for (auto & i : bbs_)
+                i->printAlloc(p);
+            p.dedent();
+
+        }
 
         const ASTBase * ast(){
             return ast_;
@@ -1720,6 +1850,7 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
     private:
         friend class ILBuilder;
         friend class ILVisitor;
+        friend class TargetProgram;
 
         ASTBase const * ast_;
 
@@ -1780,6 +1911,11 @@ class Instruction::ElemIndexInstruction : public Instruction::ElemInstruction{
             globals_->print(p);
             for (auto & i : functions_)
                 i.second->print(p);
+        }
+        void printAlloc(tiny::ASTPrettyPrinter & p) const {
+            globals_->printAlloc(p);
+            for (auto & i : functions_)
+                i.second->printAlloc(p);
         }
     protected:
         friend class ILVisitor;

@@ -311,6 +311,26 @@ namespace tvlm {
             selectedFInstrs_[which] = std::move(with);
         }
 
+//        void renameInstructions() {
+//            for( auto & pf : program_->functions()){
+//                auto * f = pf.second.get();
+//                for(auto  & bb : f->bbs_){
+//                    for (auto & instr : bb->insns_) {
+//                        auto virtReg = this->alocatedRegisters_.find(instr.get());
+//                        if(virtReg != alocatedRegisters_.end()){
+//                            if(virtReg->second){
+//
+//                            }
+//                            instr->setName(newName);
+//
+//                        }
+//                    }
+//                }
+//            }
+//
+//
+//        }
+
     private:
         std::map<const Function * ,size_t> funcLocalAlloc_;
         std::map<const ILInstruction*, std::vector<TInstruction*>> selectedInstrs_;
