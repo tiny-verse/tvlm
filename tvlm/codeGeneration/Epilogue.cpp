@@ -357,7 +357,7 @@ namespace tvlm{
 
         //===================================PATCHING Calls=====================================
         auto & tmp = getCall_patches(&program_);
-        std::cout << "call patches size: " << tmp.size() << std::endl;
+//        std::cout << "call patches size: " << tmp.size() << std::endl;
         for( auto & toPatch : tmp ){
             auto it = functionTable_.find(toPatch.second);
             if(it == functionTable_.end()){
@@ -365,8 +365,8 @@ namespace tvlm{
             }
             pb_.patch(resolveInstruction(toPatch.first),it->second);
             //std::cerr
-            std::cout
-            << "patching call at " << resolveInstruction(toPatch.first) << " with " << it->second << std::endl;
+//            std::cout
+//            << "patching call at " << resolveInstruction(toPatch.first) << " with " << it->second << std::endl;
         }
 
     }

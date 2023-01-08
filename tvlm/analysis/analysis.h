@@ -15,10 +15,10 @@ namespace tvlm {
 
 
     public:
-        std::map<const CfgNode<I>*, const Instruction *>cfg_mapping(){
+        std::map<const CfgNode<I>*, const Instruction *>& cfg_mapping(){
             return cfg_mapping_;
         };
-        std::map< const Instruction *, const CfgNode<I>*>instr_mapping(){
+        std::map< const Instruction *, const CfgNode<I>*> & instr_mapping(){
             return instr_mapping_;
         };
         virtual T  analyze() = 0;

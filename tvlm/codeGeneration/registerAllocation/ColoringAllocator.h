@@ -242,7 +242,7 @@ namespace tvlm{
         void getLRBundles(); //
         bool setColors();
 
-        VirtualRegister getRegToSpill();
+        VirtualRegister getRegToSpill() override;
         VirtualRegister getReg(const Instruction *ins) override;
         VirtualRegister getFReg(const Instruction *currentIns) override;
         void callingConvCallerSave(const Instruction *currIns) override;

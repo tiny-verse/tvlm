@@ -29,7 +29,7 @@ namespace tvlm{
         std::queue<Label> functions_;
         std::queue<Label> bbsToCompile_;
 
-        VirtualRegister getRegToSpill();
+        virtual VirtualRegister getRegToSpill();
 
         //:/ INTERFACE
         void registerMemLocation( const Store * ins, const Instruction * currentIns);

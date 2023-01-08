@@ -167,7 +167,7 @@ namespace tvlm {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
         auto it = colorPickingResult_.find(currentIns);
         if(it != colorPickingResult_.end()){
-            auto res = VirtualRegister(RegisterType::FLOAT, it->second);
+            res = VirtualRegister(RegisterType::FLOAT, it->second);
             eraseFreeReg(res);
             return res;
         }
