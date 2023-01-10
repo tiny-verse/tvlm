@@ -231,7 +231,8 @@ namespace tvlm{
     }
 
     void NaiveEpilogue::visit(Phi *ins) {
-        visitInstrHelper(ins);
+//        visitInstrHelper(ins);
+//nothing to do
     }
 
     void NaiveEpilogue::visit(ElemAddrOffset *ins) {

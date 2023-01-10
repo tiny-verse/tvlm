@@ -43,7 +43,7 @@ public:
             throw "[livenessAnalysisTarget]merging LiveRange of different types";
         }
         if(il_ != other->il_){
-            il_.merge( other->il_);
+            il_.insert( other->il_.begin(), other->il_.end());
         }
         start_ = other->start_;
 
@@ -491,17 +491,16 @@ private:
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
-                }else if (dynamic_cast<Phi *>(stmtNode->il())){
+                }else if (auto phi = dynamic_cast<Phi *>(stmtNode->il())){
                     auto newState = state;
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
-                    auto res = varMaps_.find(node->il());
-                    if(res!=varMaps_.end()){
-                        auto r = newState.find(res->second);
-                        if(r != newState.end()) {
-                            newState.erase(r);
-                        }
+
+                    //this instruction unites all liveRanges in one register
+                    for ( auto & i : phi->contents()) {
+                        combineLR(newState, phi, i.second);
                     }
+
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis

@@ -100,19 +100,19 @@ public:
         return exit_;
     }
     CfgNode<T> * addNode(CfgNode<T> * node){
-        nodes_.push_back((node));
+        nodes_.emplace(node);
         return node;
     }
     FragmentCfg<T> * addFragment(FragmentCfg<T> * f){
-        frags_.push_back(f);
+        frags_.emplace(f);
         return f;
     }
     void setCfg(FragmentCfg<T> * cfg){
         cfg_ = cfg;
     }
 private:
-    std::vector<CfgNode<T> *> nodes_;
-    std::vector<FragmentCfg<T> *> frags_;
+    std::set<CfgNode<T> *> nodes_;
+    std::set<FragmentCfg<T> *> frags_;
     CfgFunEntryNode<T> *entry_;
     CfgFunExitNode<T> * exit_;
     FragmentCfg<T> * cfg_;
@@ -317,7 +317,8 @@ private:
     std::unordered_set<const CfgNode<T>*> FragmentCfg<T>::nodes() {
         std::unordered_set<const CfgNode<T>*> res;
         for (auto & e : entryNodes_) {
-            res.merge(visit(e));
+            auto tmp = visit(e);
+            res.insert(tmp.begin(), tmp.end());
         }
         return res;
     }
@@ -339,7 +340,7 @@ private:
 
         std::unordered_set<const CfgNode<T>*> res;
         visitHelper(n,res);
-        return res;
+        return std::move(res);
     }
 
     template<class T>

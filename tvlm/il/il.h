@@ -1186,6 +1186,7 @@ namespace tvlm{
 
         void addIncomming( Instruction * src, BasicBlock * bb){
             contents_.emplace(bb, src);
+            src->registerUsage(this);
         }
 
         void print(tiny::ASTPrettyPrinter & p) const override;

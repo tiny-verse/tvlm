@@ -829,6 +829,7 @@ namespace tvlm {
 
     void SuperNaiveIS::visit(Phi *ins) {
         regAssigner_->registerPhi(ins);
+        withoutRegVariant(ins);
     }
 
     void SuperNaiveIS::visit(ElemAddrOffset *ins) {
