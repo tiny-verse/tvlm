@@ -182,6 +182,10 @@ namespace tvlm{
         }
         Type * base_;
         Instruction * size_;
+
+        size_t resolveStatic(Instruction *instr) const;
+
+        double resolveStaticDouble(Instruction *pInstruction) const;
     };
     class Type::Struct : public Type{
     public:

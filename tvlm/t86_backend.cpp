@@ -476,12 +476,20 @@ namespace tvlm{
         //auto codeGenerator = CodeGenerator (il);
 //        auto callingConventionedIL = CallingConvention();
         auto selected =  SuperNaiveIS::translate(il);
-        auto regAllocator = ColoringAllocator(std::move(selected));
-        selected = std::move(regAllocator.run());
+        bool color = true;
+        std::unique_ptr<RegisterAllocator> regAllocator;
+        if(color){
+            regAllocator = std::make_unique<ColoringAllocator>( std::move(selected));
+
+        }else{
+            regAllocator = std::make_unique<SuperNaiveRegisterAllocator>( std::move(selected));
+
+        }
+        selected = std::move(regAllocator->run());
         auto index = 0;
         std::stringstream ss;
         auto printer = tiny::ASTPrettyPrinter(ss);
-        bool again = regAllocator.changedProgram();
+        bool again = regAllocator->changedProgram();
         while(again){
             ss.str("");
             selected.program_->print(printer);

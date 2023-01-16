@@ -14,6 +14,7 @@ namespace tvlm{
         virtual ~SuperNaiveRegisterAllocator() = default;
         SuperNaiveRegisterAllocator( TargetProgram && tp);
         SuperNaiveRegisterAllocator( SuperNaiveRegisterAllocator && all) = default;
+        bool changedProgram()const override {return false;};
 
 
     protected:

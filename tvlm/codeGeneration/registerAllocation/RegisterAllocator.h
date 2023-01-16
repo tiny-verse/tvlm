@@ -89,7 +89,7 @@ namespace tvlm{
         virtual ~RegisterAllocator() = default;
         RegisterAllocator( TargetProgram  && tp);
         RegisterAllocator( RegisterAllocator  && rA) = default;
-
+        virtual bool changedProgram()const = 0;
 
         virtual TargetProgram run(){
             //implement logic of passing through the program;

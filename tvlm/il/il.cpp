@@ -318,11 +318,230 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     size_t Type::Array::size() const {
         //throw "unknown size"; TODO
-        auto sz = dynamic_cast<LoadImm *>(size_);
-        assert(sz && sz->resultType() == ResultType::Integer);
-//        if(sz){
-            return base_->size() * sz->valueInt();
+        size_t result = resolveStatic(size_);
+//        auto sz = dynamic_cast<LoadImm *>(size_);
+//        assert(sz && sz->resultType() == ResultType::Integer);
+//        if(result){
+            return base_->size() * result;
 //        }
+    }
+
+    size_t Type::Array::resolveStatic(Instruction *instr) const {
+        if(auto binop = dynamic_cast<BinOp*>(instr)){
+            size_t lhs;
+            size_t rhs;
+            if(binop->lhs()->resultType() == ResultType::Integer){
+                lhs = resolveStatic(binop->lhs());
+            }else if (binop->lhs()->resultType() == ResultType::Double){
+                lhs = (int)resolveStaticDouble(binop->lhs());
+            }
+            if(binop->rhs()->resultType() == ResultType::Integer){
+                rhs = resolveStatic(binop->rhs());
+            }else if (binop->rhs()->resultType() == ResultType::Double){
+                rhs = (int)resolveStaticDouble(binop->rhs());
+            }
+            size_t res = 0;
+            switch (binop->opType()) {
+                case BinOpType::ADD:
+                    res = lhs + rhs;
+                    break;
+                case BinOpType::SUB:
+                    res = lhs - rhs;
+                    break;
+                case BinOpType::MOD:
+                    res = lhs % rhs;
+                    break;
+                case BinOpType::MUL:
+                    res = lhs * rhs;
+                    break;
+                case BinOpType::DIV:
+                    res = lhs / rhs;
+                    break;
+                case BinOpType::AND:
+                    res = lhs && rhs;
+                    break;
+                case BinOpType::OR:
+                    res = lhs || rhs;
+                    break;
+                case BinOpType::XOR:
+                    res = lhs ^ rhs;
+                    break;
+                case BinOpType::LSH:
+                    res = lhs << rhs;
+                    break;
+                case BinOpType::RSH:
+                    res = lhs >> rhs;
+                    break;
+                case BinOpType::NEQ:
+                    res = lhs != rhs;
+                    break;
+                case BinOpType::EQ:
+                    res = lhs == rhs;
+                    break;
+                case BinOpType::LTE:
+                    res = lhs <= rhs;
+                    break;
+                case BinOpType::LT:
+                    res = lhs < rhs;
+                    break;
+                case BinOpType::GT:
+                    res = lhs > rhs;
+                    break;
+                case BinOpType::GTE:
+                    res = lhs >= rhs;
+                    break;
+            }
+            return res;
+        }else if(auto unop = dynamic_cast<UnOp*>(instr)){
+            size_t operand;
+            if(unop->operand()->resultType() == ResultType::Integer){
+                operand = resolveStatic(unop->operand());
+            }else if (unop->operand()->resultType() == ResultType::Double){
+                operand = (int)resolveStaticDouble(unop->operand());
+            }
+            switch (unop->opType()) {
+
+                case UnOpType::UNSUB:
+                    return -operand;
+                    break;
+                case UnOpType::NOT:
+                    return !operand;
+                    break;
+                case UnOpType::INC:
+                    return operand +1;
+                    break;
+                case UnOpType::DEC:
+                    return operand -1;
+                    break;
+            }
+
+        }else if(auto trunc = dynamic_cast<Truncate*>(instr)){
+            return (int)resolveStaticDouble(trunc->src());
+        }else if(auto extend = dynamic_cast<Extend*>(instr)){
+            return (int)resolveStaticDouble(extend);
+        }else if(auto loadImm = dynamic_cast<LoadImm*>(instr)){
+            if( loadImm->resultType() == ResultType::Integer){
+                return loadImm->valueInt();
+            }else{
+                return (int)resolveStaticDouble(instr);
+            }
+        }else{
+            throw new tiny::ParserError("cannot resolve statically", instr->ast()->location());
+        }
+
+
+        return 0;
+    }
+
+    double Type::Array::resolveStaticDouble(Instruction *instr) const {
+        if(auto binop = dynamic_cast<BinOp*>(instr)){
+            double lhs;
+            double rhs;
+            if(binop->lhs()->resultType() == ResultType::Integer){
+                lhs = (double)resolveStatic(binop->lhs());
+            }else if (binop->lhs()->resultType() == ResultType::Double){
+                lhs = resolveStaticDouble(binop->lhs());
+            }
+            if(binop->rhs()->resultType() == ResultType::Integer){
+                rhs = (double)resolveStatic(binop->rhs());
+            }else if (binop->rhs()->resultType() == ResultType::Double){
+                rhs = resolveStaticDouble(binop->rhs());
+            }
+            size_t res = 0;
+            switch (binop->opType()) {
+                case BinOpType::ADD:
+                    res = lhs + rhs;
+                    break;
+                case BinOpType::SUB:
+                    res = lhs - rhs;
+                    break;
+                case BinOpType::MOD:
+                    throw tiny::ParserError("cannot use mod on double operand", instr->ast()->location());
+                    break;
+                case BinOpType::MUL:
+                    res = lhs * rhs;
+                    break;
+                case BinOpType::DIV:
+                    res = lhs / rhs;
+                    break;
+                case BinOpType::AND:
+                    res = lhs && rhs;
+                    break;
+                case BinOpType::OR:
+                    res = lhs || rhs;
+                    break;
+                case BinOpType::XOR:
+//                    res = lhs ^ rhs;
+                    throw tiny::ParserError("cannot use xor on double operand", instr->ast()->location());
+
+                    break;
+                case BinOpType::LSH:
+//                    res = lhs << rhs;
+                    throw tiny::ParserError("cannot use << on double operand", instr->ast()->location());
+                    break;
+                case BinOpType::RSH:
+//                    res = lhs >> rhs;
+                    throw tiny::ParserError("cannot use >> on double operand", instr->ast()->location());
+
+                    break;
+                case BinOpType::NEQ:
+                    res = lhs != rhs;
+                    break;
+                case BinOpType::EQ:
+                    res = lhs == rhs;
+                    break;
+                case BinOpType::LTE:
+                    res = lhs <= rhs;
+                    break;
+                case BinOpType::LT:
+                    res = lhs < rhs;
+                    break;
+                case BinOpType::GT:
+                    res = lhs > rhs;
+                    break;
+                case BinOpType::GTE:
+                    res = lhs >= rhs;
+                    break;
+            }
+            return res;
+        }else if(auto unop = dynamic_cast<UnOp*>(instr)){
+            size_t operand;
+            if(unop->operand()->resultType() == ResultType::Integer){
+                operand = resolveStatic(unop->operand());
+            }else if (unop->operand()->resultType() == ResultType::Double){
+                operand = (int)resolveStaticDouble(unop->operand());
+            }
+            switch (unop->opType()) {
+
+                case UnOpType::UNSUB:
+                    return -operand;
+                    break;
+                case UnOpType::NOT:
+                    return !operand;
+                    break;
+                case UnOpType::INC:
+                    return operand +1;
+                    break;
+                case UnOpType::DEC:
+                    return operand -1;
+                    break;
+            }
+
+        }else if(auto trunc = dynamic_cast<Truncate*>(instr)){
+            return (int)resolveStaticDouble(trunc->src());
+        }else if(auto extend = dynamic_cast<Extend*>(instr)){
+            return (int)resolveStaticDouble(extend);
+        }else if(auto loadImm = dynamic_cast<LoadImm*>(instr)){
+            if( loadImm->resultType() == ResultType::Integer){
+                return loadImm->valueInt();
+            }else{
+                return (int)resolveStaticDouble(instr);
+            }
+        }else{
+            throw new tiny::ParserError("cannot resolve statically", instr->ast()->location());
+        }
+
+        return 0;
     }
 
     bool Instruction::Terminator0::operator==(const IL *il) const {

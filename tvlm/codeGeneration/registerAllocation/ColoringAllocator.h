@@ -82,7 +82,7 @@ namespace tvlm{
         }
         ColoringAllocator(ColoringAllocator && alloc) = default;
 
-        bool changedProgram()const{
+        bool changedProgram()const override{
             return programChanged_;
         }
         TargetProgram  run(TargetProgram &&  prog){
