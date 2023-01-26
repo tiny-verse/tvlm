@@ -387,6 +387,7 @@ namespace tvlm{
             Load,
             ArgAddr,
             StructAssign,
+            NOPInstruction,
 
         };
 
@@ -1704,6 +1705,17 @@ namespace tvlm{
             return ins;
         }
 
+        void removeInstr(Instruction *  ins) {
+            auto it = insns_.begin();
+            for (;it != insns_.end() && it->get() != ins ;it++ );
+            if(it == insns_.end()){
+                return;
+            }
+            it->reset(new NOPInstruction( ins->ast()));
+//            delete ins;
+
+
+        }
         bool terminated() const {
             if (insns_.empty())
                 return false;

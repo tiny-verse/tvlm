@@ -426,7 +426,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
                 return (int)resolveStaticDouble(instr);
             }
         }else{
-            throw new tiny::ParserError("cannot resolve statically", instr->ast()->location());
+            throw tiny::ParserError("cannot resolve statically", instr->ast()->location());
         }
 
 

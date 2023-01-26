@@ -240,7 +240,10 @@ namespace tvlm {
         this->colorPickingStack_ = std::stack<size_t>();
 //        this->colorPickingResult_.clear();
 
-        size_t colors = this->freeReg_.size() -1;
+        size_t colors = this->freeReg_.size() ;
+        if (colors < 3 ){
+            throw "[Coloring Allocator] Cannot do reg allocator -> too few registers";
+        }
         programChanged_ = false;
 
 
@@ -328,9 +331,9 @@ namespace tvlm {
                         if(LRincidence[i].size() > max){// spill the node with the biggest degree
                             selected = i;
                             max = LRincidence[i].size();
-                            if(max >  colors ){
-                                break;
-                            }
+//                            if(max >  colors ){
+//                                break;
+//                            }
                         }
                 }
                 //add NonEmpty with biggest degree to spill stack and remove from Graph
@@ -348,62 +351,124 @@ namespace tvlm {
 
                     BasicBlock *bb = instr->getParentBB();
 
-                    switch (instr->resultType()) {
+                    if (auto load = dynamic_cast<Load *>(instr)) {
+                        switch (instr->resultType()) {
 
-                        case ResultType::Double:{
+                            case ResultType::Double: {
 
-                            //spilling IntegerTypeRegister
+                                //spilling IntegerTypeRegister
 
-                            alloc = bb->inject(new AllocL(Type::Double().size(), instr->ast()));//begining of BB
-                            alloc->setName(STR("inject " << instr->name() << ":F"));
+                                alloc = load->address();
+                                alloc->setName(STR("sp. " << instr->name() << ":F"));
 
 
-                            for (auto *u: instr->usages()) {
-                                BasicBlock *bbu = u->getParentBB();
-                                Instruction *newLoad = bbu->injectBefore(
-                                        new Load(alloc, instr->resultType(), instr->ast()), u);
-                                u->replaceWith(instr, newLoad);
-                                newLoad->setName(STR(newLoad->name() << " by " << instr->name() << ":F"));
+                                for (auto *u: instr->usages()) {
+                                    BasicBlock *bbu = u->getParentBB();
+                                    Instruction *newLoad = bbu->injectBefore(
+                                            new Load(alloc, instr->resultType(), instr->ast()), u);
+                                    u->replaceWith(instr, newLoad);
+                                    newLoad->setName(STR(newLoad->name() << " by " << instr->name() << ":F"));
 
+                                }
+                                bb->removeInstr(load);
+//
+//                                auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
+//                                nStore->setName(STR(nStore->name() << " by " << instr->name() << ":F"));
+
+
+                                break;
                             }
+                            case ResultType::Integer:
+                            case ResultType::StructAddress: {
 
-                            auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
-                            nStore->setName(STR(nStore->name() << " by " << instr->name()<< ":F"));
+                                //spilling IntegerTypeRegister
 
-
-                            break;
-                        }
-                        case ResultType::Integer:
-                        case ResultType::StructAddress: {
-
-                            //spilling IntegerTypeRegister
-
-                            alloc = bb->inject(new AllocL(Type::Integer().size(), instr->ast()));//begining of BB
-                            alloc->setName(STR("inject " << instr->name()));
+                                alloc = load->address();
+//                                bb->inject(new AllocL(Type::Integer().size(), instr->ast()));//begining of BB
+                                alloc->setName(STR("sp. " << instr->name()));
 
 
-                            for (auto *u: instr->usages()) {
-                                BasicBlock *bbu = u->getParentBB();
-                                Instruction *newLoad = bbu->injectBefore(
-                                        new Load(alloc, instr->resultType(), instr->ast()), u);
-                                u->replaceWith(instr, newLoad);
-                                newLoad->setName(STR(newLoad->name() << " by " << instr->name()));
+                                for (auto *u: instr->usages()) {
+                                    BasicBlock *bbu = u->getParentBB();
+                                    Instruction *newLoad = bbu->injectBefore(
+                                            new Load(alloc, instr->resultType(), instr->ast()), u);
+                                    u->replaceWith(instr, newLoad);
+                                    newLoad->setName(STR(newLoad->name() << " by " << instr->name()));
 
+                                }
+
+                                bb->removeInstr(load);
+//                                auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
+//                                nStore->setName(STR(nStore->name() << " by " << instr->name()));
+//                                alloc->registerUsage(nStore);
+
+                                break;
                             }
-
-                            auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
-                            nStore->setName(STR(nStore->name() << " by " << instr->name()));
-
-                            alloc->registerUsage(nStore);
-
-                            break;
+                            default:
+                                throw "[Coloring Allocator] wrong case of ResultType for spilling";
+                                break;
                         }
-                        default:
-                            throw "[Coloring Allocator] wrong case of ResultType for spilling";
-                            break;
+
+                    } else {
+
+
+                        switch (instr->resultType()) {
+
+                            case ResultType::Double: {
+
+                                //spilling IntegerTypeRegister
+
+                                alloc = bb->inject(new AllocL(Type::Double().size(), instr->ast()));//begining of BB
+                                alloc->setName(STR("inject " << instr->name() << ":F"));
+
+
+                                for (auto *u: instr->usages()) {
+                                    BasicBlock *bbu = u->getParentBB();
+                                    Instruction *newLoad = bbu->injectBefore(
+                                            new Load(alloc, instr->resultType(), instr->ast()), u);
+                                    u->replaceWith(instr, newLoad);
+                                    newLoad->setName(STR(newLoad->name() << " by " << instr->name() << ":F"));
+
+                                }
+
+                                auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
+                                nStore->setName(STR(nStore->name() << " by " << instr->name() << ":F"));
+
+
+                                break;
+                            }
+                            case ResultType::Integer:
+                            case ResultType::StructAddress: {
+
+                                //spilling IntegerTypeRegister
+
+                                alloc = bb->inject(new AllocL(Type::Integer().size(), instr->ast()));//begining of BB
+                                alloc->setName(STR("inject " << instr->name()));
+
+
+                                for (auto *u: instr->usages()) {
+                                    BasicBlock *bbu = u->getParentBB();
+                                    Instruction *newLoad = bbu->injectBefore(
+                                            new Load(alloc, instr->resultType(), instr->ast()), u);
+                                    u->replaceWith(instr, newLoad);
+                                    newLoad->setName(STR(newLoad->name() << " by " << instr->name()));
+
+                                }
+
+                                auto *nStore = bb->injectAfter(new Store(instr, alloc, instr->ast()), instr);
+                                nStore->setName(STR(nStore->name() << " by " << instr->name()));
+
+                                alloc->registerUsage(nStore);
+
+                                break;
+                            }
+                            default:
+                                throw "[Coloring Allocator] wrong case of ResultType for spilling";
+                                break;
+                        }
+
                     }
                 }
-
                 //remove from graph
                 for (auto & k : LRincidence) {
                     k.erase(selected);

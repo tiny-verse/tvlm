@@ -120,3 +120,6 @@ class ElemAddrOffset;
  *
  */
 class StructAssign;
+
+
+class NOPInstruction;

@@ -87,6 +87,9 @@ INSTYPE(PutChar, SrcInstruction, ResultType::Void)
  */
 INSTYPE(GetChar,VoidInstruction, ResultType::Integer)
 
+
+INSTYPE(NOPInstruction, VoidInstruction, ResultType::Void)
+
 /**
  * Instruction by which is possible to carry information about regAllocation
  * it is used to specify single register for multiple assignments,

@@ -500,6 +500,7 @@ namespace tvlm{
         }else {
             setupRegister(((*virtRegs)[regpos++]), ins->index(), ins);
             setupRegister(((*virtRegs)[regpos++]), ins->offset(), ins);
+            writingPos_++;
             setupRegister(((*virtRegs)[regpos++]), ins, ins);
             setupRegister(((*virtRegs)[regpos++]), ins->base(), ins);
 
