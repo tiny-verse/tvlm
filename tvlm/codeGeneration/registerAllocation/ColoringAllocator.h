@@ -236,6 +236,9 @@ namespace tvlm{
         std::map<const Instruction * , size_t> colorPickingResult_;
         std::map<size_t , size_t> colorPickingSemiResult_;
 
+        std::map<size_t, VirtualRegister>finalMapping_;
+        std::map<size_t, VirtualRegister>finalFMapping_;
+
         bool programChanged_;
         //create live ranges, and create incidence graph
         bool generateLiveRanges(); // true == assigned without spilling
@@ -244,8 +247,9 @@ namespace tvlm{
 
         VirtualRegister getRegToSpill() override;
         VirtualRegister getReg( Instruction *ins) override;
-        VirtualRegister getFReg( Instruction *currentIns) override;
+        VirtualRegister getFReg( Instruction *ins) override;
         void callingConvCallerSave(const Instruction *currIns) override;
+        void resetFreeRegs(const Instruction * except = nullptr) override;
 //
 //        VirtualRegister getFReg(const Instruction *currentIns) override;
 

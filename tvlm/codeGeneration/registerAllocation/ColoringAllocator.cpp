@@ -147,16 +147,25 @@ namespace tvlm {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         auto it = colorPickingResult_.find(ins);
         if(it != colorPickingResult_.end()){
-            res = VirtualRegister(RegisterType::INTEGER, it->second);
-            eraseFreeReg(res);
+            auto knownMapping = finalMapping_.find(it->second);
+            if(knownMapping != finalMapping_.end()){
+                res = knownMapping->second;
+            }else{
+                VirtualRegister tmp = SuperNaiveRegisterAllocator::getReg(ins);
+                finalMapping_.emplace(it->second, tmp);
+                res = tmp;
+            }
+//            res = VirtualRegister(RegisterType::INTEGER, it->second);
+//            eraseFromFreeReg(res);
             bool global = false;
             if(*ins->name().begin() == 'g'){global = true;}
             ins->setAllocName(generateInstrName(res, global));
 //            ins->setName(generateInstrName(res, global));
             return res;
         }else if (ins->usages().empty()){
+            // instruction is not used -- takes only free register overwrites and will be overwritten
             if(freeReg_.empty()){
-                res = freeReg_.front();
+                res = *freeReg_.begin();
                 freeReg_.erase(freeReg_.begin());
             }
             regQueue_.push_back(res);
@@ -172,15 +181,23 @@ namespace tvlm {
         }
         throw "[Coloring Allocator] cannot find instruction in results";
     }
-    ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(Instruction *currentIns) {
+    ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(Instruction *ins) {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
-        auto it = colorPickingResult_.find(currentIns);
+        auto it = colorPickingResult_.find(ins);
         if(it != colorPickingResult_.end()){
-            res = VirtualRegister(RegisterType::FLOAT, it->second);
-            eraseFreeReg(res);
+            auto knownMapping = finalFMapping_.find(it->second);
+            if(knownMapping != finalFMapping_.end()){
+                res = knownMapping->second;
+            }else{
+                VirtualRegister tmp = SuperNaiveRegisterAllocator::getFReg(ins);
+                finalFMapping_.emplace(it->second, tmp);
+                res = tmp;
+            }
+//            res = VirtualRegister(RegisterType::FLOAT, it->second);
+//            eraseFromFreeReg(res);
             bool global = false;
-            if(*currentIns->name().begin() == 'g'){global = true;}
-            currentIns->setAllocName(generateInstrName(res, global));
+            if(*ins->name().begin() == 'g'){ global = true;}
+            ins->setAllocName(generateInstrName(res, global));
 //            currentIns->setName(generateInstrName(res, global));
             return res;
         }
@@ -294,7 +311,6 @@ namespace tvlm {
         }
 
 
-        this->LRincidence_;
         //**********************************************************************************
         //algo colorPicking
 //        bool anyNonEmpty =
@@ -532,4 +548,10 @@ namespace tvlm {
         }
     }
 
+
+    void ColoringAllocator::resetFreeRegs(const Instruction *except) {
+        finalMapping_.clear();
+        finalFMapping_.clear();
+        return RegisterAllocator::resetFreeRegs(except);
+    }
 }

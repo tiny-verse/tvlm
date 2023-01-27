@@ -10,16 +10,18 @@ namespace tvlm {
             RegisterAllocator(std::move(tp))
     {
         size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
-        auto it = freeReg_.begin();
+//        auto it = freeReg_.begin();
         for(size_t i = _regOffset__ ; i < regSize ; i++){
-            it = freeReg_.emplace(it, VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
-            it++;
+//            it = freeReg_.emplace(it, VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
+            freeReg_.emplace( VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
+//            it++;
         }
         size_t fregSize = tiny::t86::Cpu::Config::instance().floatRegisterCnt();
-        auto itF = freeFReg_.begin();
+//        auto itF = freeFReg_.begin();
         for(size_t i = _regOffset__; i < fregSize ; i++){
-            itF= freeFReg_.emplace(itF, VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
-            itF++;
+//            itF= freeFReg_.emplace(itF, VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
+            freeFReg_.emplace( VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
+//            itF++;
         }
 
 
@@ -64,7 +66,7 @@ namespace tvlm {
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getReg( Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         if(freeReg_.size() > 1){
-            res = freeReg_.front();
+            res = *freeReg_.begin();
             freeReg_.erase(freeReg_.begin());
 
             regQueue_.push_back(res);//TODO
@@ -84,8 +86,8 @@ namespace tvlm {
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getFReg( Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
         if(!freeFReg_.empty()){
-            res = freeFReg_.front();
-            freeFReg_.erase(freeReg_.begin());
+            res = *freeFReg_.begin();
+            freeFReg_.erase(freeFReg_.begin());
 
             regQueue_.push_back(res);
         }else {
@@ -113,18 +115,18 @@ namespace tvlm {
 
     void SuperNaiveRegisterAllocator::releaseRegister(const VirtualRegister & reg) {
         if(reg.getType() == RegisterType::INTEGER ){
-            if( reg.getNumber() > _regOffset__){
+            if( reg.getNumber() >= _regOffset__){
 
-                freeReg_.emplace(freeReg_.begin(), reg);
+                freeReg_.emplace( reg);
                 auto it = std::find(regQueue_.begin(), regQueue_.end(),reg);
                 if(it != regQueue_.end()){
                     regQueue_.erase(it);
                 }
             }
         }else if(reg.getType() == RegisterType::FLOAT ){
-            if( reg.getNumber() > _regOffset__){
+            if( reg.getNumber() >= _regOffset__){
 
-                freeFReg_.emplace(freeFReg_.begin(), reg);
+                freeFReg_.emplace( reg);
                 auto it = std::find(regQueue_.begin(), regQueue_.end(),reg);
                 if(it != regQueue_.end()){
                     regQueue_.erase(it);
@@ -159,7 +161,7 @@ namespace tvlm {
 
     }
 
-    void SuperNaiveRegisterAllocator::eraseFreeReg(VirtualRegisterPlaceholder &reg) {
+    void SuperNaiveRegisterAllocator::eraseFromFreeReg(VirtualRegisterPlaceholder &reg) {
 
             if (reg.getType() == RegisterType::INTEGER){
                 auto it = std::find(freeReg_.begin(), freeReg_.end(), reg);

@@ -267,6 +267,18 @@ private:
                         }
                     }
                     return newState;
+                }else if (dynamic_cast<ArgAddr *>(stmtNode->il())){
+                    auto newState = state;
+                    std::set<CLiveRange*> children = getSubtree(node);
+                    newState.insert(children.begin(), children.end());
+                    auto res = varMaps_.find(node->il());
+                    if(res!=varMaps_.end()){
+                        auto r = newState.find(res->second);
+                        if(r != newState.end()) {
+                            newState.erase(r);
+                        }
+                    }
+                    return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (auto store = dynamic_cast<Store *>(stmtNode->il())){
@@ -393,12 +405,12 @@ private:
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
-
+                    if(res!=varMaps_.end()){
                         auto r = newState.find(res->second);
                         if(r != newState.end()) {
                             newState.erase(r);
                         }
-
+                    }
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
@@ -407,12 +419,12 @@ private:
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
                     auto res = varMaps_.find(node->il());
-
+                    if(res!=varMaps_.end()){
                         auto r = newState.find(res->second);
                         if(r != newState.end()) {
                             newState.erase(r);
                         }
-
+                    }
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
@@ -574,6 +586,19 @@ private:
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
+                }else{
+                    auto newState = state;
+                    std::set<CLiveRange*> children = getSubtree(node);
+                    newState.insert(children.begin(), children.end());
+                    auto res = varMaps_.find(node->il());
+                    if(res!=varMaps_.end()){
+                        auto r = newState.find(res->second);
+                        if(r != newState.end()) {
+                            newState.erase(r);
+                        }
+                    }
+                    return newState;
+
                 }
             }
 

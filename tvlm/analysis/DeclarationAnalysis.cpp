@@ -154,6 +154,8 @@ void tvlm::DeclarationAnalysis::visit(tvlm::Extend *ins) {
 
 void tvlm::DeclarationAnalysis::visit(tvlm::Truncate *ins) {
 
+    result_.insert(ins->src());
+    result_.insert(ins);
 }
 
 void tvlm::DeclarationAnalysis::visit(tvlm::BinOp *ins) {

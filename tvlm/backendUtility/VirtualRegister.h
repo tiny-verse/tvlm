@@ -17,6 +17,10 @@ namespace tvlm{
         regType_(regType)
         ,number_(number)
         {}
+        VirtualRegisterPlaceholder(const VirtualRegisterPlaceholder & other):
+        regType_(other.regType_)
+        ,number_(other.number_)
+        {}
 
 //        VirtualRegisterPlaceholder(const VirtualRegisterPlaceholder & other) = delete;
 //        VirtualRegisterPlaceholder(VirtualRegisterPlaceholder && other) :regType_(other.regType_), number_(other.number_){}

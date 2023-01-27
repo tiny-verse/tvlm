@@ -828,6 +828,43 @@ namespace tvlm{
     }
 
 
+    void RegisterAllocator::updateStructures(const VirtualRegisterPlaceholder & regToAssign, const Instruction * ins){
+        //remove from structures the old data
+        unsubscribeRegister(regToAssign);
+        registerDescriptor_[regToAssign].emplace(ins);
+        //add to structures
+        addressDescriptor_[ins].insert(LocationEntry(regToAssign, ins));
+    }
+
+    void RegisterAllocator::unsubscribeRegister(const VirtualRegister &reg) {
+        //remove from structures the old data
+
+        for (auto  itOldIns = registerDescriptor_[reg].begin();
+                itOldIns != registerDescriptor_[reg].end();
+            )
+
+        {
+            auto oldIns = *itOldIns;
+            auto & locations = addressDescriptor_[oldIns];
+            for (auto itLoc = locations.begin(); itLoc != locations.end();) {
+                auto & loc = *itLoc;
+                if(loc.loc() == Location::Register && loc.regIndex() == reg){
+                    //erase address descriptor pointing to Register
+                    // no longer viable
+                    itLoc = locations.erase(itLoc);
+                }else{
+                    itLoc ++;
+                }
+            }
+
+            //erase instruction from register descriptor
+            //no longer viable
+            itOldIns =
+            registerDescriptor_[reg].erase(itOldIns);
+            //add to structures
+        }
+
+    }
 
     void RegisterAllocator::setupRegister(VirtualRegisterPlaceholder & reg, Instruction * ins,   Instruction *currentIns) {
         auto location = addressDescriptor_.find(ins);
@@ -910,8 +947,7 @@ namespace tvlm{
                         VirtualRegister freeVirtReg = getReg(currentIns);
                         Register freeReg = freeVirtReg.getNumber();
                         restore(freeVirtReg, loc, currentIns);
-                        addressDescriptor_[ins].emplace(freeVirtReg, ins);
-                        registerDescriptor_[freeVirtReg].emplace(ins);
+                        updateStructures(freeVirtReg, ins);
 
                         reg.setNumber(freeReg.index());
                         bool global = false;
@@ -926,8 +962,9 @@ namespace tvlm{
                         VirtualRegister freeVirtReg = getReg(currentIns);
                         Register freeReg = freeVirtReg.getNumber();
 
-                        restore(freeVirtReg, loc, currentIns);addressDescriptor_[currentIns].emplace( freeVirtReg, ins);
-                        registerDescriptor_[freeVirtReg].emplace(ins);
+                        restore(freeVirtReg, loc, currentIns);
+
+                        updateStructures(freeVirtReg, ins);
                         reg.setNumber(freeReg.index());
                         bool global = false;
                         if(*ins->name().begin() == 'g'){global = true;}
@@ -941,8 +978,11 @@ namespace tvlm{
             auto regToAssign = getReg(ins);
             assert(regToAssign.getNumber() <= tiny::t86::Cpu::Config::instance().registerCnt());
             reg.setNumber(regToAssign.getNumber());
-            addressDescriptor_[ins].insert(LocationEntry(regToAssign, ins));
-            registerDescriptor_[regToAssign].emplace(ins);
+
+            //replace in structures
+
+            updateStructures(regToAssign, ins);
+
             return;
         }
     }
@@ -1047,6 +1087,13 @@ namespace tvlm{
 //
 //
 //    }
+    void RegisterAllocator::resetFreeRegs(const Instruction * except){
+
+        for ( auto it= registerDescriptor_.begin(); it != registerDescriptor_.end();it++) {
+            releaseRegister(it->first);
+            //unsubscribeRegister(it->first);
+        }
+    }
 
     void RegisterAllocator::callingConvCallerSave(const Instruction *currIns) {
         spillAll(currIns);
@@ -1054,6 +1101,10 @@ namespace tvlm{
 
     void RegisterAllocator::callingConvCalleeRestore(const Instruction *currIns) {
 
+
+        //----------------------------------
+        //update RegAllocator state
+        resetFreeRegs(currIns);
     }
 
 

@@ -592,13 +592,14 @@ namespace tvlm {
             throw CSTR("[SuperNaiveIS] cannot compile " << ins->name() << "as alloc instruction") ;
         }
 
-}
+    }
 
     void SuperNaiveIS::visit(AllocL *ins) {
        auto cpy = makeLocalAllocation(ins->size(), ins);
-        if(ins->amount()){
+        if(ins->amount()){ // if array
             compileAlloc(ins, cpy);
         }
+        //doesnt compile -- symbolic
     }
 
     void SuperNaiveIS::visit(AllocG *ins) {

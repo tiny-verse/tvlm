@@ -131,15 +131,18 @@ namespace tvlm{
         bool spill(const VirtualRegister & reg, const Instruction * currentIns);
         void spillAll(const Instruction * currentIns);
         void restore(const VirtualRegister & whereTo, const LocationEntry & from, const Instruction * currentIns);
+        virtual void resetFreeRegs(const Instruction * except = nullptr);
 
         virtual VirtualRegister getReg( Instruction * currentIns) = 0;
         virtual VirtualRegister getFReg( Instruction * currentIns) = 0;
 
         virtual VirtualRegister getLastRegister(const Instruction * currentIns) = 0;
         virtual void releaseRegister(const VirtualRegister & reg) = 0;
+        void unsubscribeRegister(const VirtualRegister & reg);
 
        void updateJumpPatchPositions(const Instruction *ins);
         void updateCallPatchPositions(const Instruction *ins);
+        void updateStructures(const VirtualRegisterPlaceholder & regToAssign, const Instruction * ins);
         void setupRegister( VirtualRegisterPlaceholder & reg, Instruction * ins, Instruction * currentIns);
         void setupFRegister(VirtualRegisterPlaceholder & reg, Instruction * ins, Instruction * currentIns);
         void replaceInRegister(const Instruction * replace, const Instruction * with);
