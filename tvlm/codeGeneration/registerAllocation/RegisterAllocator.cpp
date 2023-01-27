@@ -535,6 +535,8 @@ namespace tvlm{
             visitChild(bb);
         }
 //        exitFce();
+        //update RegAllocator state
+        resetFreeRegs();
 
     }
 
@@ -1103,8 +1105,6 @@ namespace tvlm{
 
 
         //----------------------------------
-        //update RegAllocator state
-        resetFreeRegs(currIns);
     }
 
 
