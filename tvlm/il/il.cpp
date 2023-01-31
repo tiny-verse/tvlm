@@ -86,12 +86,16 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     void Instruction::PhiInstruction::print(tiny::ASTPrettyPrinter &p) const {
         Instruction::print(p);
-        p << p.keyword << instrName_ << " ";
+        p << p.keyword << instrName_;
+        p.indent();
+        p.newline();
         for(auto & i : contents_ ){
             printRegister(p, i.second);
-            p <<  "<--" << i.first->name() << ", ";
+            p <<  "<--" << i.first->name();
+            p.newline();
 
         }
+        p.dedent();
     };
 
     void Instruction::DirectCallInstruction::printAlloc(tiny::ASTPrettyPrinter &p) const {
@@ -105,12 +109,16 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     void Instruction::PhiInstruction::printAlloc(tiny::ASTPrettyPrinter &p) const {
         Instruction::printAlloc(p);
-        p << p.keyword << instrName_ << " ";
+        p << p.keyword << instrName_ ;
+        p.indent();
+        p.newline();
         for(auto & i : contents_ ){
             printAllocRegister(p, i.second);
-            p <<  "<--" << i.first->name() << ", ";
+            p <<  "<--" << i.first->name();
+            p.newline();
 
         }
+        p.dedent();
     };
 
 

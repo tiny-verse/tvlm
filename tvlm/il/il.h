@@ -952,14 +952,8 @@ namespace tvlm{
 
         BasicBlock * getTarget(size_t i) const override { return nullptr; }
 
-        void print(tiny::ASTPrettyPrinter & p) const override {
-            Instruction::print(p);
-            p << p.keyword << instrName_ << " ";
-        }
-        void printAlloc(tiny::ASTPrettyPrinter & p) const override {
-            Instruction::printAlloc(p);
-            p << p.keyword << instrName_ << " ";
-        }
+        virtual void print(tiny::ASTPrettyPrinter & p) const  = 0;
+        virtual void printAlloc(tiny::ASTPrettyPrinter & p) const  = 0;
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -997,12 +991,12 @@ namespace tvlm{
         }
 
         void print(tiny::ASTPrettyPrinter & p) const override {
-            tvlm::Instruction::Terminator0::print(p);
+            tvlm::Instruction::print(p);
             p << p.keyword << instrName_ << " ";
             if(returnValue_) printRegister(p, returnValue_);
         }
         void printAlloc(tiny::ASTPrettyPrinter & p) const override {
-            tvlm::Instruction::Terminator0::printAlloc(p);
+            tvlm::Instruction::printAlloc(p);
             p << p.keyword << instrName_ << " ";
             if(returnValue_) printAllocRegister(p, returnValue_);
         }
