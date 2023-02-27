@@ -148,8 +148,9 @@ private:
 
         bool canBinOpCombine(BinOp * binOp) {
 
-            if( binOp->lhs()->resultType() == ResultType::Integer ||
-                binOp->lhs()->resultType() == ResultType::StructAddress){
+            if( binOp->lhs()->resultType() == ResultType::Integer
+//            ||    binOp->lhs()->resultType() == ResultType::StructAddress
+                ){
                 return true;
             }else if(binOp->lhs()->resultType() == ResultType::Double){
                 switch (binOp->opType()){

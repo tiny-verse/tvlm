@@ -62,15 +62,16 @@ namespace tvlm {
 
     void SuperNaiveIS::visit(Return *ins) {
 
-        if(ins->returnType()->registerType() == ResultType::StructAddress){
-//            auto reg = getReg(ins);
-            size_t returnReg = getAllocAddrReg(ins->returnValue(), ins);
-//            addF( LMBS tiny::t86::MOV( vR(returnReg),tiny::t86::Bp() ) LMBE , ins);
-//            addF( LMBS tiny::t86::ADD( vR(returnReg), 1 ) LMBE , ins);
-            copyStruct(returnReg, ins->returnType(), tiny::t86::Reg(0) , ins);
-            // TODO fail to get info which is passing register Reg0 or stackplace or else
-
-        }else if (ins->returnType()->registerType() == ResultType::Double){
+//        if(ins->returnType()->registerType() == ResultType::StructAddress){
+////            auto reg = getReg(ins);
+//            size_t returnReg = getAllocAddrReg(ins->returnValue(), ins);
+////            addF( LMBS tiny::t86::MOV( vR(returnReg),tiny::t86::Bp() ) LMBE , ins);
+////            addF( LMBS tiny::t86::ADD( vR(returnReg), 1 ) LMBE , ins);
+//            copyStruct(returnReg, ins->returnType(), tiny::t86::Reg(0) , ins);
+//            // TODO fail to get info which is passing register Reg0 or stackplace or else
+//
+//        }else
+            if (ins->returnType()->registerType() == ResultType::Double){
             auto retFReg = getFReg(ins->returnValue(), ins);
             addF( LMBS tiny::t86::MOV(tiny::t86::FReg(0 /*or Somwhere on stack*/  ), vFR(retFReg) ) LMBE , ins);
 
@@ -82,7 +83,7 @@ namespace tvlm {
         }else{ // void
             withoutRegVariant(ins);
         }
-        //here we want to respect calling convention and spilling everything alive
+        //here we want to respect calling convention (and spilling everything dirty)
             addF( LMBS tiny::t86::MOV(tiny::t86::Sp(), tiny::t86::Bp()) LMBE , ins);
             addF( LMBS tiny::t86::POP(tiny::t86::Bp()) LMBE , ins);
             addF( LMBS tiny::t86::RET() LMBE , ins);
@@ -97,11 +98,12 @@ namespace tvlm {
 
 //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
-            if((*it).second->registerType() == ResultType::StructAddress) {
-                auto argReg = getReg(it->first, ins);
-                addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
-//                allocateStructArg(it->second, it->first);
-            }else if((*it).second->registerType() == ResultType::Integer){
+//            if((*it).second->registerType() == ResultType::StructAddress) {
+//                auto argReg = getReg(it->first, ins);
+//                addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
+////                allocateStructArg(it->second, it->first);
+//            }else
+                if((*it).second->registerType() == ResultType::Integer){
                 auto argReg = getAllocAddrReg(it->first, ins);
                 addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
 //                clearIntReg(it->first);
@@ -115,12 +117,13 @@ namespace tvlm {
 //        //prepare return Value //*-> preparation in RA -- memory and register in RA
 
         size_t returnValueRegister = 0;
-        if(ins->f()->getType()->registerType() == ResultType::StructAddress){
-            returnValueRegister = prepareReturnValue(ins->f()->getType()->size(), ins, ins);
-//            returnValueRegister = getReg(ins, ins);
-            addF( LMBS tiny::t86::MOV( tiny::t86::Reg(0), vR(returnValueRegister)) LMBE, ins);
-
-        } else if (ins->f()->getType()->registerType() == ResultType::Double){
+//        if(ins->f()->getType()->registerType() == ResultType::StructAddress){
+//            returnValueRegister = prepareReturnValue(ins->f()->getType()->size(), ins, ins);
+////            returnValueRegister = getReg(ins, ins);
+//            addF( LMBS tiny::t86::MOV( tiny::t86::Reg(0), vR(returnValueRegister)) LMBE, ins);
+//
+//        } else
+            if (ins->f()->getType()->registerType() == ResultType::Double){
             returnValueRegister = getFReg(ins, ins);
         }else if (ins->f()->getType()->registerType() == ResultType::Integer) {
             returnValueRegister = getReg(ins, ins);
@@ -143,9 +146,10 @@ namespace tvlm {
         }else if (ins->f()->getType()->registerType() == ResultType::Integer){
 //            auto reg = getReg(ins, ins);
             addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
-        } else if(ins->f()->getType()->registerType() == ResultType::StructAddress){
-            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
         }
+//        else if(ins->f()->getType()->registerType() == ResultType::StructAddress){
+//            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
+//        }
 //
         //CountArgSize;
         int argSize  = 0;
@@ -165,10 +169,11 @@ namespace tvlm {
 
 //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
-            if((*it).second->registerType() == ResultType::StructAddress) {
-                auto argReg = getReg(it->first, ins);
-//                allocateStructArg(it->second, it->first);
-            }else if((*it).second->registerType() == ResultType::Integer){
+//            if((*it).second->registerType() == ResultType::StructAddress) {
+//                auto argReg = getReg(it->first, ins);
+////                allocateStructArg(it->second, it->first);
+//            }else
+                if((*it).second->registerType() == ResultType::Integer){
                 auto argReg = getReg(it->first, ins);
                 addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
 //                clearIntReg(it->first);
@@ -182,10 +187,11 @@ namespace tvlm {
 //        //prepare return Value //*-> preparation in RA -- memory and register in RA
 
         size_t returnValueRegister = 0;
-        if(ins->retType()->registerType()== ResultType::StructAddress){
-            returnValueRegister = prepareReturnValue(ins->retType()->size(), ins, ins);
-            addF( LMBS tiny::t86::MOV( tiny::t86::Reg(0), vR(returnValueRegister)) LMBE, ins);
-        } else if (ins->retType()->registerType() == ResultType::Double){
+//        if(ins->retType()->registerType()== ResultType::StructAddress){
+//            returnValueRegister = prepareReturnValue(ins->retType()->size(), ins, ins);
+//            addF( LMBS tiny::t86::MOV( tiny::t86::Reg(0), vR(returnValueRegister)) LMBE, ins);
+//        } else
+            if (ins->retType()->registerType() == ResultType::Double){
             returnValueRegister = getFReg(ins, ins);
         }else if (ins->retType()->registerType() == ResultType::Integer) {
             returnValueRegister = getReg(ins, ins);
@@ -208,9 +214,11 @@ namespace tvlm {
         }else if (ins->retType()->registerType() == ResultType::Integer){
 //            auto reg = getReg(ins, ins);
             addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
-        } else if(ins->retType()->registerType() == ResultType::StructAddress){
-            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
-        }else if(ins->retType()->registerType() == ResultType::Void){
+        } else
+//            if(ins->retType()->registerType() == ResultType::StructAddress){
+//            addF( LMBS tiny::t86::MOV( vR(returnValueRegister), tiny::t86::Reg(0)) LMBE, ins);
+//        }else
+            if(ins->retType()->registerType() == ResultType::Void){
 
         }
 //
@@ -262,9 +270,9 @@ namespace tvlm {
             case ResultType::Void:
                 throw "copy on Void not implemented";
                 break;
-            case ResultType::StructAddress:
-                throw "copy on StructAddress not implemented";
-                break;
+//            case ResultType::StructAddress:
+//                throw "copy on StructAddress not implemented";
+//                break;
             default:
                 throw "not implemented Copy";
                 break;
@@ -292,7 +300,7 @@ namespace tvlm {
 
     void SuperNaiveIS::visit(BinOp *ins) {
         switch (ins->lhs()->resultType()) {
-            case ResultType::StructAddress:
+//            case ResultType::StructAddress:
             case ResultType::Integer:{
 
                 auto lhsreg = getReg(ins->lhs(), ins);
@@ -474,8 +482,8 @@ namespace tvlm {
     void SuperNaiveIS::visit(UnOp *ins) {
         switch (ins->resultType()) {
 
-            case ResultType::Integer:
-            case ResultType::StructAddress:{
+//            case ResultType::StructAddress:
+            case ResultType::Integer:{
 
                 auto reg =
                         getReg(ins->operand(), ins);
@@ -566,9 +574,9 @@ namespace tvlm {
                 return;
                 break;
             }
-            case ResultType::StructAddress:
-                throw "ERROR cant load StructAddress as value";
-                break;
+//            case ResultType::StructAddress:
+//                throw "ERROR cant load StructAddress as value";
+//                break;
             case ResultType::Void:
                 throw "ERROR cant load void as value";
                 break;
@@ -652,7 +660,7 @@ namespace tvlm {
                 break;
             }
 
-            case ResultType::StructAddress:
+//            case ResultType::StructAddress:
             case ResultType::Integer: {
 //        }else if (ins->resultType() == ResultType::Integer){
 
@@ -741,7 +749,7 @@ namespace tvlm {
                 }
                 return;
             }
-            case ResultType::StructAddress:
+//            case ResultType::StructAddress:
             case ResultType::Integer: {
                 if (dynamic_cast<AllocL *>(store->address())) {
                     if(auto allocLValue = dynamic_cast<AllocL*>(store->value())){
@@ -1051,9 +1059,9 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                             program_.globalEmplaceAddress(alloc, label);
                             break;
                         }
-                        case ResultType::StructAddress:
-                            throw "global Struct compilation not implemented ";
-                            break;
+//                        case ResultType::StructAddress:
+//                            throw "global Struct compilation not implemented ";
+//                            break;
                         case ResultType::Void:
                             throw "global Void compilation not implemented ";
                             break;
@@ -1076,9 +1084,9 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                         program_.globalEmplaceAddress(alloc, label);
                         break;
                     }
-                    case ResultType::StructAddress:
-                        throw "global Struct compilation not implemented ";
-                        break;
+//                    case ResultType::StructAddress:
+//                        throw "global Struct compilation not implemented ";
+//                        break;
                     case ResultType::Void:
                         throw "global Void compilation not implemented ";
                         break;
@@ -1106,9 +1114,9 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                                 program_.globalEmplaceValue(load, val->second);
                                 break;
                         }
-                    case ResultType::StructAddress:
-                        throw "[SuperNaiveIS] - global make * load structAddress not implemented";
-                        break;
+//                    case ResultType::StructAddress:
+//                        throw "[SuperNaiveIS] - global make * load structAddress not implemented";
+//                        break;
                     default:
                         throw "[SuperNaiveIS] - global make * cannot load VoidType";
                         break;
@@ -1256,14 +1264,14 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                         return;
                         break;
                     }
-                    case ResultType::StructAddress: {
-
-                        //        }else if (ins->resultType() == ResultType::StructAddress){
-                        //            regAllocator->replaceInt(ins->address(), ins);
-                        regAssigner_->replaceIntReg(load->address(), load);
-                        return;
-                        break;
-                    }
+//                    case ResultType::StructAddress: {
+//
+//                        //        }else if (ins->resultType() == ResultType::StructAddress){
+//                        //            regAllocator->replaceInt(ins->address(), ins);
+//                        regAssigner_->replaceIntReg(load->address(), load);
+//                        return;
+//                        break;
+//                    }
 
                     default:
                         throw "ERROR[global IS] not implemented Load ResultType or not supported";
@@ -1297,7 +1305,7 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
                         }
                         continue;
                     }
-                    case ResultType::StructAddress:
+//                    case ResultType::StructAddress:
                     case ResultType::Integer:{
                         if(dynamic_cast<AllocL*>(store->address())){
 

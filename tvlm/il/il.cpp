@@ -273,15 +273,19 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         p << p.keyword << "( of size: " << p.numberLiteral << type_->size() << p.keyword << ")" ;
     }
 
-    std::vector<BasicBlock *> ILVisitor::getFunctionBBs(Function *f)  {
+    std::vector<BasicBlock *> ILFriend::getFunctionBBs(Function *f)  {
         std::vector<BasicBlock*> tmp;
         for(const auto & bb : f->bbs_){
             tmp.emplace_back(bb.get());
         }
         return tmp;
     }
+    std::vector<std::unique_ptr<BasicBlock>>& ILFriend::getpureFunctionBBs(Function *f)  {
 
-    std::vector<Instruction *> ILVisitor::getBBsInstructions(BasicBlock *bb)  {
+        return f->bbs_;
+    }
+
+    std::vector<Instruction *> ILFriend::getBBsInstructions(BasicBlock *bb)  {
         std::vector<Instruction*> tmp;
         for(const auto & ins : bb->insns_){
             tmp.emplace_back(ins.get());
@@ -289,22 +293,30 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         return tmp;
     }
 
-    std::vector<std::pair<Symbol, Function *>> ILVisitor::getProgramsFunctions(Program *p) {
+    std::vector<std::unique_ptr<Instruction>>& ILFriend::getpureBBsInstructions(BasicBlock *bb)  {
+        return bb->insns_;
+    }
+
+    std::vector<std::pair<Symbol, Function *>> ILFriend::getProgramsFunctions(Program *p) {
         std::vector<std::pair<Symbol, Function*>> tmp;
         for(const auto & f : p->functions_){
             tmp.emplace_back(f.first, f.second.get());
         }
         return tmp;
     }
+    std::vector<std::pair<tiny::Symbol, std::unique_ptr<Function>>>&  ILFriend::getpureProgramsFunctions(Program *p) {
 
-    BasicBlock *ILVisitor::getProgramsGlobals(Program *p) {
+        return p->functions_;
+    }
+
+    BasicBlock *ILFriend::getProgramsGlobals(Program *p) {
         return p->globals_.get();
     }
 
-    BasicBlock *ILVisitor::getProgramsGlobals(ILBuilder &p) {
+    BasicBlock *ILFriend::getProgramsGlobals(ILBuilder &p) {
         return p.globals_.get();
     }
-    Instruction*  ILVisitor::getVariableAddress(ILBuilder &p, const Symbol & name) {
+    Instruction*  ILFriend::getVariableAddress(ILBuilder &p, const Symbol & name) {
         return p.getVariableAddress(name);
     }
 

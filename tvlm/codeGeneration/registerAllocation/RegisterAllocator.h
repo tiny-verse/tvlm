@@ -126,12 +126,13 @@ namespace tvlm{
         void visit(Function *fce) override;
         void visit(Program *p) override;
 
-
-
+        //Inner Helpers
+        void updateStructures(const VirtualRegisterPlaceholder & regToAssign, const Instruction * ins);
         bool spill(const VirtualRegister & reg, const Instruction * currentIns);
         void spillAll(const Instruction * currentIns);
         void restore(const VirtualRegister & whereTo, const LocationEntry & from, const Instruction * currentIns);
         virtual void resetFreeRegs(const Instruction * except = nullptr);
+
 
         virtual VirtualRegister getReg( Instruction * currentIns) = 0;
         virtual VirtualRegister getFReg( Instruction * currentIns) = 0;
@@ -142,11 +143,14 @@ namespace tvlm{
 
        void updateJumpPatchPositions(const Instruction *ins);
         void updateCallPatchPositions(const Instruction *ins);
-        void updateStructures(const VirtualRegisterPlaceholder & regToAssign, const Instruction * ins);
+
+        virtual void callingConvCallerSave(const Instruction *ins);
+        void callingConvCalleeRestore(const Instruction *ins);
+
+        //Inner Interface
         void setupRegister( VirtualRegisterPlaceholder & reg, Instruction * ins, Instruction * currentIns);
         void setupFRegister(VirtualRegisterPlaceholder & reg, Instruction * ins, Instruction * currentIns);
         void replaceInRegister(const Instruction * replace, const Instruction * with);
-
 
 
 //        std::set<VirtualRegister> freeReg_;
@@ -158,9 +162,6 @@ namespace tvlm{
         std::map<const Instruction *, std::set<LocationEntry>> addressDescriptor_;
         std::map<VirtualRegister, std::set<const Instruction*>> registerDescriptor_;
         size_t writingPos_; //position for insertion of code (spill or load code)
-
-        virtual void callingConvCallerSave(const Instruction *ins);
-        void callingConvCalleeRestore(const Instruction *ins);
 
         //:/Helpers
         std::set<LocationEntry>::iterator findLocation(std::set<LocationEntry> & set1, Location location);

@@ -282,9 +282,9 @@ namespace tvlm {
                     std::vector<CLiveRange *> tmpVector(t.second.begin(), t.second.end());
                     for (auto & lr2 : tmpVector) {
                         bool sameType = false;
-                        if(lr2->type() == lr1->type() ||
-                            (lr2->type() == ResultType::StructAddress && lr1->type() == ResultType::Integer) ||
-                            (lr1->type() == ResultType::StructAddress && lr2->type() == ResultType::Integer)
+                        if(lr2->type() == lr1->type()
+//                        ||  (lr2->type() == ResultType::StructAddress && lr1->type() == ResultType::Integer)
+//                        ||  (lr1->type() == ResultType::StructAddress && lr2->type() == ResultType::Integer)
                             ){
                             sameType = true;
                         }
@@ -394,8 +394,9 @@ namespace tvlm {
 
                                 break;
                             }
+//                            case ResultType::StructAddress:
                             case ResultType::Integer:
-                            case ResultType::StructAddress: {
+                            {
 
                                 //spilling IntegerTypeRegister
 
@@ -453,8 +454,9 @@ namespace tvlm {
 
                                 break;
                             }
+//                            case ResultType::StructAddress:
                             case ResultType::Integer:
-                            case ResultType::StructAddress: {
+                            {
 
                                 //spilling IntegerTypeRegister
 

@@ -50,15 +50,12 @@ namespace tvlm {
             if(auto * jmp = dynamic_cast<tvlm::Jump *>(ins)){
                 tvlm::BasicBlock * target = jmp->getTarget(1);
                 bb_->addSucc(target);
-                target->addPred(bb_);
             }else if (auto * condJump = dynamic_cast<tvlm::CondJump*>(ins)){
                 tvlm::BasicBlock * trueTarget = condJump->getTarget(1);
                 tvlm::BasicBlock * falseTarget = condJump->getTarget(0);
 
                 bb_->addSucc(trueTarget);
                 bb_->addSucc(falseTarget);
-                falseTarget->addPred(bb_);
-                trueTarget->addPred(bb_);
             }
 
 
@@ -91,11 +88,8 @@ namespace tvlm {
             return result;
         }
 
-        void registerBBSuccessor(BasicBlock * bb){
-            bb_->addSucc(bb);
-        }
-        void registerBBPredecessor(BasicBlock * bb){
-            bb_->addPred(bb);
+        void registerBBSuccessor(BasicBlock * succ){
+            bb_->addSucc(succ);
         }
 
         Context const & context() const {
@@ -227,7 +221,7 @@ namespace tvlm {
             return stringLiterals_;
         }
     private:
-        friend class ILVisitor;
+        friend class ILFriend;
         // wrappers to backend who manages the types for us
         /*
         Type * getType(Symbol symbol);

@@ -33,6 +33,7 @@ namespace tvlm{
         virtual bool operator==(const IL * il) const = 0;
     protected:
         friend class ILVisitor;
+        friend class ILFriend;
         friend class TargetProgram;
         IL * parent_;
     };
@@ -44,7 +45,7 @@ namespace tvlm{
         Integer,
         Double,
         Void,
-        StructAddress,
+//        StructAddress,
     }; // tinyc::il::ResultType
 
     class Type{
@@ -169,10 +170,14 @@ namespace tvlm{
     class Type::Array : public Type{
     public:
         Array(Type * base, Instruction * size) : base_{base}, size_(size){}
+        const Type* base()const {
+            return base_;
+        }
         size_t size()const override;
 
         ResultType registerType() const override {
-            return ResultType::StructAddress;
+//            return ResultType::StructAddress;
+            return ResultType::Integer;
         }
 
     private:
@@ -218,7 +223,8 @@ namespace tvlm{
         }
 
         ResultType registerType() const override {
-            return ResultType::StructAddress; // Address of that Struct
+//            return ResultType::StructAddress; // Address of that Struct
+            return ResultType::Integer; // Address of that Struct
         }
         const std::vector<std::pair<Symbol, Type *>> & fields() const {
             return fields_;
@@ -266,6 +272,13 @@ namespace tvlm{
 
         bool operator==(const IL *il) const override = 0;
         virtual std::vector<Instruction *> children() const = 0;
+
+
+
+        virtual Instruction * copyWithSwap(const std::unordered_map<Instruction *, Instruction *> & swapInstr)const {
+            throw "[Instruction]Abstract class cannot be copied";
+        }
+
 
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
         void replaceMe(Instruction * with ) {
@@ -418,9 +431,9 @@ namespace tvlm{
 //                    p << "void ";
 //                    p << "";
                     break;
-                case ResultType::StructAddress:
-                    p << "addr ";
-                    break;
+//                case ResultType::StructAddress:
+//                    p << "addr ";
+//                    break;
             }
 
         }
@@ -473,6 +486,17 @@ namespace tvlm{
 //            return type_->size();
         }
 
+        int printsize() const {
+            if(amount_) {
+                auto arr = dynamic_cast<Type::Array *>(type_);
+                return arr->base()->size();
+
+            }else {
+                return size();
+            }
+//            return type_->size();
+        }
+
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(amount_ == sub){
                 amount_ = toReplace;
@@ -483,20 +507,22 @@ namespace tvlm{
         void print(tiny::ASTPrettyPrinter & p) const override {
 
             Instruction::print(p);
-            p << p.keyword << instrName_ << " "<< p.numberLiteral << size() << p.keyword << " (size: " << size_ <<   ")";
+            p << p.keyword << instrName_ << " "<< p.numberLiteral << printsize() ;
             if(amount_){
                 p << p.keyword << " x ";
                 printRegister(p, amount_);
             }
+            p<< p.keyword << " (size: " << size_ <<   ")";
         };
         void printAlloc(tiny::ASTPrettyPrinter & p) const override {
 
             Instruction::printAlloc(p);
-            p << p.keyword << instrName_ << " "<< p.numberLiteral << size() << p.keyword << " (size: " << size_ <<   ")";
+            p << p.keyword << instrName_ << " "<< p.numberLiteral << printsize();
             if(amount_){
                 p << p.keyword << " x ";
                 printAllocRegister(p, amount_);
             }
+            p << p.keyword << " (size: " << size_ <<   ")";
         };
         Instruction * amount()const {
             return amount_;
@@ -508,6 +534,7 @@ namespace tvlm{
         ImmSize(Type * type,Instruction * amount, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Integer, ast, instrName, opcode},
             size_{type->size()},
+            type_{type},
             amount_(amount){
             if(amount && amount->resultType() != ResultType::Integer ){
                 throw tiny::ParserError(STR("vector size has to be of type Int"), ast->location());
@@ -519,13 +546,14 @@ namespace tvlm{
         ImmSize(size_t size, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Integer, ast, instrName, opcode},
             size_{size},
+            type_{nullptr},
             amount_(nullptr){
         }
         ImmSize(Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode ):
                 ImmSize(type, nullptr, ast, instrName, opcode){}
         Instruction * amount_;
         size_t size_;
-//        Type * type_;
+        Type * type_;
     };
 
     class Instruction::ImmIndex : public Instruction {
@@ -1058,6 +1086,8 @@ namespace tvlm{
         size_t numTargets() const override { return targets_.size(); }
 
         BasicBlock * getTarget(size_t i) const override { return targets_[i]; }
+        BasicBlock * trueTarget() const { return targets_[1]; }
+        BasicBlock * falseTarget() const { return targets_[0]; }
 
 //        void addTarget(BasicBlock * target) {
 //            targets_.push_back(target);
@@ -1550,10 +1580,30 @@ namespace tvlm{
 
 
 
+    class ILFriend {
+    protected:
+
+        static std::vector<BasicBlock *> getFunctionBBs(Function *f);
+
+        static std::vector<std::unique_ptr<BasicBlock>>  & getpureFunctionBBs(Function *f);
+
+        static std::vector<Instruction *> getBBsInstructions(BasicBlock *bb);
+
+        static std::vector<std::unique_ptr<Instruction>> & getpureBBsInstructions(BasicBlock *bb);
+
+        static std::vector<std::pair<Symbol, Function *>> getProgramsFunctions(Program *p);
+
+        static std::vector<std::pair<tiny::Symbol, std::unique_ptr<Function>>> & getpureProgramsFunctions(Program *p);
+
+        static BasicBlock *getProgramsGlobals(Program *p);
+
+        static BasicBlock *getProgramsGlobals(ILBuilder &p);
+
+        static Instruction *getVariableAddress(ILBuilder &p, const Symbol &name);
+    };
 
 
-
-    class ILVisitor {
+    class ILVisitor : public ILFriend{
     public:
         virtual ~ILVisitor() = default;
         virtual void visit(Instruction * ins) = 0;
@@ -1593,12 +1643,6 @@ namespace tvlm{
             child->accept(this);
         }
 
-        static std::vector<BasicBlock*> getFunctionBBs(Function * f);
-        static std::vector<Instruction*> getBBsInstructions(BasicBlock * bb);
-        static std::vector<std::pair<Symbol ,Function*>> getProgramsFunctions(Program * p) ;
-        static BasicBlock*  getProgramsGlobals(Program * p) ;
-        static BasicBlock*  getProgramsGlobals(ILBuilder & p) ;
-        static Instruction*  getVariableAddress(ILBuilder &p, const Symbol & name);
 
     };
 
@@ -1710,6 +1754,19 @@ namespace tvlm{
 
 
         }
+        void replaceInstr(Instruction *  ins, Instruction * with) {
+            auto it = insns_.begin();
+            for (;it != insns_.end() && it->get() != ins ;it++ );
+            if(it == insns_.end()){
+                return;
+            }
+            ins->replaceMe(with);
+            it->reset(with);
+
+//            delete ins; // done by reset
+
+
+        }
         bool terminated() const {
             if (insns_.empty())
                 return false;
@@ -1755,9 +1812,7 @@ namespace tvlm{
 
         void addSucc(BasicBlock * bl){
             successor_.push_back(bl);
-        }
-        void addPred(BasicBlock * bl){
-            predecessor_.push_back(bl);
+            bl->predecessor_.push_back(this);
         }
         void replaceWith(BasicBlock *sub, BasicBlock *toReplace) {
             //TODO
@@ -1769,7 +1824,7 @@ namespace tvlm{
     protected:
         void accept(ILVisitor * v) override{ v->visit(this); };
 
-        friend class ILVisitor;
+        friend class ILFriend;
         friend class TargetProgram;
         template<class T>
         friend class tvlm::CfgBuilder;
@@ -1860,7 +1915,7 @@ namespace tvlm{
 
     private:
         friend class ILBuilder;
-        friend class ILVisitor;
+        friend class ILFriend;
         friend class TargetProgram;
 
         ASTBase const * ast_;
@@ -1929,7 +1984,7 @@ namespace tvlm{
                 i.second->printAlloc(p);
         }
     protected:
-        friend class ILVisitor;
+        friend class ILFriend;
         friend class ILBuilder;
         template<class T>
         friend class CfgBuilder;

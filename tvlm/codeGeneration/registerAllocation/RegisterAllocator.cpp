@@ -22,12 +22,13 @@ namespace tvlm{
     void RegisterAllocator::visit(Return *ins) {
         if(ins->returnValue()){
         auto virtRegs = getAllocatedVirtualRegisters(ins);
-            if(ins->returnType()->registerType() == ResultType::StructAddress){
-                writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
-                setupRegister(((*virtRegs)[1]), ins,ins);
-                releaseRegister((*virtRegs)[1]); // don't need it anymore
-
-            } else if (ins->returnType()->registerType() == ResultType::Double){
+//            if(ins->returnType()->registerType() == ResultType::StructAddress){
+//                writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
+//                setupRegister(((*virtRegs)[1]), ins,ins);
+//                releaseRegister((*virtRegs)[1]); // don't need it anymore
+//
+//            } else
+                if (ins->returnType()->registerType() == ResultType::Double){
                 writingPos_= 0;setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
             }else if (ins->returnType()->registerType() == ResultType::Integer){
                 writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
@@ -52,7 +53,7 @@ namespace tvlm{
 
         //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
-            if( (*it).second->registerType() == ResultType::StructAddress ||
+            if( /* (*it).second->registerType() == ResultType::StructAddress ||*/
                 (*it).second->registerType() == ResultType::Integer){
                 if(virtRegs == nullptr){
                     virtRegs = getAllocatedVirtualRegisters(ins);
@@ -80,13 +81,14 @@ namespace tvlm{
 
 
         size_t returnValueRegister = 0;
-        if(ins->f()->getType()->registerType() == ResultType::StructAddress){
-            if(virtRegs == nullptr){
-                virtRegs = getAllocatedVirtualRegisters(ins);
-            }
-//            prepareReturnValue(ins->f()->getType()->size(), ins);
-            setupRegister(((*virtRegs)[regPos++]), ins, ins);
-        } else if (ins->f()->getType()->registerType() == ResultType::Double){
+//        if(ins->f()->getType()->registerType() == ResultType::StructAddress){
+//            if(virtRegs == nullptr){
+//                virtRegs = getAllocatedVirtualRegisters(ins);
+//            }
+////            prepareReturnValue(ins->f()->getType()->size(), ins);
+//            setupRegister(((*virtRegs)[regPos++]), ins, ins);
+//        } else
+            if (ins->f()->getType()->registerType() == ResultType::Double){
             if(virtRegs == nullptr){
                 virtRegs = getAllocatedVirtualRegisters(ins);
             }
@@ -117,9 +119,10 @@ namespace tvlm{
 
         //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
-            if((*it).second->registerType() == ResultType::StructAddress) {
-//                allocateStructArg(it->second, it->first);
-            }else if((*it).second->registerType() == ResultType::Integer){
+//            if((*it).second->registerType() == ResultType::StructAddress) {
+////                allocateStructArg(it->second, it->first);
+//            }else
+                if((*it).second->registerType() == ResultType::Integer){
 //                auto argReg = getReg(it->first, ins);
                 setupRegister(((*virtRegs)[regPos++]), it->first, ins);
 //                clearIntReg(it->first);
@@ -149,10 +152,11 @@ namespace tvlm{
         // implement restoring? - no
 
         size_t returnValueRegister = 0;
-        if(ins->retType()->registerType() == ResultType::StructAddress){
-//            prepareReturnValue(ins->f()->getType()->size(), ins);
-            setupRegister(((*virtRegs)[regPos++]), ins, ins);
-        } else if (ins->retType()->registerType() == ResultType::Double){
+//        if(ins->retType()->registerType() == ResultType::StructAddress){
+////            prepareReturnValue(ins->f()->getType()->size(), ins);
+//            setupRegister(((*virtRegs)[regPos++]), ins, ins);
+//        } else
+            if (ins->retType()->registerType() == ResultType::Double){
             setupFRegister(((*virtRegs)[regPos++]), ins, ins);
 
         }else if (ins->retType()->registerType() == ResultType::Integer) {
@@ -186,9 +190,9 @@ namespace tvlm{
             case ResultType::Void:
                 throw "copy on Void not implemented";
                 break;
-            case ResultType::StructAddress:
-                throw "copy on StructAddress not implemented";
-                break;
+//            case ResultType::StructAddress:
+//                throw "copy on StructAddress not implemented";
+//                break;
         }
     }
 
@@ -212,7 +216,7 @@ namespace tvlm{
 
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         switch (ins->lhs()->resultType()) {
-            case ResultType::StructAddress:
+//            case ResultType::StructAddress:
             case ResultType::Integer: {
                 writingPos_= 0;
                 setupRegister(((*virtRegs)[0]), ins->lhs(), ins);
@@ -265,8 +269,8 @@ namespace tvlm{
 
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         switch (ins->resultType()) {
-            case ResultType::Integer:
-            case ResultType::StructAddress:{
+//            case ResultType::StructAddress:
+            case ResultType::Integer:{
                 switch (ins->opType()) {
                     case UnOpType::UNSUB:{
                         writingPos_= 0;
@@ -318,9 +322,9 @@ namespace tvlm{
                 setupFRegister(((*virtRegs)[0]), ins, ins);
                 break;
             }
-            case ResultType::StructAddress:
-                throw "ERROR cant load StructAddress as value";
-                break;
+//            case ResultType::StructAddress:
+//                throw "ERROR cant load StructAddress as value";
+//                break;
             case ResultType::Void:
                 throw "ERROR cant load void as value";
                 break;
@@ -378,7 +382,7 @@ namespace tvlm{
                 setupRegister(((*virtRegs)[1]), ins->address(), ins);
             }
             return;
-        }else if (ins->resultType() == ResultType::Integer || ins->resultType() == ResultType::StructAddress){
+        }else if (ins->resultType() == ResultType::Integer /*|| ins->resultType() == ResultType::StructAddress*/){
             virtRegs =  getAllocatedVirtualRegisters(ins);
             if (dynamic_cast<Type::Array *>(ins->type())) { // TODO
                 setupRegister(((*virtRegs)[0]), ins, ins);
@@ -396,10 +400,11 @@ namespace tvlm{
                 }
             }
             return;
-        }else if (ins->resultType() == ResultType::StructAddress){
-//            replaceInRegister(ins->address(), ins);
-//            return;
         }
+//        else if (ins->resultType() == ResultType::StructAddress){
+////            replaceInRegister(ins->address(), ins);
+////            return;
+//        }
         throw "ERROR[RA] failed load";
     }
 
@@ -422,7 +427,7 @@ namespace tvlm{
                 }
                 return;
             }
-            case ResultType::StructAddress:
+//            case ResultType::StructAddress:
             case ResultType::Integer:{
                 if(dynamic_cast<AllocL*>(ins->address()) || dynamic_cast<AllocG*>(ins->address())){
                     if (!dynamic_cast<AllocG*>(ins->value())){
@@ -632,11 +637,11 @@ namespace tvlm{
 
                         break;
                     }
-                    case ResultType::StructAddress:{
-                        //                  regAllocator->replaceInt(ins->address(), ins);
-//                        regAssigner->replaceIntReg(load->address(), ins);
-                        break;
-                    }
+//                    case ResultType::StructAddress:{
+//                        //                  regAllocator->replaceInt(ins->address(), ins);
+////                        regAssigner->replaceIntReg(load->address(), ins);
+//                        break;
+//                    }
                     default:
                         throw "ERROR[IS] failed load";
 
