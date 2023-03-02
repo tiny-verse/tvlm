@@ -5,6 +5,12 @@ namespace tvlm{
 
 
     void FunctionInliner::functionInlining(IL &ir) {
+
+        using FncInlineType =  std::function<std::unique_ptr<Instruction> (std::unique_ptr<Instruction> & )>;
+        using FncInlineTypes =  std::vector<FncInlineType>;
+
+
+
         size_t  inlining_counter = 0;
         std::unordered_set<Function *> readyToBeInlined;
         for (auto & f : ir.functions()) {
@@ -15,10 +21,10 @@ namespace tvlm{
         if(readyToBeInlined.empty()) {return;}
 
         for (auto &fnc : ir.functions()) {
-            auto & bbs = getpureFunctionBBs(fnc.second.get());
-            for(size_t bbIndex = 0; bbIndex < bbs.size();){
+            auto & fncCallerbbs = getpureFunctionBBs(fnc.second.get());
+            for(size_t bbIndex = 0; bbIndex < fncCallerbbs.size();){
 
-                BasicBlock * bbWithCall = bbs[bbIndex].get();
+                BasicBlock * bbWithCall = fncCallerbbs[bbIndex].get();
                 size_t bbWithCallToInlineIndex = bbIndex;
                 auto & insns= getpureBBsInstructions(bbWithCall);
                 for (auto ins = insns.begin(); ins != insns.end(); ins++) {
@@ -27,15 +33,13 @@ namespace tvlm{
 //==================================================  decls  ============================================
                         Function *fncToInline = inlinedCall->f();
                         auto & fncToInlinebbs = getpureFunctionBBs(fncToInline);
-                        std::vector<BasicBlock*> new_BBs(fncToInlinebbs.size() + getFunctionBBs(fnc.second.get()).size() + 1);
+
+                        std::vector<BasicBlock*> new_BBs(fncToInlinebbs.size() + fncCallerbbs.size() + 1);
                         std::generate(new_BBs.begin(), new_BBs.end(), []{return new BasicBlock;});
-                        for(size_t bbIndex = 0;  bbIndex +1 < new_BBs.size() ; bbIndex){
-                            auto * bb = new_BBs[bbIndex];
-                            bb->addSucc(new_BBs[bbIndex-+1]);
-                        }
+
                         std::unordered_map<BasicBlock*, BasicBlock*> bbMapping;
                         std::vector<std::pair<AllocL *, Store*>> argTable;
-                        AllocL* returnAlloc;
+                        AllocL* returnAlloc = nullptr;
                         BasicBlock* firstHalf;
                         BasicBlock* secondHalf;
                         //cpy phase
@@ -45,34 +49,33 @@ namespace tvlm{
                         //prolog
                         size_t i;
                         for(i = 0; i < bbWithCallToInlineIndex;i++ ){
-                            bbMapping.emplace(getFunctionBBs(fnc.second.get())[i] , new_BBs[i] );
-                            new_BBs[i]->setName(getFunctionBBs(fnc.second.get())[i]->name() );
+                            bbMapping.emplace(fncCallerbbs[i].get() , new_BBs[i] );
+                            new_BBs[i]->setName(fncCallerbbs[i]->name() );
                         }
                         //1st Half
                         firstHalf = new_BBs[i];
-                        bbMapping.emplace(getFunctionBBs(fnc.second.get())[i] , new_BBs[i] );
+                        bbMapping.emplace(fncCallerbbs[i].get() , new_BBs[i] );
                         new_BBs[i]->setName(bbWithCall->name() + "_1/2_");
                         i++;
 
                         //fncInlining
-                        for( size_t j = 0; j < getFunctionBBs(fncToInline).size();i++, j++ ){
-                            bbMapping.emplace(getFunctionBBs(fncToInline)[j] , new_BBs[i] );
-                            new_BBs[i]->setName("inlined_" +  getFunctionBBs(fncToInline)[j]->name());
+                        for( size_t j = 0; j < fncToInlinebbs.size();i++, j++ ){
+                            bbMapping.emplace(fncToInlinebbs[j].get() , new_BBs[i] );
+                            new_BBs[i]->setName("inlined_" + fncToInlinebbs[j]->name());
 
                         }
 
                         //2nd Half
                         secondHalf  = new_BBs[i];
                         //doesn't exist = we are splitting actualBB:
-                        //    bbMapping.emplace( fnc.second->bbs_[i].get() ,new_BBs[i] );
+                        //    bbMapping.emplace( fncCallerbbs[i].get() ,new_BBs[i] );
                         new_BBs[i]->setName(bbWithCall->name() + "_2/2_");
                         i++;
 
                         //epilog
-                        auto & bbs = getpureFunctionBBs(fnc.second.get());
-                        for(size_t j = bbWithCallToInlineIndex +1 ; j < bbs.size();i++ , j++){
-                            bbMapping.emplace(bbs[j].get() , new_BBs[i] );
-                            new_BBs[i]->setName(bbs[j]->name());
+                        for(size_t j = bbWithCallToInlineIndex +1 ; j < fncCallerbbs.size();i++ , j++){
+                            bbMapping.emplace(fncCallerbbs[j].get() , new_BBs[i] );
+                            new_BBs[i]->setName(fncCallerbbs[j]->name());
                         }
 //=============================================  bbMapping set end  ======================================
 
@@ -88,24 +91,32 @@ namespace tvlm{
 
                             argTable.emplace_back(argAlloc, argStore);
                         }
-                        returnAlloc = new AllocL(inlinedCall->f()->getType()->size(), inlinedCall->ast());
-                        returnAlloc->setName(STR("ret" << inlining_counter) );
+                        if(inlinedCall->resultType() != ResultType::Void){
+
+                            returnAlloc = new AllocL(inlinedCall->f()->getType()->size(), inlinedCall->ast());
+                            returnAlloc->setName(STR("ret" << inlining_counter) );
+                        }
 
 //=====================================  lambdas: inliningFnc  ======================================
-                        std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>> phaseProlog;
-                        std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>> phase1stHalf;
-                        std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>> phaseInlining;
-                        std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>> phase2ndHalf;
-                        std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>> phaseEpilog;
+                        FncInlineTypes phaseProlog;
+                        FncInlineTypes phase1stHalf;
+                        FncInlineTypes phaseInlining;
+                        FncInlineTypes phase2ndHalf;
+                        FncInlineTypes phaseEpilog;
 //=====================================  lambdas: inliningFnc  ======================================
-                        std::function<std::unique_ptr<Instruction> (std::unique_ptr<Instruction> & )>
+                        FncInlineType
                         jumpReconnection = [ &instructionSwapping, bbMapping](std::unique_ptr<Instruction> & ins){
                             if (auto jmp = dynamic_cast<Jump *>(ins.get())) {
 
-                                auto it = bbMapping.find(jmp->getTarget(0));
+                                auto it = bbMapping.find(jmp->getTarget());
                                 if(it == bbMapping.end()){
                                     throw "Invalid Jump copy";
                                 }
+                                auto thisit = bbMapping.find(ins->getParentBB());
+                                if(thisit == bbMapping.end()){
+                                    throw "Invalid BB from which Jump copy";
+                                }
+                                thisit->second->addSucc(it->second);
                                 return std::unique_ptr<Instruction> (new Jump(it->second, ins->ast()));
 
 
@@ -121,8 +132,14 @@ namespace tvlm{
                                 if(itc == instructionSwapping.end() ){
                                     throw "Invalid CondJump copy - copy of cond";
                                 }
-
+                                auto thisit = bbMapping.find(ins->getParentBB());
+                                if(thisit == bbMapping.end()){
+                                    throw "Invalid BB from which CondJump copy#1";
+                                }
+                                thisit->second->addSucc(itf->second);
+                                thisit->second->addSucc(itt->second);
                                 return std::unique_ptr<Instruction>(new CondJump(itc->second, itt->second, itf->second, ins->ast()));
+
 
                             } else if (auto phi = dynamic_cast<Phi *>(ins.get())) {
 
@@ -137,7 +154,6 @@ namespace tvlm{
                                     cont = newPhi->contents().erase(cont);
                                     newPhi->contents().insert(cont, contentsCpy);
                                 }
-
                                 return std::unique_ptr<Instruction>(newPhi);
 
                             }
@@ -149,11 +165,15 @@ namespace tvlm{
                         phase2ndHalf.emplace_back(jumpReconnection);
                         phaseEpilog.emplace_back(jumpReconnection);
 //--------------------------------------------------------------------------------------------------------------------
-                        std::function<std::unique_ptr<Instruction> (std::unique_ptr<Instruction> &)>
-                        inliningStoreBeforeReturnJump = [ returnAlloc, &instructionSwapping, &inlinedCall](std::unique_ptr<Instruction> & ins){
-                            if (auto ret =dynamic_cast<Return *>(ins.get())) {
+                        FncInlineType
+                        inliningStoreBeforeReturnJump = [ returnAlloc, &instructionSwapping](std::unique_ptr<Instruction> & ins){
+                            auto ret =dynamic_cast<Return *>(ins.get());
+                            if ( ret && ret->returnValue() ) {
                                 auto it = instructionSwapping.find(ret->returnValue());
                                 if(it != instructionSwapping.end()){
+                                    std::vector<std::unique_ptr<Instruction>> res = std::vector<std::unique_ptr<Instruction>>();
+
+
                                     return std::unique_ptr<Instruction>( new Store( returnAlloc, it->second, ins->ast()));
                                 }
                                 throw "error - cant insert old address to store -when replacing return =: fnc_inlining";
@@ -163,7 +183,7 @@ namespace tvlm{
                         };
                         phaseInlining.emplace_back(inliningStoreBeforeReturnJump);
 //--------------------------------------------------------------------------------------------------------------------
-                        std::function<std::unique_ptr<Instruction> (std::unique_ptr<Instruction> & )>
+                        FncInlineType
                         inliningInstrTransformation = [&argTable,  secondHalf, &instructionSwapping, bbMapping](std::unique_ptr<Instruction> & ins){
                             if (dynamic_cast<ArgAddr *>(ins.get())) {
                                 return std::unique_ptr<Instruction> (new NOPInstruction(ins->ast()));//no need to do anything
@@ -193,12 +213,12 @@ namespace tvlm{
                         };
                         phaseInlining.emplace_back(inliningInstrTransformation);
 //--------------------------------------------------------------------------------------------------------------------
-                        std::function<std::unique_ptr<Instruction> (std::unique_ptr<Instruction> & )>
+                        FncInlineType
                         afterInlineInstructionTransforms =[&instructionSwapping, &inlinedCall, returnAlloc ](std::unique_ptr<Instruction> & ins){
-                            if(ins.get() == inlinedCall){
+                            if(ins.get() == inlinedCall && inlinedCall->resultType() != ResultType::Void){
                                 Instruction * tmp = new Load(returnAlloc, inlinedCall->resultType(), ins->ast());
                                 tmp->setName("loadRet");
-                                instructionSwapping.emplace (std::make_pair(ins.get(), tmp) );
+                                instructionSwapping.emplace (ins.get(), tmp );
                                 return std::unique_ptr<Instruction>(tmp);
                             }
                             return std::unique_ptr<Instruction>();
@@ -212,20 +232,23 @@ namespace tvlm{
 //=============================================  main work - copy  ======================================
                         //copy until 1st half;
                         for(i = 0; i < bbWithCallToInlineIndex;i++ ){
-                            copyInstructions(getpureBBsInstructions(getFunctionBBs(fnc.second.get())[i]).begin(),
-                                            getpureBBsInstructions(getFunctionBBs(fnc.second.get())[i]).end(),
-                                             std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
-                                             instructionSwapping,
-                                             phaseProlog
-                            );
+                            fncCallerbbs[i]->copy(new_BBs[i], instructionSwapping, phaseProlog);
+//                            copyInstructions(getpureBBsInstructions(getFunctionBBs(fnc.second.get())[i]).begin(),
+//                                            getpureBBsInstructions(getFunctionBBs(fnc.second.get())[i]).end(),
+//                                             std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
+//                                             instructionSwapping,
+//                                             phaseProlog
+//                            );
                         }
                         //copy 1st half;
-                        copyInstructions(getpureBBsInstructions(bbWithCall).begin(),
-                                         ins,
-                                         std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
-                                         instructionSwapping,
-                                         phase1stHalf
-                        );
+
+                        bbWithCall->copy(new_BBs[i], instructionSwapping, ins, phase1stHalf);
+//                        copyInstructions(getpureBBsInstructions(bbWithCall).begin(),
+//                                         ins,
+//                                         std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
+//                                         instructionSwapping,
+//                                         phase1stHalf
+//                        );
                         //add args
                         for(size_t a = 0; a < argTable.size();a++){
                             firstHalf->add(argTable[a].first);
@@ -238,40 +261,48 @@ namespace tvlm{
                             firstHalf->add(argTable[a].second);
                         }
                         //return alloc
-                        firstHalf->add(returnAlloc);
+                        if(inlinedCall->resultType() != ResultType::Void){
+                            firstHalf->add(returnAlloc);
+                        }
                         firstHalf->add(new Jump(new_BBs[i+1], nullptr));
                         i++;
                         //copy fncInlining
-                        for( size_t j = 0; j < getpureFunctionBBs(fncToInline).size();i++, j++ ){
-                            copyInstructions(getpureBBsInstructions(getFunctionBBs(fncToInline)[j]).begin(),
-                                             getpureBBsInstructions(getFunctionBBs(fncToInline)[j]).end(),
-                                             std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
-                                             instructionSwapping,
-                                             phaseInlining
-                            );
+                        for( size_t j = 0; j < fncToInlinebbs.size();i++, j++ ){
+
+                            fncToInlinebbs[j]->copy(new_BBs[i], instructionSwapping, phaseInlining);
+//                            copyInstructions(getpureBBsInstructions(getFunctionBBs(fncToInline)[j]).begin(),
+//                                             getpureBBsInstructions(getFunctionBBs(fncToInline)[j]).end(),
+//                                             std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
+//                                             instructionSwapping,
+//                                             phaseInlining
+//                            );
                         }
                         //copy 2nd half;
-                        copyInstructions(ins,
-                                         getpureBBsInstructions(bbWithCall).end(),
-                                         std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
-                                         instructionSwapping,
-                                         phase2ndHalf
-                        );
+
+                        bbWithCall->copy(new_BBs[i], instructionSwapping, phase2ndHalf);
+//                        copyInstructions(ins,
+//                                         getpureBBsInstructions(bbWithCall).end(),
+//                                         std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
+//                                         instructionSwapping,
+//                                         phase2ndHalf
+//                        );
                         i++;
                         //rest of "main"fnc
-                        for(size_t j = bbWithCallToInlineIndex +1 ; j < getFunctionBBs(fnc.second.get()).size();i++ , j++){
-                            copyInstructions(getpureBBsInstructions(getFunctionBBs( fnc.second.get())[j]).begin(),
-                                             getpureBBsInstructions(getFunctionBBs( fnc.second.get())[j]).end(),
-                                             std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
-                                             instructionSwapping,
-                                             phaseEpilog
-                            );
+                        for(size_t j = bbWithCallToInlineIndex +1 ; j < fncCallerbbs.size();i++ , j++){
+
+                            fncCallerbbs[j]->copy(new_BBs[i], instructionSwapping, phaseEpilog);
+//                            copyInstructions(getpureBBsInstructions(getFunctionBBs( fnc.second.get())[j]).begin(),
+//                                             getpureBBsInstructions(getFunctionBBs( fnc.second.get())[j]).end(),
+//                                             std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
+//                                             instructionSwapping,
+//                                             phaseEpilog
+//                            );
                         }
 //===========================================----main work - copy----====================================
 //===========================================  replaceBBs in fnc  ====================================
-                        getpureFunctionBBs(fnc.second.get()).clear();
+                        fncCallerbbs.clear();
                         for(i = 0; i < new_BBs.size();i++){
-                            getpureFunctionBBs(fnc.second.get()).emplace_back(new_BBs[i]);
+                            fncCallerbbs.emplace_back(new_BBs[i]);
                         }
 //=========================================----replaceBBs in fnc----====================================
 
@@ -293,23 +324,24 @@ namespace tvlm{
     const std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>> &lambdaChange =
             std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>>( )
     ){
+        throw "[CpyInstructions]wrong";
     for (; beginSource != endSource; beginSource++) {
-    std::unique_ptr<Instruction> toReplace;
+        std::unique_ptr<Instruction> toReplace;
 
-    bool lambded = false;
-    for(auto & l : lambdaChange){
-    if( (toReplace = l(*beginSource)) ){
+        bool lambded = false;
+        for(auto & l : lambdaChange){
+            if( (toReplace = l(*beginSource)) ){
+                swapInstr.emplace(beginSource->get(), toReplace.get());
+                beginDestination = std::move(toReplace);
+                lambded = true;
+            }
+        }
+        if(lambded) {continue;}
+        toReplace = std::unique_ptr<Instruction>(beginSource->get()->copyWithSwap(swapInstr));
+
     swapInstr.emplace(beginSource->get(), toReplace.get());
     beginDestination = std::move(toReplace);
-    lambded = true;
-}
-}
-if(lambded) continue;
-toReplace = std::unique_ptr<Instruction>(beginSource->get()->copyWithSwap(swapInstr));
-
-swapInstr.emplace(beginSource->get(), toReplace.get());
-beginDestination = std::move(toReplace);
-}
+    }
 }
 
 
@@ -319,7 +351,7 @@ const std::insert_iterator<std::vector<std::unique_ptr<Instruction>>> & beginDes
 const std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>> &lambdaChange =
         std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>>( )
 ){
-std::unordered_map<Instruction*, Instruction*> nop;
+std::unordered_map<Instruction*, Instruction*> nop = std::unordered_map<Instruction*, Instruction*>();
 copyInstructions(beginSource, endSource, beginDestination, nop, lambdaChange);
 }
 

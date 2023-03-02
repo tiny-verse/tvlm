@@ -7,6 +7,18 @@
 namespace tvlm {
     using Backend = t86_Backend; //TODO Modular use macros
 
+    void Instruction::Terminator0::print(tiny::ASTPrettyPrinter &p) const {
+        Instruction::print(p);
+        p << p.keyword << instrName_;
+
+    }
+
+    void Instruction::Terminator0::printAlloc(tiny::ASTPrettyPrinter &p) const {
+        Instruction::printAlloc(p);
+        p << p.keyword << instrName_ ;
+
+    }
+
     void Instruction::Terminator1::print(tiny::ASTPrettyPrinter &p) const {
         Instruction::print(p);
         p << p.keyword << instrName_ << " " << p.identifier << target_->name();
@@ -194,6 +206,24 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         }
     }
 
+    Instruction *
+    Instruction::BinaryOperator::copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const {
+        BinaryOperator * cpy = static_cast<BinaryOperator*>(clone());
+        auto itl = swapInstr.find(lhs_);
+        auto itr = swapInstr.find(rhs_);
+
+        if(itl != swapInstr.end()){
+            cpy->lhs_ = itl->second;
+        }
+
+        if(itr != swapInstr.end()){
+            cpy->rhs_ = itr->second;
+        }
+
+        return cpy;
+
+    }
+
     const char *Instruction::UnaryOperator::resolve_operator() const {
         switch (operator_) {
             case UnOpType::UNSUB:
@@ -214,6 +244,17 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
             operand_ = toReplace;
             toReplace->registerUsage(this);
         }
+    }
+
+    Instruction *
+    Instruction::UnaryOperator::copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const {
+        UnaryOperator * cpy =static_cast<UnaryOperator*>(clone());
+        auto it = swapInstr.find(operand_);
+        if(it != swapInstr.end()){
+            cpy->operand_ = it->second;
+        }
+        return cpy;
+
     }
 
 
@@ -570,5 +611,6 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         }
         else return false;
     }
+
 }
 

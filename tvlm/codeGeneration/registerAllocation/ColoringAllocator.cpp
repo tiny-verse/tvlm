@@ -381,8 +381,8 @@ namespace tvlm {
                                 for (auto *u: instr->usages()) {
                                     BasicBlock *bbu = u->getParentBB();
                                     Instruction *newLoad = bbu->injectBefore(
-                                            new Load(alloc, instr->resultType(), instr->ast()), u);
-                                    u->replaceWith(instr, newLoad);
+                                            new Load(alloc, load->resultType(), load->ast()), u);
+                                    u->replaceWith(load, newLoad);
                                     newLoad->setName(STR(newLoad->name() << " by " << instr->name() << ":F"));
 
                                 }
@@ -433,6 +433,7 @@ namespace tvlm {
 
                             case ResultType::Double: {
 
+                                //if allowing ArdAddr to be double (its Address!) then continue here
                                 //spilling IntegerTypeRegister
 
                                 alloc = bb->inject(new AllocL(Type::Double().size(), instr->ast()));//begining of BB

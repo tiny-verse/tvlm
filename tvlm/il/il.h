@@ -275,9 +275,14 @@ namespace tvlm{
 
 
 
-        virtual Instruction * copyWithSwap(const std::unordered_map<Instruction *, Instruction *> & swapInstr)const {
-            throw "[Instruction]Abstract class cannot be copied";
-        }
+        virtual Instruction * copyWithSwap(const std::unordered_map<Instruction *, Instruction *> & swapInstr)const = 0;
+//                {
+//            throw "[Instruction]Abstract class cannot be copied";
+//        }
+        virtual Instruction * clone()const = 0;
+//        {
+//            throw "[Instruction]Abstract class cannot be copied";
+//        }
 
 
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
@@ -290,6 +295,12 @@ namespace tvlm{
         //read as this is used in instruction [usage]
         virtual void registerUsage(Instruction * usage){
             used_.push_back(usage);
+        };
+        virtual void removeUsage(Instruction * usage){
+            auto it = std::find(used_.begin(), used_.end(), usage);
+            if(it != used_.end()){
+                used_.erase(it);
+            }
         };
 
         /** Returns the result type of the instruction. 
@@ -528,6 +539,11 @@ namespace tvlm{
             return amount_;
         }
         ~ImmSize() override{}
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            return clone();
+        }
+
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -580,6 +596,10 @@ namespace tvlm{
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             //nothing to do
+        }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            return clone();
         }
 
         void print(tiny::ASTPrettyPrinter & p) const override {
@@ -637,6 +657,10 @@ namespace tvlm{
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             //nothing to do
+        }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            return clone();
         }
 
         ~ImmValue() override= default;
@@ -736,6 +760,8 @@ namespace tvlm{
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override;
 
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override;
+
     protected:
         const char *  resolve_operator() const;
         // void accept(ILVisitor * v) override;
@@ -828,6 +854,8 @@ namespace tvlm{
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override;
 
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override;
+
     protected:
         const char *  resolve_operator() const;
         // void accept(ILVisitor * v) override;
@@ -876,9 +904,22 @@ namespace tvlm{
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             if(address_ == sub){
+                address_->removeUsage(this);
                 address_ = toReplace;
+
                 toReplace->registerUsage(this);
             }
+        }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+            auto it = swapInstr.find(address_);
+            auto * cpy = static_cast<LoadAddress*>(clone());
+            if(it != swapInstr.end()){
+                cpy->address_ = it->second;
+            }
+            return cpy;
+
         }
 
     protected:
@@ -887,13 +928,13 @@ namespace tvlm{
         LoadAddress(Instruction * address,Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type->registerType(), ast, instrName, opcode},
             address_{address}, type_(type) {
-
+            assert(address_->resultType() == ResultType::Integer);
             address_->registerUsage(this);
         }
         LoadAddress(Instruction * address,const ResultType & type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type, ast, instrName, opcode},
             address_{address}, type_(nullptr) {
-
+            assert(address_->resultType() == ResultType::Integer);
             address_->registerUsage(this);
         }
     private:
@@ -940,6 +981,22 @@ namespace tvlm{
                 toReplace->registerUsage(this);
             }
         }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+            auto itaddr = swapInstr.find(address_);
+            auto itvalue = swapInstr.find(value_);
+            auto * cpy = static_cast<StoreAddress*>(clone());
+            if(itaddr != swapInstr.end()){
+                cpy->address_ = itaddr->second;
+            }
+            if(itvalue != swapInstr.end()){
+                cpy->value_ = itvalue->second;
+            }
+            return cpy;
+
+        }
+
         ~StoreAddress() override= default;
     protected:
         // void accept(ILVisitor * v) override;
@@ -980,8 +1037,23 @@ namespace tvlm{
 
         BasicBlock * getTarget(size_t i) const override { return nullptr; }
 
-        virtual void print(tiny::ASTPrettyPrinter & p) const  = 0;
-        virtual void printAlloc(tiny::ASTPrettyPrinter & p) const  = 0;
+        virtual void print(tiny::ASTPrettyPrinter & p) const  ;
+        virtual void printAlloc(tiny::ASTPrettyPrinter & p) const;
+
+        std::vector<Instruction *> children() const override {
+            return std::vector<Instruction *>();
+        }
+
+        void replaceWith(Instruction *sub, Instruction *toReplace) override {
+
+        }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            return clone();
+        }
+
+        virtual ~Terminator0() override = default;
+
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -1018,6 +1090,17 @@ namespace tvlm{
             }
         }
 
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+            auto itvalue = swapInstr.find(returnValue_);
+            auto * cpy = static_cast<Returnator*>(clone());
+            if(itvalue != swapInstr.end()){
+                cpy->returnValue_ = itvalue->second;
+            }
+            return cpy;
+
+        }
+
         void print(tiny::ASTPrettyPrinter & p) const override {
             tvlm::Instruction::print(p);
             p << p.keyword << instrName_ << " ";
@@ -1052,7 +1135,7 @@ namespace tvlm{
 
         size_t numTargets() const override { return 1; }
 
-        BasicBlock * getTarget(size_t i) const override { return i == 1 ? target_ : nullptr; }
+        BasicBlock * getTarget(size_t i = 1) const override { return i == 1 ? target_ : nullptr; }
 
         void print(tiny::ASTPrettyPrinter & p) const override ;
 
@@ -1062,7 +1145,11 @@ namespace tvlm{
     public:
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
 
-    }
+        }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            return clone();
+        }
 
     protected:
         // void accept(ILVisitor * v) override;
@@ -1100,6 +1187,17 @@ namespace tvlm{
                 toReplace->registerUsage(this);
             }
         }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+            auto itvalue = swapInstr.find(cond_);
+            auto * cpy = static_cast<Terminator2*>(clone());
+            if(itvalue != swapInstr.end()){
+                cpy->cond_ = itvalue->second;
+            }
+            return cpy;
+        }
+
     protected:
         // void accept(ILVisitor * v) override;
 
@@ -1144,6 +1242,17 @@ namespace tvlm{
                 toReplace->registerUsage(this);
             }
         }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+            auto itvalue = swapInstr.find(src_);
+            auto * cpy = static_cast<SrcInstruction*>(clone());
+            if(itvalue != swapInstr.end()){
+                cpy->src_ = itvalue->second;
+            }
+            return cpy;
+        }
+
         ~SrcInstruction() override = default;
     protected:
         // void accept(ILVisitor * v) override;
@@ -1184,6 +1293,10 @@ namespace tvlm{
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
 
+        }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            return clone();
         }
 
     protected:
@@ -1230,6 +1343,20 @@ namespace tvlm{
                 toReplace->registerUsage(this);
             }
         }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            auto cpy = static_cast<PhiInstruction*>(clone());
+            for (auto it = cpy->contents_.begin();it != cpy->contents_.end();it++ ) {
+                auto find = swapInstr.find(it->second);
+                if(find != swapInstr.end()){
+                    it->second = find->second;
+                }
+            }
+
+            return cpy;
+
+        }
+
         ~PhiInstruction() override = default;
 
     protected:
@@ -1287,7 +1414,21 @@ namespace tvlm{
         }
       }
 
-    protected:
+      Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+          auto itsrc = swapInstr.find(srcVal_);
+          auto itdst = swapInstr.find(dstAddr_);
+          auto * cpy = static_cast<StructAssignInstruction*>(clone());
+          if(itsrc != swapInstr.end()){
+              cpy->srcVal_ = itsrc->second;
+          }
+          if(itdst != swapInstr.end()){
+              cpy->dstAddr_ = itdst->second;
+          }
+          return cpy;
+      }
+
+  protected:
 //      virtual void accept(ILVisitor * v) override;
 
         StructAssignInstruction( Instruction * srcVal, Instruction * dstAddr, Type::Struct * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
@@ -1363,6 +1504,21 @@ namespace tvlm{
             }
 
         }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+            auto itbase = swapInstr.find(base_);
+            auto itoffset = swapInstr.find(offset_);
+            auto * cpy = static_cast<ElemOffsetInstruction*>(clone());
+            if(itbase != swapInstr.end()){
+                cpy->base_ = itbase->second;
+            }
+            if(itoffset != swapInstr.end()){
+                cpy->offset_ = itoffset->second;
+            }
+            return cpy;
+        }
+
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
@@ -1416,6 +1572,25 @@ namespace tvlm{
             toReplace->registerUsage(this);
         }
     }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+
+            auto itbase = swapInstr.find(base_);
+            auto itoffset = swapInstr.find(offset_);
+            auto itindex = swapInstr.find(index_);
+            auto * cpy = static_cast<ElemIndexInstruction*>(clone());
+            if(itbase != swapInstr.end()){
+                cpy->base_ = itbase->second;
+            }
+            if(itoffset != swapInstr.end()){
+                cpy->offset_ = itoffset->second;
+            }
+            if(itindex != swapInstr.end()){
+                cpy->index_ = itindex->second;
+            }
+            return cpy;
+        }
+
     protected:
 //    virtual void accept(ILVisitor * v) override;
 
@@ -1494,6 +1669,19 @@ namespace tvlm{
                 }
             }
         }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            auto * cpy = static_cast< DirectCallInstruction*>(clone());
+            for (size_t i = 0; i <  args_.size(); i++) {
+                auto it = swapInstr.find(args_[i].first);
+                if(it != swapInstr.end()){
+                    cpy->args_[i] = std::make_pair(it->second, args_[i].second);
+                }
+            }
+            return cpy;
+
+        }
+
     protected:
 //        virtual void accept(ILVisitor * v) override;
 
@@ -1541,6 +1729,23 @@ namespace tvlm{
                 }
             }
         }
+
+        Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
+            auto it = swapInstr.find(f_);
+            auto * cpy = static_cast<IndirectCallInstruction*>(clone());
+            if(it != swapInstr.end()){
+                cpy->f_ = it->second;
+            }
+            for (size_t i = 0; i <  args_.size(); i++) {
+                swapInstr.find(args_[i].first);
+                if(it != swapInstr.end()){
+                    cpy->args_[i] = std::make_pair(it->second, args_[i].second);
+                }
+            }
+            return cpy;
+
+        }
+
         void print(tiny::ASTPrettyPrinter & p) const override {
             Instruction::print(p);
             p << p.keyword << instrName_ << " ";
@@ -1658,7 +1863,8 @@ namespace tvlm{
         ENCODING(NAME, ENCODING)                                        \
         virtual ~NAME(){}                                           \
         virtual void accept(ILVisitor * v)     \
-        { v->visit(this); } \
+        { v->visit(this); }                                             \
+        Instruction * clone() const override {return new NAME(*this);}\
 };
 
 #define ImmSize(NAME, ENCODING) NAME (Type * type,Instruction * amount, ASTBase const * ast) : Instruction::ENCODING{type, amount, ast, #NAME, Instruction::Opcode::NAME} {} \
@@ -1688,6 +1894,7 @@ namespace tvlm{
         virtual ~NAME(){}                                                     \
         virtual void accept(ILVisitor * v)     \
         { v->visit(this); } \
+        Instruction * clone() const override {return new NAME(*this);}\
 };
 
 #define SrcInstruction(NAME, ENCODING, TYPE) NAME (Instruction * src, ASTBase const * ast): Instruction::ENCODING{src, TYPE, ast, #NAME, Instruction::Opcode::NAME} {}
@@ -1708,7 +1915,7 @@ namespace tvlm{
         }
 
         Instruction * add(Instruction * ins) {
-            assert(! terminated());
+            assert(! terminated() && ins);
             ins->setParentBB(this);
             insns_.push_back(std::unique_ptr<Instruction>{ins});
             return ins;
@@ -1820,6 +2027,48 @@ namespace tvlm{
 
 
 
+        }
+
+        using FncInlineType =  std::vector<std::function<std::unique_ptr<Instruction>(std::unique_ptr<Instruction> &)>>;
+        BasicBlock * copy(
+                BasicBlock * dst,
+                std::unordered_map<Instruction *, Instruction *> & swapInstr,
+                const FncInlineType &lambdaChange =
+                FncInlineType( ) ) {
+            return copy(dst, swapInstr, insns_.end(),lambdaChange );
+        }
+        BasicBlock * copy(
+                BasicBlock * dst,
+                std::unordered_map<Instruction *, Instruction *> & swapInstr,
+                const std::vector<std::unique_ptr<Instruction>>::iterator &until,
+                const FncInlineType &lambdaChange =
+                FncInlineType( ) ) {
+            if (!dst) {
+                dst = new BasicBlock;
+            }
+            auto beginSource = insns_.begin();
+            auto endSource = until;
+            auto beginDestination = std::insert_iterator(dst->insns_, dst->insns_.begin());
+
+            for (; beginSource != endSource; beginSource++) {
+                std::unique_ptr<Instruction> toReplace;
+
+                bool lambded = false;
+                for(auto & l : lambdaChange){
+                    if( (toReplace = l(*beginSource)) ){
+                        toReplace->setParentBB(dst);
+                        swapInstr.emplace(beginSource->get(), toReplace.get());
+                        beginDestination = std::move(toReplace);
+                        lambded = true;
+                    }
+                }
+                if(lambded) {continue;}
+                toReplace = std::unique_ptr<Instruction>(beginSource->get()->copyWithSwap(swapInstr));
+
+                swapInstr.emplace(beginSource->get(), toReplace.get());
+                beginDestination = std::move(toReplace);
+            }
+            return dst;
         }
     protected:
         void accept(ILVisitor * v) override{ v->visit(this); };

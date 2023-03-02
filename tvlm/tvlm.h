@@ -10,9 +10,6 @@ namespace tvlm {
 
         using IL = tvlm::ILBuilder;
 
-        void optimize(IL & il) {
-            // TODO
-        }
 
     }; // tvlm
 

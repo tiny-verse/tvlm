@@ -6,9 +6,18 @@
 namespace tvlm{
     void Optimizer::optimize(IR &ir) {
 
+        std::stringstream ss;
+        auto printer = tiny::ASTPrettyPrinter(ss);
+        ir.print(printer);
+        std::cerr << tiny::color::lightBlue << "IL before optimizer" << ":\n" << ss.str() << std::endl;
+
+
         for(auto & pass : passes_ ){
             pass->run(ir);
         }
+        ss.str("");
+        ir.print(printer);
+        std::cerr << tiny::color::lightBlue << "IL after optimizer" << ":\n" << ss.str() << std::endl << "||" << std::endl;
 //
 //        functionInlining(ir);
 //        for (int i = 0; i < 1000; i++) {

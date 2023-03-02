@@ -386,7 +386,7 @@ namespace tvlm{
             virtRegs =  getAllocatedVirtualRegisters(ins);
             if (dynamic_cast<Type::Array *>(ins->type())) { // TODO
                 setupRegister(((*virtRegs)[0]), ins, ins);
-                setupRegister(((*virtRegs)[0]), ins->address(), ins);
+                setupRegister(((*virtRegs)[1]), ins->address(), ins);
                 return;
 
             } else {
