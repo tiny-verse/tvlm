@@ -2,6 +2,7 @@
 
 #include "tvlm/il/il_builder.h"
 #include "tvlm/il/il.h"
+#include "common/config.h"
 #include <memory>
 
 namespace tvlm {
@@ -10,6 +11,7 @@ namespace tvlm {
     protected:
         using IL = ILBuilder;
     public:
+        virtual ~Pass(){};
         virtual void run(IL & il) = 0;
     };
 
@@ -24,6 +26,10 @@ namespace tvlm {
         using IR = ILBuilder;
     public:
         Optimizer(){
+            tiny::config.setDefaultIfMissing("-inlining", "0");
+            inlining = std::stoul(tiny::config.get("-inlining"));
+            tiny::config.setDefaultIfMissing("-constant_propagation", "1");
+            constant = std::stoul(tiny::config.get("-constant_propagation"));
             initialize_passes();
         }
 
@@ -43,6 +49,8 @@ namespace tvlm {
         }
     private:
         std::vector<std::unique_ptr<Pass>> passes_;
+        bool inlining = false;
+        bool constant = false;
     };
 
 

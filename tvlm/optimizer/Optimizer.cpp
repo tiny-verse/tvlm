@@ -55,8 +55,13 @@ namespace tvlm{
     }
 
     void Optimizer::initialize_passes() {
-        passes_.push_back(std::make_unique<FunctionInliner>());
-        passes_.push_back(std::make_unique<ConstantPropagation>());
+        if(inlining){
+            passes_.push_back(std::make_unique<FunctionInliner>());
+        }
+        if(constant){
+            std::cerr<<"contant_propagation is ON!" << std::endl;
+            passes_.push_back(std::make_unique<ConstantPropagation>());
+        }
         passes_.push_back(std::make_unique<LastPass>());
     }
 

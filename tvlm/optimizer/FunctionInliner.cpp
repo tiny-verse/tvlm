@@ -61,7 +61,7 @@ namespace tvlm{
                         //fncInlining
                         for( size_t j = 0; j < fncToInlinebbs.size();i++, j++ ){
                             bbMapping.emplace(fncToInlinebbs[j].get() , new_BBs[i] );
-                            new_BBs[i]->setName("inlined_" + fncToInlinebbs[j]->name());
+                            new_BBs[i]->setName(STR("inlined_" << inlinedCall->f()->name() << "_"<< fncToInlinebbs[j]->name()));
 
                         }
 
@@ -85,7 +85,7 @@ namespace tvlm{
                             ////for (auto &arg: std::reverse(inlinedCall->getArgs().begin(), inlinedCall->getArgs().end())){ //no need of to do
 
                             auto argAlloc = new AllocL(arg.second->size(), inlinedCall->ast());
-                            auto argStore = new Store(argAlloc, arg.first, inlinedCall->ast());
+                            auto argStore = new Store(arg.first, argAlloc, inlinedCall->ast());
                             argStore->setName(STR("argStore" << c));
                             argAlloc->setName(STR("arg" << c++));
 
@@ -117,7 +117,10 @@ namespace tvlm{
                                     throw "Invalid BB from which Jump copy";
                                 }
                                 thisit->second->addSucc(it->second);
-                                return std::unique_ptr<Instruction> (new Jump(it->second, ins->ast()));
+                                auto njmp = new Jump(it->second, ins->ast());
+                                jmp->setName(STR("new_" << ins->name()));
+
+                                return std::unique_ptr<Instruction> (njmp);
 
 
                             } else if (auto condJmp = dynamic_cast<CondJump *>(ins.get())) {
@@ -138,7 +141,9 @@ namespace tvlm{
                                 }
                                 thisit->second->addSucc(itf->second);
                                 thisit->second->addSucc(itt->second);
-                                return std::unique_ptr<Instruction>(new CondJump(itc->second, itt->second, itf->second, ins->ast()));
+                                auto newCondJump = new CondJump(itc->second, itt->second, itf->second, ins->ast());
+                                    newCondJump->setName(STR("new_" << ins->name()));
+                                return std::unique_ptr<Instruction>(newCondJump);
 
 
                             } else if (auto phi = dynamic_cast<Phi *>(ins.get())) {
@@ -164,6 +169,20 @@ namespace tvlm{
                         phaseInlining.emplace_back(jumpReconnection);
                         phase2ndHalf.emplace_back(jumpReconnection);
                         phaseEpilog.emplace_back(jumpReconnection);
+//--------------------------------------------------------------------------------------------------------------------
+//                        FncInlineType
+//                                beforeInlineInstructionTransforms =[&instructionSwapping, &inlinedCall, returnAlloc ](std::unique_ptr<Instruction> & ins){
+//                            if(ins.get() == inlinedCall ){
+//
+//                                Instruction * tmp = new Load(returnAlloc, inlinedCall->resultType(), ins->ast());
+//                                tmp->setName("loadRet");
+//                                instructionSwapping.emplace (ins.get(), tmp );
+//                                return std::unique_ptr<Instruction>(tmp);
+//                            }
+//                            return std::unique_ptr<Instruction>();
+//                        };
+//                        phase1stHalf.emplace_back(beforeInlineInstructionTransforms);
+
 //--------------------------------------------------------------------------------------------------------------------
                         FncInlineType
                         inliningStoreBeforeReturnJump = [ returnAlloc, &instructionSwapping](std::unique_ptr<Instruction> & ins){
@@ -197,7 +216,10 @@ namespace tvlm{
                                 }
                             } else if (dynamic_cast<Return *>(ins.get())) {
                                 //store in another  lambda
-                                return std::unique_ptr<Instruction> ( new Jump(secondHalf, ins->ast()) );
+                                        auto retjmp = new Jump(secondHalf, ins->ast());
+                                        retjmp->setName(STR("retJmp"));
+                                return std::unique_ptr<Instruction> (
+                                                retjmp);
                             } else if (auto store =dynamic_cast<Store *>(ins.get())) {
                                 if(auto argAddr = dynamic_cast<ArgAddr*>(store->address())){
                                     auto it = instructionSwapping.find(store->value() );
@@ -205,7 +227,9 @@ namespace tvlm{
                                     if(it != instructionSwapping.end()){
                                         value = it->second;
                                     }
-                                    return std::unique_ptr<Instruction>(new Store(argTable[argAddr->index()].first, value, ins->ast()));
+                                    auto argstore = new Store(argTable[argAddr->index()].first, value, ins->ast());
+                                    argstore->setName(STR("argStore " << ins->name()));
+                                    return std::unique_ptr<Instruction>(argstore);
                                 }
                                 return std::unique_ptr<Instruction>();
                             }
@@ -242,7 +266,7 @@ namespace tvlm{
                         }
                         //copy 1st half;
 
-                        bbWithCall->copy(new_BBs[i], instructionSwapping, ins, phase1stHalf);
+                        bbWithCall->copyUntil(new_BBs[i], instructionSwapping, ins, phase1stHalf);
 //                        copyInstructions(getpureBBsInstructions(bbWithCall).begin(),
 //                                         ins,
 //                                         std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
@@ -256,9 +280,14 @@ namespace tvlm{
                             if(it != instructionSwapping.end()){
 //                                argTable[a].second->value() = it->second;
                                 auto badStore = argTable[a].second;
-                                badStore->replaceMe(new Store(it->second, badStore->address(), badStore->ast()));
+//                                badStore->replaceMe();
+                                auto goodStore = new Store(it->second, badStore->address(), badStore->ast());
+                                argTable[a].second = goodStore;
+                                delete badStore;
+                                firstHalf->add(goodStore);
+                            }else{
+                                firstHalf->add(argTable[a].second);
                             }
-                            firstHalf->add(argTable[a].second);
                         }
                         //return alloc
                         if(inlinedCall->resultType() != ResultType::Void){
@@ -279,7 +308,7 @@ namespace tvlm{
                         }
                         //copy 2nd half;
 
-                        bbWithCall->copy(new_BBs[i], instructionSwapping, phase2ndHalf);
+                        bbWithCall->copyFrom(new_BBs[i], instructionSwapping, ins+1, phase2ndHalf);
 //                        copyInstructions(ins,
 //                                         getpureBBsInstructions(bbWithCall).end(),
 //                                         std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
@@ -339,8 +368,8 @@ namespace tvlm{
         if(lambded) {continue;}
         toReplace = std::unique_ptr<Instruction>(beginSource->get()->copyWithSwap(swapInstr));
 
-    swapInstr.emplace(beginSource->get(), toReplace.get());
-    beginDestination = std::move(toReplace);
+        swapInstr.emplace(beginSource->get(), toReplace.get());
+        beginDestination = std::move(toReplace);
     }
 }
 

@@ -25,8 +25,8 @@ namespace tvlm{
                               const std::vector <std::function<std::unique_ptr<Instruction>(std::unique_ptr < Instruction > &)>> &lambdaChange
         );
 
-
     public:
+        virtual ~FunctionInliner(){}
         void run(IL & il) override{
             functionInlining(il);
         }

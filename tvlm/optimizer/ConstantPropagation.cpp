@@ -67,6 +67,47 @@ namespace tvlm{
 
         }
     }
+    double ConstantPropagation::resolveBinOperator(BinOp * bin, double lhs, double rhs){
+
+        auto binIns = dynamic_cast<Instruction::BinaryOperator *>(bin);
+        if(binIns){
+            if(binIns->opType() == BinOpType ::ADD){
+                return lhs + rhs;
+            }else if(binIns->opType() == BinOpType::SUB){
+                return lhs - rhs;
+
+            }else if(binIns->opType() == BinOpType::MUL){
+                return lhs * rhs;
+
+            }else if(binIns->opType() == BinOpType::DIV){
+                return lhs / rhs;
+
+            }else if(binIns->opType() == BinOpType::LT){
+                return lhs < rhs;
+
+            }else if(binIns->opType() == BinOpType::LTE){
+                return lhs <= rhs;
+
+            }else if(binIns->opType() == BinOpType::GT){
+                return lhs > rhs;
+
+            }else if(binIns->opType() == BinOpType::GTE){
+                return lhs >= rhs;
+
+            }else if(binIns->opType() == BinOpType::EQ){
+                return lhs == rhs;
+
+            }else if(binIns->opType() == BinOpType::NEQ){
+                return lhs != rhs;
+
+            }else {
+                throw "[ConstantPropagation] unknown BinOpType";
+            }
+        }else{
+            throw "[ConstantPropagation]Cannot bin optimize non-BionOp instruciton";
+
+        }
+    }
 
     bool ConstantPropagation::isPowerOfTwo(int num){
         return (num & (num - 1)) == 0; // value == 2^(whatever)
@@ -78,7 +119,7 @@ namespace tvlm{
         for (size_t idx = 0, len = insns.size(); idx < len; idx++) {
             auto &first = insns[idx];
             auto binOp = dynamic_cast<BinOp *>(first);
-            if (binOp) {
+            if (binOp && binOp->resultType() == ResultType::Integer) {
                 if (auto lhs = dynamic_cast<Instruction::ImmValue *>(binOp->lhs())) {
                     if (auto rhs = dynamic_cast<Instruction::ImmValue *>(binOp->rhs())) {
                         int64_t value = resolveBinOperator(binOp, lhs->valueInt(), rhs->valueInt());
@@ -134,6 +175,30 @@ namespace tvlm{
 
 
 
+            }else if(binOp && binOp->resultType() == ResultType::Double){
+                if (auto lhs = dynamic_cast<Instruction::ImmValue *>(binOp->lhs())) {
+                    if (auto rhs = dynamic_cast<Instruction::ImmValue *>(binOp->rhs())) {
+                        double value ;
+                        if(lhs->resultType() == ResultType::Integer
+                            && rhs->resultType() == ResultType::Double){
+                            value= resolveBinOperator(binOp, (double)lhs->valueInt(), rhs->valueFloat());
+                        }else if (lhs->resultType() == ResultType::Double
+                            && rhs->resultType() == ResultType::Integer
+                        ){
+                            value= resolveBinOperator(binOp, lhs->valueFloat(), (double)rhs->valueInt());
+                        }else {
+                            value= resolveBinOperator(binOp, lhs->valueFloat(), rhs->valueFloat());
+                        }
+
+                        bb->replaceInstr(first, new LoadImm(value, first->ast()));
+                        bb->removeInstr(lhs);
+                        bb->removeInstr(rhs);
+//                        first.replaceMe(value)
+//                        new(first) Instruction::ImmValue(value);
+//                        new(lhs) Instruction::NOP();
+//                        new(rhs) Instruction::NOP();
+                    }
+                }
             }
 
         }
@@ -161,17 +226,18 @@ namespace tvlm{
 
         for (size_t idx = 0, len = insns.size();  idx < len; idx++) {
             auto & first = insns[idx];
-            if (auto bin = dynamic_cast<BinOp*>(first.get())){
-                if(auto lhs = dynamic_cast<LoadImm*>(bin->lhs())){
-                    if(auto rhs = dynamic_cast<LoadImm*>(bin->rhs())){
-                        int64_t value = resolveBinOperator(bin,lhs->valueInt() , rhs->valueInt()) ;
+            auto binOp = dynamic_cast<BinOp*>(first.get());
+            if (binOp && binOp->resultType() == ResultType::Integer){
+                if(auto lhs = dynamic_cast<LoadImm*>(binOp->lhs())){
+                    if(auto rhs = dynamic_cast<LoadImm*>(binOp->rhs())){
+                        int64_t value = resolveBinOperator(binOp,lhs->valueInt() , rhs->valueInt()) ;
 
 //                        auto regNum = first->regNum_;
                         auto regName = first->name();
 
 
 //                        new ( first.get()) Instruction::LoadImm(value);
-                        bb->replaceInstr(first.get(), new LoadImm(value, bin->ast()));
+                        bb->replaceInstr(first.get(), new LoadImm(value, binOp->ast()));
 //                        new ( first.get()) Instruction::LoadImm(value);
 
 //                        first->setRegNumber(regNum);

@@ -15,6 +15,7 @@ namespace tvlm{
         void run(IL &il);
 
         int64_t resolveBinOperator(BinOp *bin, int64_t lhs, int64_t rhs);
+        double resolveBinOperator(BinOp *bin, double lhs, double rhs);
 
         static bool isPowerOfTwo(int num);
 
