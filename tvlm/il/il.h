@@ -288,7 +288,7 @@ namespace tvlm{
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
         void replaceMe(Instruction * with ) {
             for (auto  * ins: used_) {
-                replaceWith(this, with);
+                ins->replaceWith(this, with);
             }
             with->used_ = used_;
         }
@@ -1356,9 +1356,11 @@ namespace tvlm{
         }
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
             for (auto & i : contents_) {
-                if(i.second == sub)
+                if(i.second == sub){
                     i.second = toReplace;
-                toReplace->registerUsage(this);
+                    toReplace->registerUsage(this);
+                }
+
             }
         }
 
@@ -2013,17 +2015,18 @@ namespace tvlm{
 
 
         }
-        void replaceInstr(Instruction *  ins, Instruction * with) {
+        Instruction * replaceInstr(Instruction *  ins, Instruction * with) {
             auto it = insns_.begin();
             for (;it != insns_.end() && it->get() != ins ;it++ );
             if(it == insns_.end()){
-                return;
+                delete with; //TODO make checks
+                return nullptr;
             }
             ins->replaceMe(with);
             it->reset(with);
 
 //            delete ins; // done by reset
-
+            return with;
 
         }
         bool terminated() const {

@@ -457,6 +457,8 @@ namespace tvlm {
     public:
         static int MemoryCellSize;
 
+        static  void tests();
+
         using IL = tvlm::ILBuilder;
         using PB = tiny::t86::Program;
         PB compileToTarget( IL && il);

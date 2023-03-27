@@ -197,10 +197,12 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     void Instruction::BinaryOperator::replaceWith(Instruction *sub, Instruction *toReplace) {
         if(lhs_ == sub){
+            std::remove(used_.begin(), used_.end(),sub);
             lhs_ = toReplace;
             toReplace->registerUsage(this);
         }
         if(rhs_ == sub){
+            std::remove(used_.begin(), used_.end(),sub);
             rhs_ = toReplace;
             toReplace->registerUsage(this);
         }
@@ -247,6 +249,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     void Instruction::UnaryOperator::replaceWith(Instruction *sub, Instruction *toReplace) {
         if(operand_ == sub){
+            std::remove(used_.begin(), used_.end(),sub);
             operand_ = toReplace;
             toReplace->registerUsage(this);
         }

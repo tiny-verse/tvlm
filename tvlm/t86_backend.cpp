@@ -472,11 +472,21 @@ namespace tvlm{
 //
 //        return true;
 //    }
+    bool setupColorConfig(){
+        tiny::config.setDefaultIfMissing("colorRegisterAllocation", "1");
+        try{
+            return stoi(tiny::config.get("colorRegisterAllocation")) > 0;
+        }catch (...) {
+            return false;
+        }
+    }
+
+
     t86_Backend::PB t86_Backend::compileToTarget(t86_Backend::IL &&il) {
         //auto codeGenerator = CodeGenerator (il);
 //        auto callingConventionedIL = CallingConvention();
         auto selected =  SuperNaiveIS::translate(il);
-        bool color = true;
+        bool color = setupColorConfig();
         std::unique_ptr<RegisterAllocator> regAllocator;
         if(color){
             regAllocator = std::make_unique<ColoringAllocator>( std::move(selected));
@@ -729,7 +739,12 @@ void tvlm::ILTiler::visit(tvlm::StructAssign *ins) {
 int tvlm::Rule::counter = 0;
 
 #if (defined TARGET_t86)
-int tvlm::t86_Backend::MemoryCellSize = 4; // inBytes
+int tvlm::t86_Backend::MemoryCellSize = 4;
+
+void tvlm::t86_Backend::tests() {
+
+}
+// inBytes
 #else
 int tvlm::t86_Backend::MemoryCellSize = 1; // inBytes
 #endif

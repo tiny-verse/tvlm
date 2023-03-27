@@ -24,10 +24,17 @@ namespace tvlm{
         InstructionAnalysis(Program * p): Analysis<Declarations>(), p_(p){
 
         }
+        InstructionAnalysis(ILBuilder * p): Analysis<Declarations>(), p_(p){
+
+        }
 
         Declarations  analyze() override{
             auto visitor = std::make_unique<InsVisitor>();
-            visitor->visit(p_);
+            if(std::holds_alternative<Program*>(p_)){
+                visitor->visit(std::get<Program*>(p_));
+            }else{
+                visitor->visit(std::get<ILBuilder*>(p_)->)
+            }
             //for each
             return std::move(visitor->declarations);
         }
@@ -115,10 +122,11 @@ namespace tvlm{
 
         public:
             void visit(Program *p) override;
+            void visit(ILBuilder *p) override;
         };
 
     private:
-        Program * p_;
+        std::variant<Program *, ILBuilder*> p_;
         static size_t counter_;
     };
 }

@@ -15,6 +15,7 @@ namespace tvlm{
         virtual ~FlatElem() = default;
         virtual FlatElem<A>* copy() const = 0;
         virtual bool operator == (const FlatElem<A> * other ) const = 0;
+        virtual A  get() = 0;
     };
 
 
@@ -23,7 +24,9 @@ namespace tvlm{
     public:
         FlatTop(): FlatElem<A>(){}
         FlatElem<A> * copy()const override;
-
+        A  get() override{
+            throw "not implemented";
+        }
         bool operator==(const FlatElem<A> *other) const override;
     };
 
@@ -33,6 +36,9 @@ namespace tvlm{
     public:
         FlatBot(): FlatElem<A>(){}
         FlatElem<A> * copy()const override;
+        A  get() override{
+            throw "not implemented";
+        }
 
         bool operator==(const FlatElem<A> *other) const override;
     };
@@ -43,6 +49,9 @@ namespace tvlm{
            FlatVal(const A & elem) : elem_(elem){
            }
         FlatElem<A> * copy()const override;
+        A  get() override{
+            return elem_;
+        }
 
         bool operator==(const FlatElem<A> * other)  const  override;
 

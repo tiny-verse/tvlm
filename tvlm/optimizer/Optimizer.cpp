@@ -13,7 +13,7 @@ namespace tvlm{
 
 
         for(auto & pass : passes_ ){
-            pass->run(ir);
+             pass->run(ir);
         }
         ss.str("");
         ir.print(printer);

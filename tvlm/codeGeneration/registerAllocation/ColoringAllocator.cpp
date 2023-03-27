@@ -179,7 +179,9 @@ namespace tvlm {
         if(dynamic_cast<const AllocG*>(ins) || dynamic_cast<const AllocL*>(ins)){
             return SuperNaiveRegisterAllocator::getReg(ins);
         }
-        throw "[Coloring Allocator] cannot find instruction in results";
+        std::cerr << "[Coloring Allocator] cannot find instruction in results";
+        return res;
+//        throw "[Coloring Allocator] cannot find instruction in results";
     }
     ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(Instruction *ins) {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);

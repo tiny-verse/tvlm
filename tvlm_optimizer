@@ -1,8 +1,9 @@
 #pragma once
 
 #include "tvlm/tvlm.h"
+#include "tvlm/optimizer/Optimizer.h"
 
 namespace tiny {
 
-    using tvlm_optimizer = tvlm::Tvlm;
+    using tvlm_optimizer = tvlm::Optimizer;
 }
