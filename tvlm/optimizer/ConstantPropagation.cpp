@@ -236,8 +236,7 @@ namespace tvlm{
 
 
     void ConstantPropagation::run(IL & il){
-
-        auto constProp = ConstantPropagationAnalysis(il);
+        auto constProp = new ConstantPropagationAnalysis<> (&il);
 
 
         for (int i = 0; i < 1000; i++) {

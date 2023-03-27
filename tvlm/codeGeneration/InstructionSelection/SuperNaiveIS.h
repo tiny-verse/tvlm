@@ -52,7 +52,7 @@ namespace  tvlm{
         SuperNaiveIS(const std::shared_ptr<Program> & prog);
 
     static TargetProgram translate(TargetProgram && prog) ;
-    static TargetProgram translate(ILBuilder &ilb) ;
+    static TargetProgram translate(Program && ilb) ;
         TargetProgram  finalize();
     protected:
         void run();

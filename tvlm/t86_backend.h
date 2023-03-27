@@ -459,9 +459,9 @@ namespace tvlm {
 
         static  void tests();
 
-        using IL = tvlm::ILBuilder;
-        using PB = tiny::t86::Program;
-        PB compileToTarget( IL && il);
+        using IL = tvlm::Program;
+        using TargetProgram = tiny::t86::Program;
+        TargetProgram compileToTarget( IL && il);
     };
 } // namespace tvlm
 

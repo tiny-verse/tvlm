@@ -141,6 +141,10 @@ public:
     { return contents_.insert(std::move(x)); }
 
     std::pair<typename std::map<A,B>::iterator, bool>
+    insert(typename std::map<A,B>::value_type & x)
+    { return contents_.insert(x); }
+
+    std::pair<typename std::map<A,B>::iterator, bool>
     insert(const typename std::map<A,B>::value_type & x)
     { return contents_.insert(x); }
 
@@ -185,6 +189,19 @@ public:
     typename std::map<A,B>::size_type size() const noexcept {
         return contents_.size();
     }
+
+    typename std::map<A,B>::iterator
+    erase(typename std::map<A,B>::const_iterator __position)
+    { return contents_.erase(__position); }
+
+    typename std::map<A,B>::size_type
+    erase(const typename std::map<A,B>::key_type& __x)
+    { return contents_.erase(__x); }
+
+     bool
+    empty() const noexcept
+    { return contents_.empty(); }
+
 
 //    virtual B makeVal(B val) {
 //        storage_.push_back(val);

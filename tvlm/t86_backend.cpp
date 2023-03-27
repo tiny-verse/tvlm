@@ -482,10 +482,10 @@ namespace tvlm{
     }
 
 
-    t86_Backend::PB t86_Backend::compileToTarget(t86_Backend::IL &&il) {
+    t86_Backend::TargetProgram t86_Backend::compileToTarget(t86_Backend::IL &&il) {
         //auto codeGenerator = CodeGenerator (il);
 //        auto callingConventionedIL = CallingConvention();
-        auto selected =  SuperNaiveIS::translate(il);
+        auto selected =  SuperNaiveIS::translate(std::move(il));
         bool color = setupColorConfig();
         std::unique_ptr<RegisterAllocator> regAllocator;
         if(color){

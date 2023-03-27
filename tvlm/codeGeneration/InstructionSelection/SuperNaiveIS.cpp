@@ -1338,8 +1338,8 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
     }
 
 
-    TargetProgram SuperNaiveIS::translate(ILBuilder &ilb) {
-        auto  prog = std::make_shared<Program>(ilb.finish());
+    TargetProgram SuperNaiveIS::translate(Program && ilb) {
+        auto prog = std::make_shared<Program>(std::move(ilb));
         auto is = SuperNaiveIS(prog);
         is.run();
         return std::move(is.finalize());

@@ -18,7 +18,7 @@ namespace tvlm{
     using ConstVars = MAP<const CfgNode<T> *, MAP<Declaration*, Const*>>;
     ;
 
-    template<class Info>
+    template<class Info = DummyClass>
     class ConstantPropagationAnalysis : public BackwardAnalysis<ConstVars<Info>, Info>{
 
     //    using Declaration = tvlm::Instruction;
@@ -27,7 +27,7 @@ namespace tvlm{
 
         NodeState join(const CfgNode<Info> * node, ConstVars<Info> & state);
 
-        ConstantPropagationAnalysis( const Declarations & declarations, ILBuilder * program);
+        ConstantPropagationAnalysis( const Declarations & declarations, Program * program);
 
         Const*  eval(Declaration * expr , NodeState & state);
 
@@ -40,31 +40,32 @@ namespace tvlm{
         virtual ~ConstantPropagationAnalysis(){
             delete cfg_;
         }
-        explicit ConstantPropagationAnalysis(ILBuilder * p);
+        explicit ConstantPropagationAnalysis(Program * p);
         ConstVars<Info> analyze() override;
 
         std::map<const CfgNode<Info>*, const Instruction *>instr_mapping(){
             return instr_mapping_;
         };
     private:
-        std::map<const CfgNode<Info>*, const Instruction *>instr_mapping_;
-        NodeState declaredVars_;
-        MapLattice<Declaration*, Constant> nodeLattice_;
-        MapLattice<const CfgNode<Info> *, NodeState> lattice_;
-        ProgramCfg<Info> * cfg_;
         Program * program_;
+        ProgramCfg<Info> * cfg_;
+        std::map<const CfgNode<Info>*, const Instruction *>instr_mapping_;
+        std::unordered_set<Declaration*> declaredVars_;
+        std::unique_ptr<ConstantPropagationLattice<Info>> constPropLattice_;
+        MapLattice<Declaration*, Const *> nodeLattice_;
+        MapLattice<const CfgNode<Info> *, NodeState> lattice_;
 
     };
 //************************************************************************************************************
 
     template<class I>
-    ConstantPropagationAnalysis<I>::ConstantPropagationAnalysis(ILBuilder *p):
+    ConstantPropagationAnalysis<I>::ConstantPropagationAnalysis(Program *p):
             ConstantPropagationAnalysis( InstructionAnalysis(p).analyze(), p)
     {
     }
 
     template<class I>
-    Const* ConstantPropagationAnalysis<I>::eval(Declaration * expr, ConstantPropagationAnalysis<I>::NodeState *state) {
+    Const* ConstantPropagationAnalysis<I>::eval(Declaration * expr, ConstantPropagationAnalysis<I>::NodeState &state) {
 
         //TODO
 
@@ -88,7 +89,7 @@ namespace tvlm{
 
                 if (dynamic_cast<AllocL *>(stmtNode->il())){
                     auto newState = state;
-                        newState.insert(std::make_pair(instr, ConstantPropagationLattice::top()))
+                        newState.insert(std::make_pair(instr, constPropLattice_->top()));
                     return newState;
 //                    return ;
                 }else if (dynamic_cast<AllocG *>(stmtNode->il())){
@@ -101,118 +102,118 @@ namespace tvlm{
                     return state; // TODO create state transfer - liveness analysis
                 }else if (auto store = dynamic_cast<Store *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<Load *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<LoadImm *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<Return *>(stmtNode->il())){
                     auto ret  = dynamic_cast<Return *>(stmtNode->il());
                     auto newState = state;
-                    newState.emplace(ret->returnValue());
+//                    newState.emplace(ret->returnValue());
 //                    newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<CondJump *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
 //                    newState.erase(node->il());
                     return newState;
                 }else if (dynamic_cast<Copy *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<Extend *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<Truncate *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<BinOp *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<UnOp *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<Phi *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<Call *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<ElemAddrIndex *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<ElemAddrOffset *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<StructAssign *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
                     return state; // TODO create state transfer - liveness analysis
                 }else if (dynamic_cast<CallStatic *>(stmtNode->il())){
                     auto newState = state;
-                    std::unordered_set<Declaration*> children = getSubtree(node);
-                    newState.insert(children.begin(), children.end());
+//                    std::unordered_set<Declaration*> children = getSubtree(node);
+//                    newState.insert(children.begin(), children.end());
                     newState.erase(node->il());
                     return newState;
 
@@ -275,10 +276,10 @@ namespace tvlm{
     }
 
     template<typename Info>
-    ConstantPropagationAnalysis<Info>::ConstantPropagationAnalysis( const Declarations &declarations, ILBuilder * program):
+    ConstantPropagationAnalysis<Info>::ConstantPropagationAnalysis( const Declarations &declarations, Program * program):
             BackwardAnalysis<ConstVars<Info>, Info>(),
             cfg_(this->getCfg(program)),
-            allVars_([&](){
+            declaredVars_([&](){
                 std::unordered_set< Declaration*> tmp;
                 for ( auto & n : cfg_->nodes()){
                     tmp.emplace(n->il());
@@ -286,8 +287,9 @@ namespace tvlm{
                 return tmp;
             }())
             ,
-            nodeLattice_(MapLattice<Declaration*>(allVars_, new ConstantPropagationLattice() )),
-            lattice_(MapLattice<const CfgNode<Info>*, std::unordered_set<Declaration*>>(cfg_->nodes(), &nodeLattice_)),
+            constPropLattice_(std::make_unique<ConstantPropagationLattice<Info>>() ),
+            nodeLattice_(MapLattice<Declaration*, Const*>(declaredVars_, constPropLattice_.get() )),
+            lattice_(MapLattice<const CfgNode<Info>*, NodeState>(cfg_->nodes(), &nodeLattice_)),
             program_(program){
 
     }

@@ -6,10 +6,10 @@
 #include <memory>
 
 namespace tvlm {
-
+#define used_IL ::tvlm::Program
     class Pass : public ILFriend{
     protected:
-        using IL = ILBuilder;
+        using IL = used_IL;
     public:
         virtual ~Pass(){};
         virtual void run(IL & il) = 0;
@@ -23,7 +23,7 @@ namespace tvlm {
     };
     class Optimizer {
 
-        using IR = ILBuilder;
+        using IL = used_IL;
     public:
         Optimizer(){
             tiny::config.setDefaultIfMissing("-inlining", "0");
@@ -34,11 +34,11 @@ namespace tvlm {
         }
 
         void initialize_passes();
-        void optimize(IR &ir);
+        void optimize(IL &ir);
 
 
 
-        void functionInlining(IR &ir);
+        void functionInlining(IL &ir);
 
 
         static bool eligibleForInlining(Function *fnc);

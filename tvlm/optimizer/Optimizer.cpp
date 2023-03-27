@@ -4,7 +4,7 @@
 #include "ConstantPropagation.h"
 
 namespace tvlm{
-    void Optimizer::optimize(IR &ir) {
+    void Optimizer::optimize(IL &ir) {
 
         std::stringstream ss;
         auto printer = tiny::ASTPrettyPrinter(ss);
