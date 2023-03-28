@@ -229,26 +229,44 @@ namespace tvlm{
     }
 
 
-    void ConstantPropagation::optimizeBasicBlock(BasicBlock* bb) {
-        optimizeConstantPropagation(bb);
+    void ConstantPropagation::optimizeBasicBlock(BasicBlock* bb, CPNodeState & analysis ) {
+        optimizeConstantPropagation(bb, analysis);
         optimizeStrengthReduction(bb);
     }
 
 
     void ConstantPropagation::run(IL & il){
         auto constProp = new ConstantPropagationAnalysis<> (&il);
+        auto an  = constProp->analyze();
+        CPNodeState analysis = constProp->transform(an);
+//        for (auto &cfgPair: an) {
+////            analysis.insert( std::make_pair((ILInstruction* )cfgPair.first->il(), cfgPair.second));
+////            update result for every
+//            auto cpRecord = cfgPair.second;
+//
+//            for(auto & cpRecordLine :  cpRecord){
+//                //for every line try to update the bunch where we find if an instruction can be constantly evaluated
+//
+//
+//                tmp.update( std::make_pair( cpRecordLine.first, //for instruction in recorded Line update the final result
+//                                            ConstantPropagationLattice::lub(tmp.access(cpRecordLine), // lub of current record
+//                                                       cpRecordLine.second)) );          //and the new incomming
+//
+//            }
+//
+//        }
 
 
         for (int i = 0; i < 1000; i++) {
             for(auto & fnc : il.functions()){
                 for( auto & bb : getpureFunctionBBs(fnc.second.get())){
-                    optimizeBasicBlock(bb.get());
+                    optimizeBasicBlock(bb.get(), analysis);
                 }
             }
         }
     }
 
-    void ConstantPropagation::optimizeConstantPropagation(BasicBlock * bb) {
+    void ConstantPropagation::optimizeConstantPropagation(BasicBlock * bb,  CPNodeState & analysis) {
         auto & insns = getpureBBsInstructions(bb);
 
         for (size_t idx = 0, len = insns.size();  idx < len; idx++) {
@@ -363,7 +381,64 @@ namespace tvlm{
                         bb->removeInstr(src);
                     }
                 }
+            }else if (auto load = dynamic_cast<Load *>(first.get())){
+                auto it = analysis.find((ILInstruction*)load->address());
+                if(it == analysis.end()){
+                    std::cerr << "cannot find in analysis, dead code?";
+                }else{
+                    if( dynamic_cast<FlatVal<Constant>*>(it->second)){
+
+                        //found in analysis as constant
+
+                        auto constant = it->second->get();
+                        //replace load with load of a constant
+
+                        auto regName = first->name();
+                        if(constant.resType() == ResultType::Double){
+
+                            bb->replaceInstr(first.get(), new LoadImm(constant.getFloat(), load->ast()));
+                        }else{
+                            bb->replaceInstr(first.get(), new LoadImm(constant.getInt(), load->ast()));
+                        }
+                        first->setName(regName);
+                        bb->removeInstr(load);
+
+                    }
+                }
+
+            }else if (auto store = dynamic_cast<Store *>(first.get())){
+                auto it = analysis.find((ILInstruction*)store->address());
+                if(it == analysis.end()){
+                    std::cerr << "cannot find in analysis, dead code?";
+                }else{
+                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+                        //remove Store while obsolete
+                        bb->removeInstr(store);
+                    }
+                }
+
+            }else if (auto allocL = dynamic_cast<AllocL *>(first.get())){
+                auto it = analysis.find((ILInstruction*)allocL);
+                if(it == analysis.end()){
+                    std::cerr << "cannot find in analysis, dead code?";
+                }else{
+                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+                        //remove Store while obsolete
+                        bb->removeInstr(allocL);
+                    }
+                }
             }
+//            else if (auto allocG = dynamic_cast<AllocG *>(first.get())){
+//                auto it = analysis.find((ILInstruction*)allocG);
+//                if(it == analysis.end()){
+//                    std::cerr << "cannot find in analysis, dead code?";
+//                }else{
+//                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+//                        //remove Store while obsolete
+//                        bb->removeInstr(allocG);
+//                    }
+//                }
+//            }
         }
 
     }

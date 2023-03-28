@@ -178,6 +178,10 @@ public:
     operator[](const typename std::map<A,B>::key_type& k){
         return contents_[k];
     }
+    const typename std::map<A, B>::mapped_type&
+    operator[](const typename std::map<A,B>::key_type& k)const{
+        return contents_.at(k);
+    }
 
     typename std::map<A,B>::iterator find(const typename std::map<A,B>::key_type& x){
         return contents_.find(x);

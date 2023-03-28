@@ -23,6 +23,10 @@ namespace tvlm {
         };
         virtual T  analyze() = 0;
         virtual ~Analysis() = default;
+
+        virtual const std::vector<tvlm::CfgNode<I> *> & next(const CfgNode<I> * n)const{
+            return n->succ_;
+        };
     };
 
     template<typename T, typename I>
@@ -35,14 +39,20 @@ namespace tvlm {
         }
     public:
         virtual ~BackwardAnalysis() = default;
-        virtual T analyze() = 0;
+//        virtual T analyze() = 0;
+        const std::vector<tvlm::CfgNode<I> *> & next(const CfgNode<I> *n)const override{
+            return n->succ_;
+        };
     };
 
     template<typename T, typename I>
     class ForwardAnalysis : public Analysis<T, I> {
     public:
         virtual ~ForwardAnalysis() = default;
-        virtual T analyze() = 0;
+//        virtual T analyze() = 0;
+        const std::vector<tvlm::CfgNode<I> *> & next(const CfgNode<I> *n)const override {
+            return n->pred_;
+        };
     protected:
         ForwardAnalysis():Analysis<T, I>(){}
          virtual ProgramCfg<I> * getCfg(Program * p){

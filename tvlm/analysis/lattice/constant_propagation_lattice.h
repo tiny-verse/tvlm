@@ -31,14 +31,20 @@ namespace tvlm{
         ResultType resType()const{
             return resType_;
         }
-
+        bool operator==(const Constant & other ) const {
+            return resType_ == other.resType_ && intVal_ == other.intVal_ && floatValue_ == other.floatValue_;
+        }
+        bool operator!=(const Constant & other ) const {
+            return ! operator==(other);
+        }
     private:
         int64_t intVal_;
         double floatValue_;
         ResultType resType_;
     };
     using  Const = FlatElem<Constant>;
-    template<typename A>
+
+    
     class ConstantPropagationLattice : public FlatLattice<Constant>{
     public:
         explicit ConstantPropagationLattice( )
@@ -46,7 +52,7 @@ namespace tvlm{
 
 
         Const * num(Constant c) {
-            return new FlatVal(c);
+            return add(new FlatVal(c));
         }
 
 #define ROUTINE( operator) \
@@ -150,6 +156,29 @@ namespace tvlm{
             }
 
         }
+        Const * phi(Const * a, Const * b) {
+            if( dynamic_cast<FlatBot<Constant>*>(a)){
+                    return a;
+                }else if ( dynamic_cast<FlatBot<Constant>*>(b)){
+                    return b;
+                }else if ( dynamic_cast<FlatTop<Constant>*>(a)){
+                    return a;
+                }else if ( dynamic_cast<FlatTop<Constant>*>(b)){
+                    return b;
+                }else {
+                    auto aa = a->get();
+                    auto bb = b->get();
+                    if(aa == bb){
+                        return a;
+                    }else{
+                        return bot();
+                    }
+            }
+
+        }
+        Const * mod(Const * a, Const * b) {
+            BITROUTINE(%)
+        }
         Const * eq(Const * a, Const * b) {
             ROUTINE(==)
         }
@@ -176,6 +205,102 @@ namespace tvlm{
         }
         Const * bxor(Const * a, Const * b) {
             BITROUTINE(^)
+        }
+        Const * lsh(Const * a, Const * b) {
+            BITROUTINE(<<)
+        }
+        Const * rsh(Const * a, Const * b) {
+            BITROUTINE(>>)
+
+        }
+
+
+        Const * trunc(Const * a) {
+            if( dynamic_cast<FlatBot<Constant>*>(a)){
+                return a;
+            }else if ( dynamic_cast<FlatTop<Constant>*>(a)){
+                return a;
+            }else {
+                auto aa = a->get();
+                if (aa.resType() == ResultType::Integer) {
+                    return a;
+                }else{
+                    return num(Constant((int64_t)aa.getFloat()));
+                }
+            }
+        }
+
+        Const * extend(Const * a) {
+            if( dynamic_cast<FlatBot<Constant>*>(a)){
+                return a;
+            }else if ( dynamic_cast<FlatTop<Constant>*>(a)){
+                return a;
+            }else {
+                auto aa = a->get();
+                if (aa.resType() == ResultType::Integer) {
+                    return num(Constant((double)aa.getInt()));
+                }else{
+                    return a;
+                }
+            }
+        }
+
+
+        Const * unminus(Const * a) {
+            if( dynamic_cast<FlatBot<Constant>*>(a)){
+                return a;
+            }else if ( dynamic_cast<FlatTop<Constant>*>(a)){
+                return a;
+            }else {
+                auto aa = a->get();
+                if (aa.resType() == ResultType::Integer) {
+                    return num(Constant( - aa.getInt()));
+                }else{
+                    return num(Constant( - aa.getFloat()));
+                }
+            }
+        }
+        Const * uninc(Const * a) {
+            if( dynamic_cast<FlatBot<Constant>*>(a)){
+                return a;
+            }else if ( dynamic_cast<FlatTop<Constant>*>(a)){
+                return a;
+            }else {
+                auto aa = a->get();
+                if (aa.resType() == ResultType::Integer) {
+                    return num(Constant( aa.getInt() + 1));
+                }else{
+                    return num(Constant( aa.getFloat() + 1));
+                }
+            }
+        }
+        Const * undec(Const * a) {
+            if( dynamic_cast<FlatBot<Constant>*>(a)){
+                return a;
+            }else if ( dynamic_cast<FlatTop<Constant>*>(a)){
+                return a;
+            }else {
+                auto aa = a->get();
+                if (aa.resType() == ResultType::Integer) {
+                    return num(Constant(  aa.getInt() - 1));
+                }else{
+                    return num(Constant( aa.getFloat() - 1));
+                }
+            }
+        }
+        Const * unnot(Const * a) {
+            if( dynamic_cast<FlatBot<Constant>*>(a)){
+                return a;
+            }else if ( dynamic_cast<FlatTop<Constant>*>(a)){
+                return a;
+            }else {
+                auto aa = a->get();
+                if (aa.resType() == ResultType::Integer) {
+                    return num(Constant( ~ aa.getInt()));
+                }else{
+                    return bot();
+                }
+            }
         }
 
 

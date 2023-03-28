@@ -1,13 +1,14 @@
 #pragma once
 
 #include "Optimizer.h"
+#include "tvlm/analysis/constantPropagation_analysis.h"
 
 namespace tvlm{
     class ConstantPropagation : public Pass {
 
-        void optimizeConstantPropagation(BasicBlock *bb);
+        void optimizeConstantPropagation(BasicBlock *bb,  CPNodeState &);
 
-        void optimizeBasicBlock(BasicBlock* bb);
+        void optimizeBasicBlock(BasicBlock* bb,  CPNodeState &);
 
         void optimizeStrengthReduction(BasicBlock *bb);
 

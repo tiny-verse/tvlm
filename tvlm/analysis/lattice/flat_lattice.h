@@ -3,6 +3,7 @@
 #include <any>
 #include <memory>
 #include <vector>
+#include <set>
 #include "lattice.h"
 
 
@@ -129,15 +130,27 @@ namespace tvlm{
     template<typename A>
     FlatElem<A> *FlatLattice<A>::lub(FlatElem<A> *const &x, FlatElem<A> *const &y){
         if(dynamic_cast<FlatBot<A>*>(x) ){
+            if( dynamic_cast<FlatBot<A>*>(y)){
+                return bot();
+            }  else if( dynamic_cast<FlatTop<A>*>(y)){
+                return top();
+            }
             return add(y->copy());
         }else if ( dynamic_cast<FlatBot<A>*>(y) ){
+            if( dynamic_cast<FlatBot<A>*>(x)){
+                return bot();
+            }else if( dynamic_cast<FlatTop<A>*>(x)){
+                return top();
+            }
             return add(x->copy());
         }else if (dynamic_cast<FlatTop<A>*>(x)|| (dynamic_cast<FlatTop<A>*>(y)) ){
-            return add(new FlatTop<A>);
+
+            return top();
+//            return add(new FlatTop<A>);
         }else if (  *(x) == y){
             return add(x->copy());
         }else{
-            return add(new FlatTop<A>);
+            return top();
         }
     }
 
@@ -149,6 +162,7 @@ namespace tvlm{
     template<typename A>
     FlatElem<A> *FlatLattice<A>::add(FlatElem<A> *val) {
         lubs_.emplace_back(val);
+//        lubs_.emplace(val);
         return val;
     }
 

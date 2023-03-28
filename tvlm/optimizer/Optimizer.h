@@ -24,6 +24,7 @@ namespace tvlm {
     class Optimizer {
 
         using IL = used_IL;
+        using ILInstruction = ::tvlm::IL;
     public:
         Optimizer(){
             tiny::config.setDefaultIfMissing("-inlining", "0");
