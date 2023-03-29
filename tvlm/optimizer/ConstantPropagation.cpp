@@ -257,15 +257,49 @@ namespace tvlm{
 //        }
 
 
-        for (int i = 0; i < 1000; i++) {
+//        for (int i = 0; i < 1000; i++) {
             for(auto & fnc : il.functions()){
-                for( auto & bb : getpureFunctionBBs(fnc.second.get())){
+                auto & bbs = getpureFunctionBBs(fnc.second.get());
+                for( auto & bb : bbs){
                     optimizeBasicBlock(bb.get(), analysis);
                 }
+                for( auto & bb : bbs){
+                    optimizeConstantPropagationLatePass(bb.get(), analysis);
+                }
             }
-        }
+//        }
     }
 
+    void ConstantPropagation::optimizeConstantPropagationLatePass(BasicBlock * bb,  CPNodeState & analysis) {
+        auto & insns = getpureBBsInstructions(bb);
+
+        for (size_t idx = 0, len = insns.size();  idx < len; idx++) {
+            auto &first = insns[idx];
+            if (auto allocL = dynamic_cast<AllocL *>(first.get())){
+                auto it = analysis.find((ILInstruction*)allocL);
+                if(it == analysis.end()){
+                    std::cerr << "cannot find in analysis, dead code?";
+                }else{
+                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+                        //remove Store while obsolete
+                        bb->removeInstr(allocL);
+                    }
+                }
+            }
+            else if (auto allocG = dynamic_cast<AllocG *>(first.get())){
+                auto it = analysis.find((ILInstruction*)allocG);
+                if(it == analysis.end()){
+                    std::cerr << "cannot find in analysis, dead code?";
+                }else{
+                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+                        //remove Store while obsolete
+                        bb->removeInstr(allocG);
+                    }
+                }
+            }
+
+        }
+    }
     void ConstantPropagation::optimizeConstantPropagation(BasicBlock * bb,  CPNodeState & analysis) {
         auto & insns = getpureBBsInstructions(bb);
 
@@ -425,32 +459,6 @@ namespace tvlm{
         //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         //Alloc needs to be removed afterwards while using them to index the constants
 
-        for (size_t idx = 0, len = insns.size();  idx < len; idx++) {
-            auto &first = insns[idx];
-             if (auto allocL = dynamic_cast<AllocL *>(first.get())){
-                auto it = analysis.find((ILInstruction*)allocL);
-                if(it == analysis.end()){
-                    std::cerr << "cannot find in analysis, dead code?";
-                }else{
-                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
-                        //remove Store while obsolete
-                        bb->removeInstr(allocL);
-                    }
-                }
-            }
-            else if (auto allocG = dynamic_cast<AllocG *>(first.get())){
-                auto it = analysis.find((ILInstruction*)allocG);
-                if(it == analysis.end()){
-                    std::cerr << "cannot find in analysis, dead code?";
-                }else{
-                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
-                        //remove Store while obsolete
-                        bb->removeInstr(allocG);
-                    }
-                }
-            }
-
-        }
         //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 

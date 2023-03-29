@@ -55,13 +55,13 @@ namespace tvlm{
                         //1st Half
                         firstHalf = new_BBs[i];
                         bbMapping.emplace(fncCallerbbs[i].get() , new_BBs[i] );
-                        new_BBs[i]->setName(bbWithCall->name() + "_1/2_");
+                        new_BBs[i]->setName(STR(bbWithCall->name() << "_1/2_[" << inlining_counter << "]"));
                         i++;
 
                         //fncInlining
                         for( size_t j = 0; j < fncToInlinebbs.size();i++, j++ ){
                             bbMapping.emplace(fncToInlinebbs[j].get() , new_BBs[i] );
-                            new_BBs[i]->setName(STR("inlined_" << inlinedCall->f()->name() << "_"<< fncToInlinebbs[j]->name()));
+                            new_BBs[i]->setName(STR("inlined_" << inlinedCall->f()->name() <<"[" << inlining_counter << "]_"<< fncToInlinebbs[j]->name()));
 
                         }
 
@@ -69,7 +69,7 @@ namespace tvlm{
                         secondHalf  = new_BBs[i];
                         //doesn't exist = we are splitting actualBB:
                         //    bbMapping.emplace( fncCallerbbs[i].get() ,new_BBs[i] );
-                        new_BBs[i]->setName(bbWithCall->name() + "_2/2_");
+                        new_BBs[i]->setName(STR(bbWithCall->name() << "_2/2_[" << inlining_counter << "]"));
                         i++;
 
                         //epilog
@@ -83,7 +83,7 @@ namespace tvlm{
                         int c = 0;
                         for (auto &arg: inlinedCall->args()) {
                             ////for (auto &arg: std::reverse(inlinedCall->getArgs().begin(), inlinedCall->getArgs().end())){ //no need of to do
-
+                            arg.first->removeUsage(inlinedCall);
                             auto argAlloc = new AllocL(arg.second->size(), inlinedCall->ast());
                             auto argStore = new Store(arg.first, argAlloc, inlinedCall->ast());
                             argStore->setName(STR("argStore" << c));
@@ -130,7 +130,7 @@ namespace tvlm{
                                 if(itt == bbMapping.end() || itf == bbMapping.end()){
                                     throw "Invalid CondJump copy";
                                 }
-                                Instruction * newCond;
+
                                 auto itc = instructionSwapping.find(condJmp->condition());
                                 if(itc == instructionSwapping.end() ){
                                     throw "Invalid CondJump copy - copy of cond";
@@ -192,8 +192,9 @@ namespace tvlm{
                                 if(it != instructionSwapping.end()){
                                     std::vector<std::unique_ptr<Instruction>> res = std::vector<std::unique_ptr<Instruction>>();
 
-
-                                    return std::unique_ptr<Instruction>( new Store( returnAlloc, it->second, ins->ast()));
+                                    auto returnStore =  new Store( it->second, returnAlloc,  ins->ast());
+                                    returnStore->setName("returnStore_inlined" );
+                                    return std::unique_ptr<Instruction>( returnStore);
                                 }
                                 throw "error - cant insert old address to store -when replacing return =: fnc_inlining";
                             } else{
@@ -241,11 +242,23 @@ namespace tvlm{
                         afterInlineInstructionTransforms =[&instructionSwapping, &inlinedCall, returnAlloc ](std::unique_ptr<Instruction> & ins){
                             if(ins.get() == inlinedCall && inlinedCall->resultType() != ResultType::Void){
                                 Instruction * tmp = new Load(returnAlloc, inlinedCall->resultType(), ins->ast());
+                                for( auto us : inlinedCall->usages()){
+//                                    auto parentBB = us->getParentBB();
+                                    us->replaceWith(inlinedCall, tmp);
+                                }
                                 tmp->setName("loadRet");
                                 instructionSwapping.emplace (ins.get(), tmp );
                                 return std::unique_ptr<Instruction>(tmp);
+                            }else if(ins.get() == inlinedCall && inlinedCall->resultType() == ResultType::Void){
+                                Instruction * tmp = new NOPInstruction( ins->ast());
+
+                                tmp->setName("VoidLoadRet");
+                                instructionSwapping.emplace (ins.get(), tmp );
+                                return std::unique_ptr<Instruction>(tmp);
+                            }else{
+                                //ignore anything without inlined call
+                                return std::unique_ptr<Instruction>();
                             }
-                            return std::unique_ptr<Instruction>();
                         };
 
                         phase2ndHalf.emplace_back(afterInlineInstructionTransforms);
@@ -279,9 +292,14 @@ namespace tvlm{
                             auto it = instructionSwapping.find(argTable[a].second->value());
                             if(it != instructionSwapping.end()){
 //                                argTable[a].second->value() = it->second;
-                                auto badStore = argTable[a].second;
+                                auto badStore = argTable[a].second; //pointing to old value
 //                                badStore->replaceMe();
                                 auto goodStore = new Store(it->second, badStore->address(), badStore->ast());
+                                for(auto ch : badStore->children()){
+                                    ch->removeUsage(badStore);
+                                    ch->registerUsage(goodStore);
+                                }
+
                                 argTable[a].second = goodStore;
                                 delete badStore;
                                 firstHalf->add(goodStore);
@@ -294,6 +312,7 @@ namespace tvlm{
                             firstHalf->add(returnAlloc);
                         }
                         firstHalf->add(new Jump(new_BBs[i+1], nullptr));
+                        firstHalf->addSucc(new_BBs[i+1]);
                         i++;
                         //copy fncInlining
                         for( size_t j = 0; j < fncToInlinebbs.size();i++, j++ ){
@@ -308,7 +327,7 @@ namespace tvlm{
                         }
                         //copy 2nd half;
 
-                        bbWithCall->copyFrom(new_BBs[i], instructionSwapping, ins+1, phase2ndHalf);
+                        bbWithCall->copyFrom(new_BBs[i], instructionSwapping, ins, phase2ndHalf);
 //                        copyInstructions(ins,
 //                                         getpureBBsInstructions(bbWithCall).end(),
 //                                         std::insert_iterator(getpureBBsInstructions(new_BBs[i]), getpureBBsInstructions(new_BBs[i]).begin()),
@@ -334,6 +353,25 @@ namespace tvlm{
                             fncCallerbbs.emplace_back(new_BBs[i]);
                         }
 //=========================================----replaceBBs in fnc----====================================
+                        //repair bbs succ and predecessors
+                        for ( auto  bb : getFunctionBBs(fnc.second.get())) {
+                            auto insns2 = getBBsInstructions(bb);
+                            if(insns2.empty()) {continue;}//empty bbs useless - skip
+                            auto terminator = insns2.back();
+                            auto term = dynamic_cast<Instruction::Terminator*>(terminator);
+                            if(!term){
+                                throw "[Funciton Inlining] fail, bb without terminator!";
+                            }
+                            for(auto target : term->allTargets()){
+
+                                bb->addSucc(target);//auto adds predecessor as well
+
+
+                                target->registerUsage(term); // add usages to BB that it knows who points to them
+                            }
+
+                        }
+
 
                         inlining_counter++;
                         break;//inlined ... this bbWithCall is over
@@ -394,10 +432,13 @@ bool FunctionInliner::eligibleForInlining(Function *fnc) {
             if (in && in->f() == fnc) {
                 return false;
             }
+            if(dynamic_cast<Call *>(ins->get())){ //dont know if it is recursive
+                return false;
+            }
         }
     }
 
-    return fnc->name() != Symbol("main") && getFunctionBBs(fnc).size() > 1;
+    return fnc->name() != Symbol("main") && getFunctionBBs(fnc).size() < 3;
 }
 
 

@@ -1046,11 +1046,11 @@ namespace tvlm{
 
         virtual void replaceMe(Instruction * with )override;
 
+        virtual std::vector<BasicBlock * > allTargets()const  = 0;
     protected:
         Terminator(ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Void, ast, instrName, opcode} {
         }
-        virtual std::vector<BasicBlock * > allTargets()const  = 0;
     }; // Instruction::Terminator
 
     class Instruction::Terminator0 : public Instruction::Terminator {
@@ -1376,7 +1376,7 @@ namespace tvlm{
 
         void print(tiny::ASTPrettyPrinter & p) const override;
         void printAlloc(tiny::ASTPrettyPrinter & p) const override;
-        std::unordered_map<BasicBlock*, Instruction *> contents()const{
+        std::unordered_map<BasicBlock*, Instruction *> & contents(){
             return contents_;
         }
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
@@ -2096,18 +2096,21 @@ namespace tvlm{
             return usages_;
         }
 
-        void removeUsage(Instruction * ins ) {
-            auto it = std::find(usages_.begin(), usages_.end(), ins);
-            if(it != usages_.end()){
-                usages_.erase(it);
-            }
-        }
+        void removeUsage(Instruction * ins );
 
         void registerUsage(Instruction * ins){
+            //dont add duplicates
+            if(std::find(usages_.begin(), usages_.end(),ins) != usages_.end()){ return;}
+
+
             usages_.emplace_back(ins);
         }
 
         void addSucc(BasicBlock * bl){
+            //dont add duplicates
+            if(std::find(successor_.begin(), successor_.end(),bl) != successor_.end()){ return;}
+
+
             successor_.push_back(bl);
             bl->predecessor_.push_back(this);
         }

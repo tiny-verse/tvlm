@@ -631,5 +631,27 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
             Instruction::replaceMe(with);
 
     }
+
+    void BasicBlock::removeUsage(Instruction *ins) {
+        auto it = std::find(usages_.begin(), usages_.end(), ins);
+        if(it != usages_.end()){
+            usages_.erase(it);
+        }
+        //and remove cross reference via succ and pred
+        if(auto term = dynamic_cast<Instruction::Terminator *>(ins)) {
+            for (auto i = ins->getParentBB()->successor_.begin(); i != ins->getParentBB()->successor_.end(); i++) {
+                if (*i == this) { // remove matching me
+                    ins->getParentBB()->successor_.erase(i); // remove  with successors
+                    break; //only once should be there
+                }
+            }
+            for (auto i = this->predecessor_.begin(); i != this->predecessor_.end(); i++) {
+                if (*i == ins->getParentBB()) { // remove cross check
+                    this->predecessor_.erase(i);
+                }
+            }
+
+        }
+    }
 }
 
