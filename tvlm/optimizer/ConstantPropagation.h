@@ -14,7 +14,9 @@ namespace tvlm{
 
     public:
         void run(IL &il);
-
+        std::string name() const override{
+            return "CP";
+        }
         int64_t resolveBinOperator(BinOp *bin, int64_t lhs, int64_t rhs);
         double resolveBinOperator(BinOp *bin, double lhs, double rhs);
         int64_t resolveUnOperator(UnOp *bin, int64_t lhs);

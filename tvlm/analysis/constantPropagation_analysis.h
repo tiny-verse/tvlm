@@ -199,8 +199,8 @@ namespace tvlm{
 
         }else{
             return constPropLattice_->top();
-            throw "[Constant propagation] cannot eval";
         }
+        throw "[Constant propagation] cannot eval";
     }
 
     template<class I>

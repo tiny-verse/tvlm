@@ -624,5 +624,12 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         else return false;
     }
 
+    void Instruction::Terminator::replaceMe(Instruction *with) {
+            for ( auto bb : allTargets()){
+                bb->removeUsage(this);
+            }
+            Instruction::replaceMe(with);
+
+    }
 }
 

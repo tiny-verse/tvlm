@@ -286,7 +286,11 @@ namespace tvlm{
 
 
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
-        void replaceMe(Instruction * with ) {
+        virtual void replaceMe(Instruction * with ) {
+            for ( auto chi: children()) {
+                chi->removeUsage(this);
+            }
+
             for (auto  * ins: used_) {
                 ins->replaceWith(this, with);
             }
@@ -482,8 +486,12 @@ namespace tvlm{
     class Instruction::ImmSize : public Instruction {
     public:
         std::vector<Instruction*> children() const override{
-            return {amount_};
-        }
+            if(amount_) {
+                return {amount_};
+            }else {
+                return {};
+            }
+        };
 
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::ImmSize*>(il)){
@@ -1033,10 +1041,16 @@ namespace tvlm{
         virtual BasicBlock * getTarget(size_t i) const = 0;
 
         ~Terminator() override= default;
+
+
+
+        virtual void replaceMe(Instruction * with )override;
+
     protected:
         Terminator(ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Void, ast, instrName, opcode} {
         }
+        virtual std::vector<BasicBlock * > allTargets()const  = 0;
     }; // Instruction::Terminator
 
     class Instruction::Terminator0 : public Instruction::Terminator {
@@ -1064,10 +1078,12 @@ namespace tvlm{
         virtual ~Terminator0() override = default;
 
     protected:
-        // void accept(ILVisitor * v) override;
-
         Terminator0(ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Terminator{ast, instrName, opcode} {
+        }
+        // void accept(ILVisitor * v) override;
+        std::vector<BasicBlock * > allTargets()const override {
+            return {};
         }
     }; // Instruction::Terminator0
 
@@ -1167,8 +1183,11 @@ namespace tvlm{
         // void accept(ILVisitor * v) override;
 
         Terminator1(BasicBlock * target, ASTBase const * ast, const std::string & instrName, Opcode opcode);
-
         ~Terminator1() override = default;
+
+        std::vector<BasicBlock * > allTargets()const override {
+            return {target_};
+        }
     private:
         BasicBlock * target_;
     }; // Instruction::Terminator1
@@ -1219,6 +1238,11 @@ namespace tvlm{
         Terminator2(Instruction * cond,BasicBlock * trueTarget, BasicBlock * falseTarget, ASTBase const * ast, const std::string & instrName, Opcode opcode);
 
         ~Terminator2() override = default;
+        std::vector<BasicBlock * > allTargets()const override {
+            return targets_;
+        }
+
+
     private:
         Instruction * cond_;
         std::vector<BasicBlock *> targets_;
@@ -1331,6 +1355,7 @@ namespace tvlm{
         std::vector<Instruction*> children() const override{
 //            throw "not implemented children on Phi Instruction";
             std::vector<Instruction*> successors;
+            successors.reserve(contents_.size());
             for (auto & c: contents_) {
                 successors.push_back(c.second);
             }
@@ -2010,7 +2035,7 @@ namespace tvlm{
             if(it == insns_.end()){
                 return;
             }
-            it->reset(new NOPInstruction( ins->ast()));
+            replaceInstr(ins, new NOPInstruction( ins->ast()));
 //            delete ins;
 
 
@@ -2066,6 +2091,16 @@ namespace tvlm{
         BasicBlock * setName(std::string const & name) {
             name_ = name;
             return this;
+        }
+        const std::vector<Instruction *> used() const {
+            return usages_;
+        }
+
+        void removeUsage(Instruction * ins ) {
+            auto it = std::find(usages_.begin(), usages_.end(), ins);
+            if(it != usages_.end()){
+                usages_.erase(it);
+            }
         }
 
         void registerUsage(Instruction * ins){
@@ -2167,7 +2202,7 @@ BasicBlock * copyUntil(
         std::vector<BasicBlock*>successor_;     //only inside function
     }; // BasicBlock
 
-    class Function : public IL{
+    class Function : public IL, public ILFriend{
     public:
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Function *>(il)){
@@ -2232,6 +2267,24 @@ BasicBlock * copyUntil(
             for (auto & i : bbs_)
                 i->printAlloc(p);
             p.dedent();
+
+        }
+
+        void removeBB(BasicBlock * bb) {
+            auto bbit = bbs_.begin();
+            for (; bbit != bbs_.end(); bbit++) {
+                if(bbit->get() == bb) {
+                    break;
+                }
+            }
+            if(bbit == bbs_.end()) { return; }
+
+            for (auto instr: getBBsInstructions(bb)) {
+                bb->removeInstr(instr);
+            }
+
+
+            bbs_.erase(bbit);
 
         }
 

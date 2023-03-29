@@ -417,7 +417,17 @@ namespace tvlm{
                     }
                 }
 
-            }else if (auto allocL = dynamic_cast<AllocL *>(first.get())){
+            }
+
+        }
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        //                           NEXT PHASE
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        //Alloc needs to be removed afterwards while using them to index the constants
+
+        for (size_t idx = 0, len = insns.size();  idx < len; idx++) {
+            auto &first = insns[idx];
+             if (auto allocL = dynamic_cast<AllocL *>(first.get())){
                 auto it = analysis.find((ILInstruction*)allocL);
                 if(it == analysis.end()){
                     std::cerr << "cannot find in analysis, dead code?";
@@ -428,18 +438,22 @@ namespace tvlm{
                     }
                 }
             }
-//            else if (auto allocG = dynamic_cast<AllocG *>(first.get())){
-//                auto it = analysis.find((ILInstruction*)allocG);
-//                if(it == analysis.end()){
-//                    std::cerr << "cannot find in analysis, dead code?";
-//                }else{
-//                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
-//                        //remove Store while obsolete
-//                        bb->removeInstr(allocG);
-//                    }
-//                }
-//            }
+            else if (auto allocG = dynamic_cast<AllocG *>(first.get())){
+                auto it = analysis.find((ILInstruction*)allocG);
+                if(it == analysis.end()){
+                    std::cerr << "cannot find in analysis, dead code?";
+                }else{
+                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+                        //remove Store while obsolete
+                        bb->removeInstr(allocG);
+                    }
+                }
+            }
+
         }
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 
     }
 

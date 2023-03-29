@@ -13,6 +13,9 @@ namespace tvlm {
     public:
         virtual ~Pass(){};
         virtual void run(IL & il) = 0;
+        virtual std::string name() const {
+            return "generic pass";
+        }
     };
 
     class LastPass : public Pass{
@@ -20,6 +23,9 @@ namespace tvlm {
         void lastToOptimize(IL &il);
     public:
         void run (IL & il) override;
+        std::string name() const override{
+            return "Last Pass";
+        }
     };
     class Optimizer {
 
@@ -29,8 +35,10 @@ namespace tvlm {
         Optimizer(){
             tiny::config.setDefaultIfMissing("-inlining", "0");
             inlining = std::stoul(tiny::config.get("-inlining"));
-            tiny::config.setDefaultIfMissing("-constant_propagation", "1");
-            constant = std::stoul(tiny::config.get("-constant_propagation"));
+            tiny::config.setDefaultIfMissing("-optimization_cp", "1");
+            constant = std::stoul(tiny::config.get("-optimization_cp"));
+            tiny::config.setDefaultIfMissing("-optimization_dce", "1");
+            deadCodeElimination = std::stoul(tiny::config.get("-optimization_dce"));
             initialize_passes();
         }
 
@@ -52,6 +60,7 @@ namespace tvlm {
         std::vector<std::unique_ptr<Pass>> passes_;
         bool inlining = false;
         bool constant = false;
+        bool deadCodeElimination = false;
     };
 
 

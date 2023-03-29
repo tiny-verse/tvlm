@@ -15,6 +15,10 @@ namespace tvlm{
 
         for(auto & pass : passes_ ){
              pass->run(ir);
+
+            ss.str("");
+            ir.print(printer);
+            std::cerr << tiny::color::lightBlue << "IL after "<< pass->name() << ":\n" << ss.str() << std::endl << "||" << std::endl;
         }
         ss.str("");
         ir.print(printer);
@@ -36,8 +40,10 @@ namespace tvlm{
             auto & bbs = getpureFunctionBBs(fnc.second.get());
             for(auto bb = bbs.begin(); bb != bbs.end() ;){
                 //remove empty thus not terminated BBs
-                if(!(*bb)->terminated() ){
-                    bb = bbs. erase(bb);
+                if(!(*bb)->terminated() || (bb->get()->used().empty() && bb != bbs.begin())){
+                    // first bb of a function needs to stay allways
+                    fnc.second->removeBB(bb->get());
+//                    bb = bbs. erase(bb);
                     continue;
                 }
 

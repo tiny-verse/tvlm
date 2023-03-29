@@ -30,6 +30,8 @@ namespace tvlm{
         void run(IL & il) override{
             functionInlining(il);
         }
-
+        std::string name() const override{
+            return "Fnc Inliner";
+        }
     };
 }
