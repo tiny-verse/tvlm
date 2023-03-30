@@ -6,7 +6,6 @@ namespace tvlm {
     using ILType = tvlm::Type;
     using CType = tinyc::Type;
 
-
     class ILBuilder {
     public:
 
@@ -45,15 +44,12 @@ namespace tvlm {
                     ins->setName(STR("g" << (globalRegisterCounter_++)));
             }
 
-
-
             if(auto * jmp = dynamic_cast<tvlm::Jump *>(ins)){
                 tvlm::BasicBlock * target = jmp->getTarget(1);
                 bb_->addSucc(target);
             }else if (auto * condJump = dynamic_cast<tvlm::CondJump*>(ins)){
                 tvlm::BasicBlock * trueTarget = condJump->getTarget(1);
                 tvlm::BasicBlock * falseTarget = condJump->getTarget(0);
-
                 bb_->addSucc(trueTarget);
                 bb_->addSucc(falseTarget);
             }
@@ -176,7 +172,7 @@ namespace tvlm {
                 i.second->print(p);
         }
         void finalize(){
-//            add(new Halt{nullptr}); // TODO append halt instr
+//            add(new Halt{nullptr});
         }
 
         tvlm::Program finish(){
@@ -198,9 +194,6 @@ namespace tvlm {
             return (r != functions_.end()) ? r->second.get() : nullptr;
         }
 
-//        size_t sizeOfType(Type * t) {
-//            return 4; //TODO
-//        }
 
         Instruction * lastInstr()const {
             return lastInstr_;

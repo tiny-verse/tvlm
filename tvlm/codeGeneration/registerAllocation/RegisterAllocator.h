@@ -153,9 +153,6 @@ namespace tvlm{
         void replaceInRegister(const Instruction * replace, const Instruction * with);
 
 
-//        std::set<VirtualRegister> freeReg_;
-//        std::set<VirtualRegister> freeFReg_;
-
         Function * currenFunction_;
         TargetProgram targetProgram_;
 

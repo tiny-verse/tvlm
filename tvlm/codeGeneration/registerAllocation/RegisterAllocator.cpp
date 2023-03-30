@@ -4,7 +4,6 @@
 
 namespace tvlm{
 
-
     void RegisterAllocator::visit(Instruction *ins) {
     }
 
@@ -22,25 +21,13 @@ namespace tvlm{
     void RegisterAllocator::visit(Return *ins) {
         if(ins->returnValue()){
         auto virtRegs = getAllocatedVirtualRegisters(ins);
-//            if(ins->returnType()->registerType() == ResultType::StructAddress){
-//                writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
-//                setupRegister(((*virtRegs)[1]), ins,ins);
-//                releaseRegister((*virtRegs)[1]); // don't need it anymore
-//
-//            } else
                 if (ins->returnType()->registerType() == ResultType::Double){
                 writingPos_= 0;setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
             }else if (ins->returnType()->registerType() == ResultType::Integer){
                 writingPos_= 0;setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
-
-            }else{
-
             }
-        }else{
-
         }
         callingConvCalleeRestore(ins);
-
 
     }
 
@@ -53,8 +40,7 @@ namespace tvlm{
 
         //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
-            if( /* (*it).second->registerType() == ResultType::StructAddress ||*/
-                (*it).second->registerType() == ResultType::Integer){
+            if( (*it).second->registerType() == ResultType::Integer){
                 if(virtRegs == nullptr){
                     virtRegs = getAllocatedVirtualRegisters(ins);
                 }
@@ -68,26 +54,12 @@ namespace tvlm{
         }
         //        //prepare return Value //*-> preparation in RA -- memory and register in RA
 
-
-
-//        spillCallReg(); //implement calling convention -> spill caller saved
         callingConvCallerSave(ins);
 
         updateCallPatchPositions(ins);
 //        tiny::t86::Label callLabel = ...
         writingPos_++;
 
-
-
-
-        size_t returnValueRegister = 0;
-//        if(ins->f()->getType()->registerType() == ResultType::StructAddress){
-//            if(virtRegs == nullptr){
-//                virtRegs = getAllocatedVirtualRegisters(ins);
-//            }
-////            prepareReturnValue(ins->f()->getType()->size(), ins);
-//            setupRegister(((*virtRegs)[regPos++]), ins, ins);
-//        } else
             if (ins->f()->getType()->registerType() == ResultType::Double){
             if(virtRegs == nullptr){
                 virtRegs = getAllocatedVirtualRegisters(ins);
@@ -100,13 +72,9 @@ namespace tvlm{
             }
             setupRegister(((*virtRegs)[regPos++]), ins, ins);
 
-
         }else{//void
-
         }
-
         //implement restoring? no need -- needed will be restored - lazy
-
 
     }
 
@@ -119,55 +87,27 @@ namespace tvlm{
 
         //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
-//            if((*it).second->registerType() == ResultType::StructAddress) {
-////                allocateStructArg(it->second, it->first);
-//            }else
                 if((*it).second->registerType() == ResultType::Integer){
-//                auto argReg = getReg(it->first, ins);
-                setupRegister(((*virtRegs)[regPos++]), it->first, ins);
-//                clearIntReg(it->first);
-            }else if ((*it).second->registerType() == ResultType::Double){
-//                auto argFReg = getFReg(it->first, ins);
-
-                setupFRegister(((*virtRegs)[regPos++]), it->first, ins);
-//                addF(LMBS tiny::t86::FPUSH(vFR(argFReg)) LMBE, ins);
-//                clearFloatReg(it->first);
-            }
+                    setupRegister(((*virtRegs)[regPos++]), it->first, ins);
+                }else if ((*it).second->registerType() == ResultType::Double){
+                    setupFRegister(((*virtRegs)[regPos++]), it->first, ins);
+                }
         }
-        //        //prepare return Value //*-> preparation in RA -- memory and register in RA
+        //prepare return Value //*-> preparation in RA -- memory and register in RA
 
-
-//        spillCallReg(); //TODO implement calling convention
         callingConvCallerSave(ins);
-
-//        updateCallPatchPositions(ins); // not a staticCall
-            setupRegister(((*virtRegs)[regPos++]), ins->f(), ins);
-
+        setupRegister(((*virtRegs)[regPos++]), ins->f(), ins);
         updateCallPatchPositions(ins);
-//        tiny::t86::Label callLabel = addF(
-//                LMBS tiny::t86::CALL{tiny::t86::Label::empty()} LMBE
-//                , ins );
         writingPos_++;
 
         // implement restoring? - no
 
-        size_t returnValueRegister = 0;
-//        if(ins->retType()->registerType() == ResultType::StructAddress){
-////            prepareReturnValue(ins->f()->getType()->size(), ins);
-//            setupRegister(((*virtRegs)[regPos++]), ins, ins);
-//        } else
-            if (ins->retType()->registerType() == ResultType::Double){
+        if (ins->retType()->registerType() == ResultType::Double){
             setupFRegister(((*virtRegs)[regPos++]), ins, ins);
-
         }else if (ins->retType()->registerType() == ResultType::Integer) {
-//            returnValueRegister = getReg(ins, ins);
             setupRegister(((*virtRegs)[regPos++]), ins, ins);
-
-
         }else{//void
-
         }
-
     }
 
     void RegisterAllocator::visit(Copy *ins) {
@@ -190,9 +130,6 @@ namespace tvlm{
             case ResultType::Void:
                 throw "copy on Void not implemented";
                 break;
-//            case ResultType::StructAddress:
-//                throw "copy on StructAddress not implemented";
-//                break;
         }
     }
 
@@ -269,7 +206,7 @@ namespace tvlm{
 
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         switch (ins->resultType()) {
-//            case ResultType::StructAddress:
+
             case ResultType::Integer:{
                 switch (ins->opType()) {
                     case UnOpType::UNSUB:{
@@ -287,10 +224,7 @@ namespace tvlm{
                     case UnOpType::DEC:
                         writingPos_= 0;
                         setupRegister(((*virtRegs)[0]), ins->operand(), ins);
-//                        if(auto load = dynamic_cast<Load*>(ins->operand())){
-//                            setupRegister(((*virtRegs)[1]), load->address(), ins);
-//                            //store incremented -- TODO make dirty reg
-//                        }
+
                         //is it necessary to save store location?
                         replaceInRegister(ins->operand(), ins);
 
@@ -314,7 +248,6 @@ namespace tvlm{
             case ResultType::Integer:{
                 writingPos_= 0;
                 setupRegister(((*virtRegs)[0]), ins, ins);
-//                auto reg = getReg(ins, ins);
                 break;
             }
             case ResultType::Double:{
@@ -322,9 +255,6 @@ namespace tvlm{
                 setupFRegister(((*virtRegs)[0]), ins, ins);
                 break;
             }
-//            case ResultType::StructAddress:
-//                throw "ERROR cant load StructAddress as value";
-//                break;
             case ResultType::Void:
                 throw "ERROR cant load void as value";
                 break;
@@ -336,8 +266,7 @@ namespace tvlm{
         if(ins->amount()){
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         writingPos_= 0;
-//        setupRegister(((*virtRegs)[0]), ins, ins);
-            setupRegister(((*virtRegs)[0]), ins, ins);
+        setupRegister(((*virtRegs)[0]), ins, ins);
         }
 
     }
@@ -346,8 +275,7 @@ namespace tvlm{
         if(ins->amount()){
         auto virtRegs = getAllocatedVirtualRegisters(ins);
         writingPos_= 0;
-//        setupRegister(((*virtRegs)[0]), ins, ins);
-            setupRegister(((*virtRegs)[0]), ins, ins);
+        setupRegister(((*virtRegs)[0]), ins, ins);
         }
     }
 
@@ -382,9 +310,9 @@ namespace tvlm{
                 setupRegister(((*virtRegs)[1]), ins->address(), ins);
             }
             return;
-        }else if (ins->resultType() == ResultType::Integer /*|| ins->resultType() == ResultType::StructAddress*/){
+        }else if (ins->resultType() == ResultType::Integer ){
             virtRegs =  getAllocatedVirtualRegisters(ins);
-            if (dynamic_cast<Type::Array *>(ins->type())) { // TODO
+            if (dynamic_cast<Type::Array *>(ins->type())) {
                 setupRegister(((*virtRegs)[0]), ins, ins);
                 setupRegister(((*virtRegs)[1]), ins->address(), ins);
                 return;
@@ -401,16 +329,11 @@ namespace tvlm{
             }
             return;
         }
-//        else if (ins->resultType() == ResultType::StructAddress){
-////            replaceInRegister(ins->address(), ins);
-////            return;
-//        }
         throw "ERROR[RA] failed load";
     }
 
     void RegisterAllocator::visit(Store *ins) {
         writingPos_= 0;
-//        setupRegister(((*virtRegs)[0]), ins->address(), ins);
 
         switch (ins->value()->resultType()) {
             case ResultType::Double:{
@@ -427,7 +350,7 @@ namespace tvlm{
                 }
                 return;
             }
-//            case ResultType::StructAddress:
+
             case ResultType::Integer:{
                 if(dynamic_cast<AllocL*>(ins->address()) || dynamic_cast<AllocG*>(ins->address())){
                     if (!dynamic_cast<AllocG*>(ins->value())){
@@ -456,7 +379,6 @@ namespace tvlm{
 
 
     void RegisterAllocator::visit(Phi *ins) {
-        //TODO phi function to inform registers
 
     }
 
@@ -525,21 +447,20 @@ namespace tvlm{
     }
 
     void RegisterAllocator::visit(BasicBlock *bb) {
-//        enterNewBB(bb);
 
         for (auto * ins : getBBsInstructions(bb)) {
             visitChild(ins);
         }
-//        exitBB();
+
     }
 
     void RegisterAllocator::visit(Function *fce) {
         currenFunction_ = fce;
-//        enterNewFce(fce);
+
         for (BasicBlock * bb : getFunctionBBs(fce)){
             visitChild(bb);
         }
-//        exitFce();
+
         //update RegAllocator state
         resetFreeRegs();
 
@@ -547,10 +468,8 @@ namespace tvlm{
 
     void RegisterAllocator::visit(Program *p) {
         auto globals = getProgramsGlobals(p);
-//        enterNewBB(globals);
 
         for (const auto & str : p->stringLiterals() ) {
-//            auto reg = getReg(str.second, str.second);
             auto virtRegs = getAllocatedVirtualRegisters(str.first);
             writingPos_= 0;
             setupRegister(((*virtRegs)[0]), str.first, str.first);
@@ -560,12 +479,11 @@ namespace tvlm{
             if(auto * i = dynamic_cast<const  LoadImm *>(ins)){
                 if(i->resultType() == ResultType::Integer){
 
-//                    auto reg = getReg(ins, ins);
                     auto virtRegs = getAllocatedVirtualRegisters(ins);
                     writingPos_= 0;
                     setupRegister(((*virtRegs)[0]), ins, ins);
                 }else if (i->resultType() == ResultType::Double){
-//                    auto freg=getFReg(ins, ins);
+
                     auto virtRegs = getAllocatedVirtualRegisters(ins);
                     writingPos_= 0;
                     setupRegister(((*virtRegs)[0]), ins, ins);
@@ -573,23 +491,11 @@ namespace tvlm{
                     throw "load imm with Res Type Structure or Void not implemented";
                 }
             }else if(const auto * alloc = dynamic_cast< const AllocG *>(ins)){
-//                if(alloc->amount()){
-//                    throw "allocG with array not implemented"; //TODO global array
-//                }else{
-//                    getReg(alloc, ins);
-//                    auto virtRegs = getAllocatedVirtualRegisters(ins);
-//                    writingPos_= 0;
-//                    setupRegister(((*virtRegs)[0]), alloc, ins);
-//                }
                 continue;
-            }else if(const auto * alloc = dynamic_cast< const AllocL *>(ins)){
-//
-////                    getReg(alloc, ins);
-//                auto virtRegs = getAllocatedVirtualRegisters(ins);
-//                writingPos_= 0;
-//                setupRegister(((*virtRegs)[0]), ins, ins);
+            }else if(const auto * allocL = dynamic_cast< const AllocL *>(ins)){
+
             }else if( const auto  * store = dynamic_cast<const Store *>(ins)){
-//                auto reg = getReg(ins, ins);
+
                 auto virtRegs = getAllocatedVirtualRegisters(ins);
                 writingPos_= 0;
                 setupRegister(((*virtRegs)[0]), store->value(), ins);
@@ -602,10 +508,6 @@ namespace tvlm{
                     case ResultType::Double:{
 
                         setupFRegister(((*virtRegs)[0]), ins, ins);
-//                        auto freg =getFReg(ins, ins);
-                        //            auto regAddr = getReg(ins->address(), ins);
-//                        int64_t addrOffset = regAssigner->getAllocOffset(load->address());
-//                        addF( LMBS tiny::t86::MOV( vFR(freg), tiny::t86::Mem( tiny::t86::Bp() - addrOffset)) LMBE, ins);
 
                         break;
                     }
@@ -613,49 +515,34 @@ namespace tvlm{
 
                         auto it = targetProgram_.globalFindAddress(load->address());
                         if(it != targetProgram_.globalEndAddress()){
-//                            auto reg = getReg(ins, ins);
-
                             setupRegister(((*virtRegs)[0]), ins, ins);
-//                            addF( LMBS tiny::t86::MOV(vR(reg), (int64_t)it->second) LMBE, ins);
+
                             break;
                         }
-                        if(dynamic_cast<Type::Array *>(load->type())){ // TODO
-//                            auto reg = getReg(ins, ins);
+                        if(dynamic_cast<Type::Array *>(load->type())){
                             setupRegister(((*virtRegs)[0]), ins, ins);
-
-//                            auto regAddr = getReg(load->address(), ins);
                             setupRegister(((*virtRegs)[1]), load->address(), ins);
-//                            addF( LMBS tiny::t86::MOV( vR(reg), vR(regAddr)) LMBE, ins);
 
                         }else{
-//                            auto reg = getReg(ins, ins);
                             setupRegister(((*virtRegs)[0]), ins, ins);
-                            //                auto regAddr = getReg(ins->address(), ins);
-//                            int64_t addrOffset = regAssigner->getAllocOffset(load->address());
-//                            addF( LMBS tiny::t86::MOV( vR(reg), tiny::t86::Mem(tiny::t86::Bp() - addrOffset)) LMBE, ins);
+
                         }
 
                         break;
                     }
-//                    case ResultType::StructAddress:{
-//                        //                  regAllocator->replaceInt(ins->address(), ins);
-////                        regAssigner->replaceIntReg(load->address(), ins);
-//                        break;
-//                    }
+
                     default:
                         throw "ERROR[IS] failed load";
 
 
                 }
-//                auto reg = getReg(ins, ins);
-//                auto virtRegs = getAllocatedVirtualRegisters(ins);
-//                writingPos_= 0;
+
             }else{
                 throw tiny::ParserError("unknown global instruction", ins->ast()->location());
             }
 
         }
-//        exitBB();
+
 
         for(auto & f : getProgramsFunctions(p)){
             visitChild(f.second);
@@ -669,15 +556,6 @@ namespace tvlm{
             writingPos_(0),
             currenFunction_(nullptr)
     {
-//        size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
-//        for(size_t i = 1 ; i < regSize ; i++){
-//            freeReg_.emplace(VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
-//        }
-//        size_t fregSize = tiny::t86::Cpu::Config::instance().floatRegisterCnt();
-//        for(size_t i = 1; i < fregSize ; i++){
-//            freeFReg_.emplace(VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
-//        }
-
 
     }
 
@@ -718,7 +596,7 @@ namespace tvlm{
                             newPosition = memLoc->memAddress();
                             memset = true;
                         }
-                        //todo add address Descriptor
+
                     }else {
                         if(!stackset){
                             stackset = true;
@@ -759,7 +637,7 @@ namespace tvlm{
                     }
                     releaseRegister(lastReg);
                 }else if (stackset){
-    //spill Code
+                    //spill Code
                     VirtualRegister lastReg = getLastRegister(currentIns);
                     Register lReg = Register(lastReg.getNumber());
                     targetProgram_.addF_insert(LMBS tiny::t86::MOV( lReg, tiny::t86::Bp())LMBE, currentIns, writingPos_++);
@@ -817,7 +695,6 @@ namespace tvlm{
                         break;
                     case Location::Stack:{
 
-//                        VirtualRegister freeRegVirt = getReg(currentIns);
                         VirtualRegister freeRegVirt = VirtualRegisterPlaceholder(RegisterType::INTEGER, 0);
                         Register freeReg = freeRegVirt.getNumber();
                         targetProgram_.addF_insert(LMBS tiny::t86::MOV( freeReg, tiny::t86::Bp()) LMBE,currentIns, writingPos_++);
@@ -876,66 +753,6 @@ namespace tvlm{
     void RegisterAllocator::setupRegister(VirtualRegisterPlaceholder & reg, Instruction * ins,   Instruction *currentIns) {
         auto location = addressDescriptor_.find(ins);
         if(location != addressDescriptor_.end() && !location->second.empty()){
-//            for (auto & loc : location->second) { //priority in ordered set will manage to do it
-//                if(loc.loc() == Location::Register){
-//                    reg->setNumber(loc.regIndex().getNumber());
-//                    return;
-//                }
-//            }
-//            if(auto load = dynamic_cast<const Load*>(ins)){
-//                if(load->resultType() == ResultType::Integer){
-//
-//                    if(auto allocL = dynamic_cast<AllocL*>(load->address())){
-//
-//                        VirtualRegister freeVirtReg = getReg(ins);
-//                        Register freeReg = freeVirtReg.getNumber();
-//                        auto stackLoc = targetProgram_.allocMapping_.find(allocL);
-//                        if(stackLoc == targetProgram_.allocMapping_.end()){
-//                            throw "[RegisterAllocator]cannot find allocL";
-//                        }
-//                        size_t loc = stackLoc->second;
-//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Bp())LMBE ,currentIns, writingPos_++);
-//                        targetProgram_.addF_insert( LMBS tiny::t86::SUB( freeReg, loc)LMBE ,currentIns, writingPos_++);
-//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Mem(freeReg))LMBE ,currentIns, writingPos_++);
-//                        reg.setNumber(freeReg.index());
-//
-//                    }else if (auto allocG = dynamic_cast<AllocG*>(load->address())){
-//                        VirtualRegister freeVirtReg = getReg(ins);
-//                        Register freeReg = freeVirtReg.getNumber();
-//                        auto stackLoc = targetProgram_.allocMapping_.find(allocG);
-//                        if(stackLoc == targetProgram_.allocMapping_.end()){
-//                            throw "[RegisterAllocator]cannot find allocG";
-//                        }
-//                        size_t loc = stackLoc->second;
-//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Bp())LMBE ,currentIns, writingPos_++);
-//                        targetProgram_.addF_insert( LMBS tiny::t86::SUB( freeReg, loc)LMBE ,currentIns, writingPos_++);
-//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( freeReg, tiny::t86::Mem(freeReg))LMBE ,currentIns, writingPos_++);
-//                        reg.setNumber(freeReg.index());
-//
-//                    }else if (auto argAddr = dynamic_cast<ArgAddr*>(load->address())){
-//                        VirtualRegister freeVirtReg = getReg(argAddr);
-//                        auto allocDesc = addressDescriptor_.find(argAddr);
-//                        if(allocDesc == addressDescriptor_.end() || allocDesc->second.empty()){
-//                            throw "[Register Allocator] cannot find argAddr in registers";
-//                        }
-//
-//
-//                        restore(freeVirtReg, *allocDesc->second.begin(),currentIns);
-//                        VirtualRegister loadVirtReg = getReg(load);
-//                        Register freeReg = freeVirtReg.getNumber();
-//                        Register loadReg = loadVirtReg.getNumber();
-//                        targetProgram_.addF_insert( LMBS tiny::t86::MOV( loadReg, tiny::t86::Mem(freeReg))LMBE ,currentIns, writingPos_++);
-//                        reg.setNumber(loadReg.index());
-//
-//                    }else{
-//                        //probably argAddr, Elem, ...
-//                    }
-//                }else if (load->resultType() == ResultType::Double){
-//                    throw "not implemented 656833535";
-//                }else {
-//                    throw "not implemented 665352535";
-//                }
-//            }
             for (auto & loc : location->second) {
                 switch(loc.loc()) {
                     case Location::Register:{
@@ -946,8 +763,6 @@ namespace tvlm{
                         bool global = false;
                         if(*ins->name().begin() == 'g'){global = true;}
                         ins->setAllocName(generateInstrName(reg, global));
-//            ins->setName(generateInstrName(res, global));
-
                         return;
                     }
                     case Location::Memory: {
@@ -960,7 +775,6 @@ namespace tvlm{
                         bool global = false;
                         if(*ins->name().begin() == 'g'){global = true;}
                         ins->setAllocName(generateInstrName(reg, global));
-//            ins->setName(generateInstrName(res, global));
                         return;
                     }
                     case Location::Stack: {
@@ -976,7 +790,6 @@ namespace tvlm{
                         bool global = false;
                         if(*ins->name().begin() == 'g'){global = true;}
                         ins->setAllocName(generateInstrName(reg, global));
-//            ins->setName(generateInstrName(res, global));
                         return;
                     }
                 }
@@ -998,12 +811,7 @@ namespace tvlm{
     RegisterAllocator::setupFRegister(VirtualRegisterPlaceholder & reg, Instruction *ins, Instruction * currentIns) {
         auto location = addressDescriptor_.find(ins);
         if(location != addressDescriptor_.end()){
-//            for (auto & loc : location->second) { //priority in ordered set will manage to do it
-//                if(loc.loc() == Location::Register){
-//                    reg->setNumber(loc.regIndex().getNumber());
-//                    return;
-//                }
-//            }
+
             for (auto & loc : location->second) {
                 switch(loc.loc()) {
                     case Location::Register:
@@ -1053,11 +861,11 @@ namespace tvlm{
                     for (auto  addr = addressDescriptor_[replace].begin(); addr != addressDescriptor_[replace].end();addr++) { // remove descriptor with Register ( transfered)
                         if(addr->loc() == Location::Register){
                             addressDescriptor_[with].insert(*addr);
-//                            addr = addressDescriptor_[replace].erase(addr);
+
                             loc = address->second.begin();
                         }
                     }
-//                    registerDescriptor_[loc->regIndex()].erase(replace); // remove it
+
                 }
                 loc++;
             }
@@ -1072,7 +880,6 @@ namespace tvlm{
     }
     void RegisterAllocator::updateCallPatchPositions(const Instruction * ins) {
         for ( auto & pos : getCallPos(&targetProgram_)[ins]) {
-//            targetProgram_.call_patches_[pos].first.second = Label( targetProgram_.call_patches_[pos].first.second.address() + writingPos_);
             getUnpatchedFCalls(&targetProgram_)[pos].first.second = Label( getUnpatchedFCalls(&targetProgram_)[pos].first.second.address() + writingPos_);
         }
     }
@@ -1083,22 +890,10 @@ namespace tvlm{
         }
 
     }
-//    void GeneralRegisterAllocator::registerMemLocation(const Store *ins, const Instruction *currentIns) {
-//
-//        ins->address(); //TODO
-//        auto it = targetProgram_.allocLmapping_.find(ins->address());
-//        if(it != targetProgram_.allocLmapping_.end()){
-//
-//            addressDescriptor_[ins->value()].emplace( LocationEntry( ins->address(), ins->value(), it->second));
-//        }
-//
-//
-//    }
     void RegisterAllocator::resetFreeRegs(const Instruction * except){
 
         for ( auto it= registerDescriptor_.begin(); it != registerDescriptor_.end();it++) {
             releaseRegister(it->first);
-            //unsubscribeRegister(it->first);
         }
     }
 
@@ -1108,14 +903,12 @@ namespace tvlm{
 
     void RegisterAllocator::callingConvCalleeRestore(const Instruction *currIns) {
 
-
         //----------------------------------
     }
 
 
     std::vector<VirtualRegisterPlaceholder> *
     RegisterAllocator::getAllocatedVirtualRegisters(const Instruction *ins) {
-//            return targetProgram_.alocatedRegisters_[ins];
         auto it = getAllocatedRegisters(&targetProgram_).find(ins);
         if ( it != getAllocatedRegisters(&targetProgram_).end()){
             return  &(it->second);

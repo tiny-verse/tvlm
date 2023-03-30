@@ -23,15 +23,7 @@ namespace tvlm{
         ss.str("");
         ir.print(printer);
         std::cerr << tiny::color::lightBlue << "IL after optimizer" << ":\n" << ss.str() << std::endl << "||" << std::endl;
-//
-//        functionInlining(ir);
-//        for (int i = 0; i < 1000; i++) {
-//            for(auto & fnc : ir.functions()){
-//                for( auto & bb : getFunctionBBs(fnc.second.get())){
-//                    optimizeBasicBlock(bb.get());
-//                }
-//            }
-//        }
+
     }
 
 
@@ -43,7 +35,6 @@ namespace tvlm{
                 if(!(*bb)->terminated() || (bb->get()->used().empty() && bb != bbs.begin())){
                     // first bb of a function needs to stay allways
                     fnc.second->removeBB(bb->get());
-//                    bb = bbs. erase(bb);
                     continue;
                 }
 
@@ -69,7 +60,6 @@ namespace tvlm{
             }
         }
         if(constant){
-//            std::cerr<<"contant_propagation is ON!" << std::endl;
             passes_.push_back(std::make_unique<ConstantPropagation>());
         }
         if(deadCodeElimination){

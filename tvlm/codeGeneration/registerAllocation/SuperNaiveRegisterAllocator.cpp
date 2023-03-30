@@ -1,7 +1,5 @@
 #include "SuperNaiveRegisterAllocator.h"
 
-#include "tvlm/tvlm/codeGeneration/FunctionalMacro.h"
-
 namespace tvlm {
 
 
@@ -10,51 +8,16 @@ namespace tvlm {
             RegisterAllocator(std::move(tp))
     {
         size_t regSize = tiny::t86::Cpu::Config::instance().registerCnt();
-//        auto it = freeReg_.begin();
         for(size_t i = _regOffset__ ; i < regSize ; i++){
-//            it = freeReg_.emplace(it, VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
             freeReg_.emplace( VirtualRegisterPlaceholder(RegisterType::INTEGER, i));
-//            it++;
         }
         size_t fregSize = tiny::t86::Cpu::Config::instance().floatRegisterCnt();
-//        auto itF = freeFReg_.begin();
         for(size_t i = _regOffset__; i < fregSize ; i++){
-//            itF= freeFReg_.emplace(itF, VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
             freeFReg_.emplace( VirtualRegisterPlaceholder(RegisterType::FLOAT, i));
-//            itF++;
         }
 
 
     }
-//
-//    SuperNaiveRegisterAllocator::VirtualRegister
-//    SuperNaiveRegisterAllocator::getRegister(SuperNaiveRegisterAllocator::VirtualRegister &reg,const Instruction * ins,  const Instruction * currentIns) {
-//        auto it = addressDescriptor_.find(ins); //auto it = regMapping_.find(&reg);
-//        if(it != addressDescriptor_.end() /*regMapping_.end()*/){
-//            switch (it->second.begin()->loc()){
-//                case Location::Register:
-//                    return it->second.begin()->regIndex();
-//
-//                    break;
-//                case Location::Stack:
-//                case Location::Memory:
-//
-//                    auto free = getReg(currentIns);
-//                    restore( free, * it->second.begin(), ins);
-////                    addressDescriptor_.erase(it); //regMapping_.erase(it);
-//                    addressDescriptor_[ins].emplace( LocationEntry( free, ins) );   //regMapping_.emplace( &reg,LocationEntry( free.index(), ins) );
-//                    registerDescriptor_[free].emplace(ins);
-//                    return free;
-//                    break;
-//            }
-//        }else{
-//            //notFound --> Allocate new
-//            VirtualRegister newReg = getReg(currentIns);
-//            addressDescriptor_[ins].emplace( LocationEntry( newReg, ins)); //regMapping_.emplace(&reg, LocationEntry( newReg.index(), ins));
-//            return newReg;
-//        }
-//        throw "error this shouldn't happen 123";
-//    }
 
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getRegToSpill() {
         VirtualRegister res = regQueue_.front();
@@ -69,7 +32,7 @@ namespace tvlm {
             res = *freeReg_.begin();
             freeReg_.erase(freeReg_.begin());
 
-            regQueue_.push_back(res);//TODO
+            regQueue_.push_back(res);
         }else {
             VirtualRegisterPlaceholder ress = getRegToSpill();
             spill( ress, currentIns);
@@ -79,7 +42,6 @@ namespace tvlm {
         bool global = false;
         if(*currentIns->name().begin() == 'g'){global = true;}
         currentIns->setAllocName(generateInstrName(res, global));
-//        currentIns->setName(generateInstrName(res, global));
         return res;
     }
 
@@ -98,18 +60,13 @@ namespace tvlm {
         }bool global = false;
         if(*currentIns->name().begin() == 'g'){global = true;}
         currentIns->setAllocName(generateInstrName(res, global));
-//        currentIns->setName(generateInstrName(res, global));
+
         return res;
     }
 
     SuperNaiveRegisterAllocator::VirtualRegister SuperNaiveRegisterAllocator::getLastRegister(const Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
-//        if(!freeReg_.empty()){
-//            res = freeReg_.front();
-//            freeReg_.erase(freeReg_.begin());
-//        }else {
-//            throw "no free register";
-//        }
+
         return res;
     }
 
@@ -123,6 +80,7 @@ namespace tvlm {
                     regQueue_.erase(it);
                 }
             }
+
         }else if(reg.getType() == RegisterType::FLOAT ){
             if( reg.getNumber() >= _regOffset__){
 
@@ -132,8 +90,8 @@ namespace tvlm {
                     regQueue_.erase(it);
                 }
             }
-        }else {
 
+        }else {
             throw "[SuperNaiveRegisterAllocator]not Implemented 1656435";
         }
     }
@@ -141,24 +99,14 @@ namespace tvlm {
 
     void SuperNaiveRegisterAllocator::removeFromRegisterDescriptor(const Instruction *ins) {
         throw "not Implemented [RA] removeFromRegisterDescriptor fnc ";
-        auto address = addressDescriptor_.find(ins);
-        if(address != addressDescriptor_.end()){
-//            if (address->second.loc() == Location::Register){
-//                registerDescriptor_[address->second.regIndex()].erase(ins);
-//            }
-        }
-
     }
     void SuperNaiveRegisterAllocator::registerMemLocation(const Store *ins, const Instruction *currentIns) {
 
-        ins->address(); //TODO
         auto it = getAllocMapping(&targetProgram_).find(ins->address());
         if(it != getAllocMapping(&targetProgram_).end()){
 
             addressDescriptor_[ins->value()].emplace( LocationEntry( ins->address(), ins->value(), it->second));
         }
-
-
     }
 
     void SuperNaiveRegisterAllocator::eraseFromFreeReg(VirtualRegisterPlaceholder &reg) {
@@ -178,9 +126,5 @@ namespace tvlm {
             }else {
                 throw "[Register Allocator] unknown RegisterType";
             }
-
-
         }
-
-
 }

@@ -16,7 +16,6 @@ namespace tvlm{
 
     using ASTBase = tiny::ASTBase;
     using Symbol = tiny::Symbol;
-//    using Type = tinyc::Type;
 
     class BasicBlock;
     class Function;
@@ -48,7 +47,6 @@ namespace tvlm{
         Integer,
         Double,
         Void,
-//        StructAddress,
     }; // tinyc::il::ResultType
 
     class Type{
@@ -60,7 +58,6 @@ namespace tvlm{
         class Array;
         class Char;
         class Void;
-//        class String;
         virtual ~Type() = default;
 
         virtual size_t size() const  = 0;
@@ -70,7 +67,6 @@ namespace tvlm{
             return ss.str();
         }
         virtual ResultType registerType()const  =0;
-
 
     private:
         virtual void toStream(std::ostream & s) const = 0;
@@ -121,23 +117,6 @@ namespace tvlm{
         }
     };
 
-//    class Type::String : public Type{
-//    public:
-//        explicit String(size_t size):size_(size){}
-//        int size() const {
-//            return (int)size_;
-//        }
-//
-//        ResultType registerType() const override {
-//            return ResultType::Integer; // Address of that string
-//        }
-//
-//    private:
-//        void toStream(std::ostream & s) const override {
-//            s << "string (of size: " << size_ << ")";
-//        }
-//        size_t size_;
-//    };
     class Type::Double : public Type{
     public:
         Double(){}
@@ -179,7 +158,6 @@ namespace tvlm{
         size_t size()const override;
 
         ResultType registerType() const override {
-//            return ResultType::StructAddress;
             return ResultType::Integer;
         }
 
@@ -226,9 +204,9 @@ namespace tvlm{
         }
 
         ResultType registerType() const override {
-//            return ResultType::StructAddress; // Address of that Struct
             return ResultType::Integer; // Address of that Struct
         }
+
         const std::vector<std::pair<Symbol, Type *>> & fields() const {
             return fields_;
         }
@@ -276,16 +254,8 @@ namespace tvlm{
         bool operator==(const IL *il) const override = 0;
         virtual std::vector<Instruction *> children() const = 0;
 
-
-
         virtual Instruction * copyWithSwap(const std::unordered_map<Instruction *, Instruction *> & swapInstr)const = 0;
-//                {
-//            throw "[Instruction]Abstract class cannot be copied";
-//        }
         virtual Instruction * clone()const = 0;
-//        {
-//            throw "[Instruction]Abstract class cannot be copied";
-//        }
 
 
         virtual void replaceWith(Instruction * sub, Instruction * toReplace ) = 0;
@@ -299,6 +269,7 @@ namespace tvlm{
             }
             with->used_ = used_;
         }
+
         //read as this is used in instruction [usage]
         virtual void registerUsage(Instruction * usage){
             used_.push_back(usage);
@@ -345,7 +316,6 @@ namespace tvlm{
             return parentBB_;
         }
 
-
         const std::vector<Instruction *> &  usages()const {
             return used_;
         }
@@ -353,7 +323,6 @@ namespace tvlm{
         std::vector<Instruction *> & usages() {
             return used_;
         }
-
 
         virtual void print(tiny::ASTPrettyPrinter & p) const {
             if (resultType_ != ResultType::Void) {
@@ -368,8 +337,6 @@ namespace tvlm{
             }
         }
 
-
-        //enum opcode TODO
         enum class Opcode {
             ADD,
             SUB,
@@ -394,8 +361,6 @@ namespace tvlm{
             GTE,
 
 
-            //BinOp,
-            //UnOp,
             LoadImm,
             AllocG,
             AllocL,
@@ -426,8 +391,6 @@ namespace tvlm{
     protected:
 
         friend class ILVisitor;
-        template<typename T>
-        friend class LivenessAnalysis;
         /** Creates the instruction with given return type and corresponding abstract syntax tree. 
          */
         Instruction(ResultType resultType, ASTBase const * ast, const std::string & instrName, Opcode opcode):
@@ -446,12 +409,7 @@ namespace tvlm{
                     p << "double ";
                     break;
                 case ResultType::Void:
-//                    p << "void ";
-//                    p << "";
                     break;
-//                case ResultType::StructAddress:
-//                    p << "addr ";
-//                    break;
             }
 
         }
@@ -506,7 +464,6 @@ namespace tvlm{
 
         int size() const {
             return size_;
-//            return type_->size();
         }
 
         int printsize() const {
@@ -517,7 +474,6 @@ namespace tvlm{
             }else {
                 return size();
             }
-//            return type_->size();
         }
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
@@ -557,7 +513,6 @@ namespace tvlm{
         }
 
     protected:
-        // void accept(ILVisitor * v) override;
 
         ImmSize(Type * type,Instruction * amount, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Integer, ast, instrName, opcode},
@@ -602,9 +557,6 @@ namespace tvlm{
         size_t index() const{
             return index_;   
         }
-//        std::vector<Instruction *> args()const{
-//            return args_;
-//        }
 
         void replaceWith(Instruction *sub, Instruction *toReplace) override {
             //nothing to do
@@ -626,7 +578,6 @@ namespace tvlm{
         ~ImmIndex() override = default;
     protected:
 
-        // void accept(ILVisitor * v) override;
         ImmIndex(size_t index, Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type->registerType(), ast, instrName, opcode},
             index_{index}, type_(type) {
@@ -776,7 +727,6 @@ namespace tvlm{
 
     protected:
         const char *  resolve_operator() const;
-        // void accept(ILVisitor * v) override;
 
         BinaryOperator(Opcode op, BinOpType oper, Instruction * lhs, Instruction * rhs, ASTBase const * ast, const std::string & instrName):
             Instruction{GetResultType(lhs, rhs, oper), ast, instrName, op},
@@ -796,9 +746,6 @@ namespace tvlm{
                 case BinOpType::GTE:
                 case BinOpType::EQ:
                 case BinOpType::NEQ:
-//                case BinOpType::AND:
-//                case BinOpType::OR:
-//                case BinOpType::XOR:
                 return true;
             default:
                 return false;
@@ -870,7 +817,6 @@ namespace tvlm{
 
     protected:
         const char *  resolve_operator() const;
-        // void accept(ILVisitor * v) override;
 
         UnaryOperator( Opcode op, UnOpType oper, Instruction * operand, ASTBase const * ast, const std::string & instrName):
             Instruction{operand->resultType(), ast, instrName, op},
@@ -938,7 +884,6 @@ namespace tvlm{
         }
 
     protected:
-        // void accept(ILVisitor * v) override;
 
         LoadAddress(Instruction * address,Type * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{type->registerType(), ast, instrName, opcode},
@@ -1020,7 +965,6 @@ namespace tvlm{
 
         ~StoreAddress() override= default;
     protected:
-        // void accept(ILVisitor * v) override;
 
         StoreAddress(Instruction * value, Instruction * address, ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Instruction{ResultType::Void, ast, instrName, opcode},
@@ -1085,7 +1029,7 @@ namespace tvlm{
         Terminator0(ASTBase const * ast, const std::string & instrName, Opcode opcode):
             Terminator{ast, instrName, opcode} {
         }
-        // void accept(ILVisitor * v) override;
+
         std::vector<BasicBlock * > allTargets()const override {
             return {};
         }
@@ -1120,7 +1064,6 @@ namespace tvlm{
         }
 
         Instruction *copyWithSwap(const std::unordered_map<Instruction *, Instruction *> &swapInstr) const override {
-
             auto itvalue = swapInstr.find(returnValue_);
             auto * cpy = dynamic_cast<Returnator*>(clone());
             if(itvalue != swapInstr.end()){
@@ -1211,9 +1154,6 @@ namespace tvlm{
         BasicBlock * trueTarget() const { return targets_[1]; }
         BasicBlock * falseTarget() const { return targets_[0]; }
 
-//        void addTarget(BasicBlock * target) {
-//            targets_.push_back(target);
-//        }
         void print(tiny::ASTPrettyPrinter & p) const override;
         void printAlloc(tiny::ASTPrettyPrinter & p) const override;
         void replaceWith(Instruction *sub, Instruction *toReplace) override{
@@ -1237,7 +1177,6 @@ namespace tvlm{
         }
 
     protected:
-        // void accept(ILVisitor * v) override;
 
         Terminator2(Instruction * cond,BasicBlock * trueTarget, BasicBlock * falseTarget, ASTBase const * ast, const std::string & instrName, Opcode opcode);
 
@@ -1301,7 +1240,6 @@ namespace tvlm{
 
         ~SrcInstruction() override = default;
     protected:
-        // void accept(ILVisitor * v) override;
 
         SrcInstruction(Instruction * src, ResultType type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{type, ast, instrName, opcode},
@@ -1346,7 +1284,6 @@ namespace tvlm{
         }
 
     protected:
-//        virtual void accept(ILVisitor * v) override;
 
         VoidInstruction( ResultType type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{type, ast, instrName, opcode}{
@@ -1357,7 +1294,6 @@ namespace tvlm{
     class Instruction::PhiInstruction : public Instruction{
     public:
         std::vector<Instruction*> children() const override{
-//            throw "not implemented children on Phi Instruction";
             std::vector<Instruction*> successors;
             successors.reserve(contents_.size());
             for (auto & c: contents_) {
@@ -1412,7 +1348,6 @@ namespace tvlm{
         ~PhiInstruction() override = default;
 
     protected:
-//        virtual void accept(ILVisitor * v) override;
 
         PhiInstruction( ResultType type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{type, ast, instrName, opcode}{
@@ -1487,7 +1422,6 @@ namespace tvlm{
       }
 
   protected:
-//      virtual void accept(ILVisitor * v) override;
 
         StructAssignInstruction( Instruction * srcVal, Instruction * dstAddr, Type::Struct * type, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 Instruction{ResultType::Void, ast, instrName, opcode},
@@ -1584,7 +1518,6 @@ namespace tvlm{
         }
 
     protected:
-//        virtual void accept(ILVisitor * v) override;
 
         ElemOffsetInstruction( Instruction * base, Instruction * offset,  ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 ElemInstruction{base, ast, instrName, opcode },
@@ -1662,7 +1595,6 @@ namespace tvlm{
         }
 
     protected:
-//    virtual void accept(ILVisitor * v) override;
 
         ElemIndexInstruction( Instruction * base,Instruction * offset, Instruction * index, ASTBase const * ast, const std::string & instrName, Opcode opcode):
                 ElemInstruction{base, ast, instrName, opcode },
@@ -1700,8 +1632,6 @@ namespace tvlm{
 
         ~CallInstruction() override =default;
 
-
-
     protected:
 
         CallInstruction(std::vector<std::pair< Instruction *, Type*>> && args,
@@ -1715,14 +1645,13 @@ namespace tvlm{
             }
         }
         std::vector<std::pair< Instruction *, Type*>> args_;
+
     }; // Instruction::CallInstruction
 
     class Instruction::DirectCallInstruction : public CallInstruction{
     public:
 
-
         bool operator==(const IL *il) const override;
-
 
         Function * f() const {
             return f_;
@@ -1756,7 +1685,6 @@ namespace tvlm{
         }
 
     protected:
-//        virtual void accept(ILVisitor * v) override;
 
         DirectCallInstruction(Function * f, std::vector<std::pair< Instruction *, Type*>> && args,
                               const ASTBase * ast , const std::string & instrName, Opcode opcode);
@@ -1842,7 +1770,6 @@ namespace tvlm{
 
         ~IndirectCallInstruction() override = default;
     protected:
-//        virtual void accept(ILVisitor * v) override;
 
         IndirectCallInstruction(Instruction * f,Type * retType, std::vector<std::pair< Instruction *, Type*>> && args,const ASTBase * ast, const std::string & instrName, Opcode opcode ):
                 CallInstruction{std::move(args), ast, instrName, opcode, f->resultType()},
@@ -1857,7 +1784,6 @@ namespace tvlm{
         Instruction * f_;
         Type * retType_;
     }; // Instruction::IndirectCallInstruction
-
 
 
     class ILFriend {
@@ -1882,7 +1808,6 @@ namespace tvlm{
         static Instruction *getVariableAddress(ILBuilder &p, const Symbol &name);
     };
 
-
     class ILVisitor : public ILFriend{
     public:
         virtual ~ILVisitor() = default;
@@ -1895,7 +1820,6 @@ namespace tvlm{
         virtual void visit(Copy * ins) = 0;
         virtual void visit(Extend * ins) = 0;
         virtual void visit(Truncate * ins) = 0;
-//        virtual void visit(Instruction::SrcInstruction * ins) = 0;
         virtual void visit(BinOp * ins) = 0;
         virtual void visit(UnOp * ins) = 0;
         virtual void visit(LoadImm * ins) = 0;
@@ -1927,10 +1851,6 @@ namespace tvlm{
     };
 
     // tinyc::ASTVisitor
-
-
-
-
 
 
 #define INS(NAME, ENCODING) class NAME : public Instruction::ENCODING { \
@@ -2040,21 +1960,18 @@ namespace tvlm{
                 return;
             }
             replaceInstr(ins, new NOPInstruction( ins->ast()));
-//            delete ins;
-
 
         }
         Instruction * replaceInstr(Instruction *  ins, Instruction * with) {
             auto it = insns_.begin();
             for (;it != insns_.end() && it->get() != ins ;it++ );
             if(it == insns_.end()){
-                delete with; //TODO make checks
+                delete with;
                 return nullptr;
             }
             ins->replaceMe(with);
             it->reset(with);
 
-//            delete ins; // done by reset
             return with;
 
         }
@@ -2069,7 +1986,6 @@ namespace tvlm{
             p.indent();
             p.newline();
             for (auto & i : insns_) {
-                // TODO add printing of instructions in some nice way
                 i->print(p);
                 p.newline();
             }
@@ -2119,10 +2035,7 @@ namespace tvlm{
             bl->predecessor_.push_back(this);
         }
         void replaceWith(BasicBlock *sub, BasicBlock *toReplace) {
-            //TODO
             throw "not implemented replacing of BasicBLocks";
-
-
 
         }
 
@@ -2199,8 +2112,7 @@ BasicBlock * copyUntil(
 
         friend class ILFriend;
         friend class TargetProgram;
-        template<class T>
-        friend class tvlm::CfgBuilder;
+
     private:
         std::string name_;
         std::vector<std::unique_ptr<Instruction>> insns_;
@@ -2254,7 +2166,7 @@ BasicBlock * copyUntil(
 
         void print(tiny::ASTPrettyPrinter & p) const {
 
-            p << p.comment << "function: " ; //<< il_->type()->toString();
+            p << p.comment << "function: " ;
             p.newline();
             p << p.identifier << name_ << p.symbol << ":";
             p.indent();
@@ -2266,7 +2178,7 @@ BasicBlock * copyUntil(
         }
         void printAlloc(tiny::ASTPrettyPrinter & p) const {
 
-            p << p.comment << "function: " ; //<< il_->type()->toString();
+            p << p.comment << "function: " ;
             p.newline();
             p << p.identifier << name_ << p.symbol << ":";
             p.indent();
@@ -2290,9 +2202,7 @@ BasicBlock * copyUntil(
                 bb->removeInstr(instr);
             }
 
-
             bbs_.erase(bbit);
-
         }
 
         const ASTBase * ast(){
@@ -2310,13 +2220,9 @@ BasicBlock * copyUntil(
         friend class TargetProgram;
 
         ASTBase const * ast_;
-
         std::string name_;
-
         std::vector<std::unique_ptr<BasicBlock>> bbs_;
-
         ResultType resultType_;
-
         Type * type_;
 
     };   // tvlm::Function
@@ -2387,31 +2293,5 @@ BasicBlock * copyUntil(
         std::vector<std::unique_ptr<tvlm::Type>> allocated_types_;
         std::unordered_map<Symbol, Instruction*> globalNames_;
     } ; // tvlm::Program
-
-
-//    inline void Instruction::Terminator0::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::Terminator1::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::Terminator2::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::Returnator::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::BinaryOperator::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::UnaryOperator::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::LoadAddress::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::StoreAddress::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::SrcInstruction::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::VoidInstruction::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::PhiInstruction::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::ElemIndexInstruction::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::ElemOffsetInstruction::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::StructAssignInstruction::accept(ILVisitor *v) {v->visit(this); }
-//    inline void Instruction::IndirectCallInstruction::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::DirectCallInstruction::accept(ILVisitor * v) { v->visit(this); }
-//
-//
-//
-//    inline void Instruction::ImmValue::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::ImmSize::accept(ILVisitor * v) { v->visit(this); }
-//    inline void Instruction::ImmIndex::accept(ILVisitor * v) { v->visit(this); }
-
-
 
 } // namespace tvlm

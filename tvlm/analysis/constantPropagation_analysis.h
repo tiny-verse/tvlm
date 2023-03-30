@@ -11,19 +11,14 @@
 
 namespace tvlm{
     using Instruction = ::tvlm::Instruction;
-
-
-
     using CPNodeState = MAP<Declaration*, Const*>;
+
     template<class T>
     using ConstVars = MAP<const CfgNode<T> *, CPNodeState>;
-    ;
+
 
     template<class Info = DummyClass>
     class ConstantPropagationAnalysis : public BackwardAnalysis<ConstVars<Info>, Info>{
-
-    //    using Declaration = tvlm::Instruction;
-    //    using Declarations = MAP< ILInstruction *, Declaration*>;
 
         CPNodeState join(const CfgNode<Info> * node, ConstVars<Info> & state);
 
@@ -36,7 +31,7 @@ namespace tvlm{
 
         CPNodeState funOne(const CfgNode<Info> * node, ConstVars<Info> & state);
     public:
-//        static ConstantPropagationAnalysis<Info> * create(Program * p);
+
         virtual ~ConstantPropagationAnalysis(){
             delete cfg_;
         }
@@ -91,8 +86,7 @@ namespace tvlm{
         } else if (auto load = dynamic_cast<Load *>(expr)) {
             return  state.access(load->address());
         }else if (auto loadImm = dynamic_cast<LoadImm *>(expr)){
-//                    std::unordered_set<Declaration*> children = getSubtree(node);
-//                    newState.insert(children.begin(), children.end());
+
             if(loadImm->resultType() == ResultType::Double){
                  return constPropLattice_->num(Constant(loadImm->valueFloat()));
             }else{
@@ -105,63 +99,48 @@ namespace tvlm{
 
         }else if (auto ext = dynamic_cast<Extend *>(expr)){
             auto old = eval(ext->src(), state);
-            return  constPropLattice_->extend(old) ;
+            return  constPropLattice_->extend(old);
 
         }else if (auto trunc = dynamic_cast<Truncate *>(expr)){
             auto old = eval(trunc->src(), state);
-            return constPropLattice_->trunc(old) ;
+            return constPropLattice_->trunc(old);
+
         }else if (auto binop = dynamic_cast<BinOp *>(expr)){
             auto oldLhs = eval(binop->lhs(), state);
             auto oldRhs = eval(binop->rhs(), state);
             switch(binop->opType()){
                 case BinOpType::ADD:
                     return  constPropLattice_->plus(oldLhs, oldRhs);
-                    break;
                 case BinOpType::SUB:
                     return  constPropLattice_->minus(oldLhs, oldRhs);
-                    break;
                 case BinOpType::MUL:
                     return  constPropLattice_->times(oldLhs, oldRhs);
-                    break;
                 case BinOpType::DIV:
                     return  constPropLattice_->div(oldLhs, oldRhs);
-                    break;
                 case BinOpType::MOD:
                     return  constPropLattice_->mod(oldLhs, oldRhs);
-                    break;
                 case BinOpType::LSH:
                     return  constPropLattice_->lsh(oldLhs, oldRhs);
-                    break;
                 case BinOpType::RSH:
                     return  constPropLattice_->rsh(oldLhs, oldRhs);
-                    break;
                 case BinOpType::AND:
                     return  constPropLattice_->band(oldLhs, oldRhs);
-                    break;
                 case BinOpType::XOR:
                     return  constPropLattice_->bxor(oldLhs, oldRhs);
-                    break;
                 case BinOpType::OR:
                     return  constPropLattice_->bor(oldLhs, oldRhs);
-                    break;
                 case BinOpType::NEQ:
                     return  constPropLattice_->neq(oldLhs, oldRhs);
-                    break;
                 case BinOpType::EQ:
                     return  constPropLattice_->eq(oldLhs, oldRhs);
-                    break;
                 case BinOpType::LTE:
                     return  constPropLattice_->lte(oldLhs, oldRhs);
-                    break;
                 case BinOpType::LT:
                     return  constPropLattice_->lt(oldLhs, oldRhs);
-                    break;
                 case BinOpType::GT:
                     return  constPropLattice_->gt(oldLhs, oldRhs);
-                    break;
                 case BinOpType::GTE:
                     return  constPropLattice_->gte(oldLhs, oldRhs);
-                    break;
             }
 
         }else if (auto unop = dynamic_cast<UnOp *>(expr)){
@@ -196,7 +175,6 @@ namespace tvlm{
                 return  tmp ;
             }
 
-
         }else{
             return constPropLattice_->top();
         }
@@ -216,14 +194,13 @@ namespace tvlm{
             return state;
         }else if(auto * stmtNode = dynamic_cast<const CfgStmtNode<I> *>(node)){
             auto instr = dynamic_cast<ILInstruction *>(stmtNode->il());
-            if(instr) { //TODO rules to add and remove from states
-
+            if(instr) {
 
                 if (dynamic_cast<AllocL *>(stmtNode->il())) {
                     auto newState = state;
                     newState.insert(std::make_pair(instr, constPropLattice_->bot()));
                     return newState;
-//                    return ;
+
                 } else if (dynamic_cast<AllocG *>(stmtNode->il())) {
                     auto newState = state;
                     newState.insert(std::make_pair(instr, constPropLattice_->bot()));
@@ -245,23 +222,11 @@ namespace tvlm{
                     newState.update(std::make_pair(store->address(), realValue));
                     return newState;
                 }
-//                else if (auto load = dynamic_cast<Load *>(stmtNode->il())) {
-//                    auto newState = state;
-//
-//                    newState.update(std::make_pair(load, state.access(load->address())));
-//
-//                    return newState;
-//                }
-                else {}
             }
-
-        } else{
         }
+
         return state;
     }
-
-
-
 
     template<class Info>
     ConstVars<Info> ConstantPropagationAnalysis<Info>::analyze() {

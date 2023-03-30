@@ -133,8 +133,6 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         p.dedent();
     };
 
-
-
     Instruction::DirectCallInstruction::DirectCallInstruction(Function *f, std::vector<std::pair< Instruction *, Type*>> &&args,
                                                               const ASTBase *ast, const std::string &instrName,
                                                               Instruction::Opcode opcode) :
@@ -285,7 +283,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         Instruction::print(p);
         p << p.keyword << instrName_ << " " ;
         printRegister(p, base_);
-//        p << p.keyword<<  "+ " << p.numberLiteral << offset_.size();
+
         p << p.keyword<<  "+ "; printRegister(p, offset_);
     }
 
@@ -304,7 +302,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
             printAllocRegister(p, base_);
             p << p.keyword<<  "+ ";
             printAllocRegister(p, index_);
-//            p << p.keyword<<  "x " << p.numberLiteral << offset_.size();
+
             p << p.keyword<<  "x " << p.numberLiteral;
             printAllocRegister(p, offset_);
     }
@@ -313,7 +311,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         Instruction::printAlloc(p);
         p << p.keyword << instrName_ << " " ;
         printAllocRegister(p, base_);
-//        p << p.keyword<<  "+ " << p.numberLiteral << offset_.size();
+
         p << p.keyword<<  "+ "; printAllocRegister(p, offset_);
     }
 
@@ -328,6 +326,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     std::vector<BasicBlock *> ILFriend::getFunctionBBs(Function *f)  {
         std::vector<BasicBlock*> tmp;
+        tmp.reserve(f->bbs_.size());
         for(const auto & bb : f->bbs_){
             tmp.emplace_back(bb.get());
         }
@@ -340,6 +339,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     std::vector<Instruction *> ILFriend::getBBsInstructions(BasicBlock *bb)  {
         std::vector<Instruction*> tmp;
+        tmp.reserve(bb->insns_.size());
         for(const auto & ins : bb->insns_){
             tmp.emplace_back(ins.get());
         }
@@ -352,6 +352,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
 
     std::vector<std::pair<Symbol, Function *>> ILFriend::getProgramsFunctions(Program *p) {
         std::vector<std::pair<Symbol, Function*>> tmp;
+        tmp.reserve(p->functions_.size());
         for(const auto & f : p->functions_){
             tmp.emplace_back(f.first, f.second.get());
         }
@@ -390,13 +391,8 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
     }
 
     size_t Type::Array::size() const {
-        //throw "unknown size"; TODO
         size_t result = resolveStatic(size_);
-//        auto sz = dynamic_cast<LoadImm *>(size_);
-//        assert(sz && sz->resultType() == ResultType::Integer);
-//        if(result){
-            return base_->size() * result;
-//        }
+        return base_->size() * result;
     }
 
     size_t Type::Array::resolveStatic(Instruction *instr) const {
@@ -520,7 +516,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
             }else if (binop->rhs()->resultType() == ResultType::Double){
                 rhs = resolveStaticDouble(binop->rhs());
             }
-            size_t res = 0;
+            double res = 0;
             switch (binop->opType()) {
                 case BinOpType::ADD:
                     res = lhs + rhs;
@@ -544,16 +540,13 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
                     res = lhs || rhs;
                     break;
                 case BinOpType::XOR:
-//                    res = lhs ^ rhs;
                     throw tiny::ParserError("cannot use xor on double operand", instr->ast()->location());
 
                     break;
                 case BinOpType::LSH:
-//                    res = lhs << rhs;
                     throw tiny::ParserError("cannot use << on double operand", instr->ast()->location());
                     break;
                 case BinOpType::RSH:
-//                    res = lhs >> rhs;
                     throw tiny::ParserError("cannot use >> on double operand", instr->ast()->location());
 
                     break;
@@ -578,9 +571,9 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
             }
             return res;
         }else if(auto unop = dynamic_cast<UnOp*>(instr)){
-            size_t operand;
+            double operand;
             if(unop->operand()->resultType() == ResultType::Integer){
-                operand = resolveStatic(unop->operand());
+                operand = (double)resolveStatic(unop->operand());
             }else if (unop->operand()->resultType() == ResultType::Double){
                 operand = (int)resolveStaticDouble(unop->operand());
             }
@@ -606,12 +599,12 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
             return (int)resolveStaticDouble(extend);
         }else if(auto loadImm = dynamic_cast<LoadImm*>(instr)){
             if( loadImm->resultType() == ResultType::Integer){
-                return loadImm->valueInt();
+                return (double)loadImm->valueInt();
             }else{
                 return (int)resolveStaticDouble(instr);
             }
         }else{
-            throw new tiny::ParserError("cannot resolve statically", instr->ast()->location());
+            throw tiny::ParserError("cannot resolve statically", instr->ast()->location());
         }
 
         return 0;
@@ -651,8 +644,8 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
                     break; //only once should be there
                 }
             }
-
         }
+
     }
 }
 

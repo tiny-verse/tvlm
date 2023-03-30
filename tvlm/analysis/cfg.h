@@ -58,8 +58,6 @@ protected:
     std::unordered_set<CfgNode<T> *> exitNodes_;
 
 private:
-//    friend ProgramCfg<T> * get(Program * program, GlobalCfg<T> * globalCfg, std::unordered_set<FunctionCfg<T>*> & functionsCfg);
-//template<class Tt>
     friend class ProgramCfg<T>;};
 
 template<class T>
@@ -89,9 +87,6 @@ public:
         for (auto* n : frags_) {
             delete n;
         }
-//        for (int i = 0; i < frags_.size(); ++i) {
-//            delete frags_[i];
-//        }
     }
     const CfgFunEntryNode<T> * entry()const {
         return entry_;
@@ -138,8 +133,7 @@ protected:
             functionsCfg_(std::move(functionsCfg)),
             p_(program)
             {
-
-    }
+            }
 
 public:
     virtual ~ProgramCfg() = default;
@@ -150,20 +144,9 @@ public:
     }
 
     ProgramCfg(const ProgramCfg<T> & other) = delete;
-//    :FragmentCfg(other.entryNodes_, other.exitNodes_),
-//    p_(other.p_){
-//        functionsCfg_.reserve(other.functionsCfg_.size());
-//        auto e  = other.functionsCfg_.begin();
-//        auto f = functionsCfg_.begin();
-//        for (; e != other.functionsCfg_.end();e++, f++) {
-//            functionsCfg_.emplace_back(new FunctionCfg(**(e)));
-//        }
-//    }
-
 public:
 
     static ProgramCfg<T> * get(Program * program, GlobalCfg<T> * globalCfg, std::unordered_set<FunctionCfg<T>*> & functionsCfg);
-
 
 private:
     std::vector<std::unique_ptr<FragmentCfg<T>>> functionsCfg_;
@@ -174,7 +157,7 @@ private:
 using ILInstruction = Instruction;
 
 template<class T>
-class CfgBuilder {
+class CfgBuilder : public ILFriend{
 public:
     CfgBuilder(std::map<const CfgNode<T>*, const Instruction *> * cfg_mapping,
                std::map<const Instruction *, const CfgNode<T>*> * instr_mapping):
@@ -195,8 +178,6 @@ public:
         for (auto & ff : p->functions()) {
             tmp.insert( fromFunction(ff.second.get()) );
         }
-
-
         return ProgramCfg<T>::get(p,fromGlobals(p->globals_.get()), tmp);
     }
 
@@ -206,7 +187,7 @@ protected:
     }
 
     static std::vector<std::unique_ptr<Instruction>> & getInstructions(BasicBlock * bb) {
-        return bb->insns_;
+        return getpureBBsInstructions(bb);
     }
     std::map<const CfgNode<T>*, const Instruction *> * cfg_mapping_;
     std::map<const Instruction *, const CfgNode<T>*> * instr_mapping_;
@@ -249,17 +230,14 @@ private:
 
 
     CfgNode<T> * append(CfgNode<T> * a){
-//        allNodes.emplace_back(a);
         return current_fnc->addNode(a);
     }
 
     FragmentCfg<T> * append(FragmentCfg<T> * a){
-//        allFragments.emplace_back(a);
         return current_fnc->addFragment(a);
     }
 
-//    std::vector<std::unique_ptr<CfgNode<T>>> allNodes;
-//    std::vector<std::unique_ptr<FragmentCfg<T>>> allFragments;
+
     std::map<IL*, CfgNode<T>*> allNodesMap_;
     std::map<IL*, FragmentCfg<T>*> allFragmentsMap_;
     FragmentCfg<T> * fncexit_;
@@ -384,7 +362,7 @@ private:
         }
 
         FragmentCfg<T> * fullGlobalCfg = entryPtr->concat(acc)->concat(exitPtr);
-//        globalCfg->addNode(fullGlobalCfg); //TODO how to do better memory management
+
         globalCfg->addFragment(fullGlobalCfg);
         globalCfg->setCfg(fullGlobalCfg);
         current_fnc = nullptr;
@@ -402,15 +380,9 @@ private:
         auto ptr = single(entry);
         fncexit_ = single(exit);
         auto blockCfg = fromBB(CfgBuilder<T>::getBBs(fnc)[0].get());
-        FragmentCfg<T> * cfg = ptr->concat(blockCfg);//->concat(fncexit_); // exit appended by return
+        FragmentCfg<T> * cfg = ptr->concat(blockCfg); // exit appended by return
         append(cfg);
-//        for (auto & e: allNodes) {
-//            fncCfg->addNode(e.release());
-//        }allNodes.clear();
-//        for (auto & e: allFragments) {
-//            fncCfg->addFragment(e.release());
-//            assert(e == nullptr);
-//        }allFragments.clear();
+
         current_fnc = nullptr;
         fncCfg->setCfg(cfg);
         return fncCfg;
@@ -445,62 +417,22 @@ private:
         std::unordered_set<CfgNode<T>*> setEntry;
         std::unordered_set<CfgNode<T>*> setExit;
         std::vector<std::unique_ptr<FragmentCfg<T>>> tmp;
-//        FragmentCfg<T> *  AllGlobals = new FragmentCfg(std::unordered_set<CfgNode<T>*> (), std::unordered_set<CfgNode<T>*> ());
 
         tmp.reserve(functionsCfg.size());
         for(auto & e: functionsCfg ){
             auto prependedGlobals = globalCfg->concat (e);
             auto uPtr = std::unique_ptr<FragmentCfg<T>>(prependedGlobals);
             tmp.emplace_back(std::move(uPtr));
-//            auto tmpAllGlobals = AllGlobals;
-//            AllGlobals = (AllGlobals->concat( prependedGlobals));
-//            delete tmpAllGlobals;
 
             setExit.insert((CfgNode<T>*)e->exit());
             tmp.emplace_back(e);
         }
-//        AllGlobals = globalCfg->concat ((CfgNode<T>*)e->entry());
-//        tmp.emplace_back(AllGlobals);
 
-//        for(auto * i : ProgramFrag->entryNodes_){
-//            setEntry.insert(i);
-//        }
         for(auto * i : globalCfg->entryNodes_){
             setEntry.insert(i);
         }
-//        setEntry.insert(globalCfg);
+
         return new ProgramCfg(program, std::move(setEntry), std::move(setExit) , std::move(tmp) );
     }
-//ProgramCfg<T>* ProgramCfg<T>::get(Program *program, FragmentCfg<T> * globalCfg, std::unordered_set<FunctionCfg<T> *> &functionsCfg) {
-//        std::unordered_set<CfgNode<T>*> setEntry;
-//        for(auto & e: functionsCfg ){
-//            setEntry.insert((CfgNode<T>*)e->entry());
-//        }
-//        std::unordered_set<CfgNode<T>*> setExit;
-//        for(auto & e: functionsCfg ){
-//            setExit.insert((CfgNode<T>*)e->exit());
-//        }
-//
-//        std::vector<std::unique_ptr<FunctionCfg<T>>> tmp;
-//        std::vector<std::unique_ptr<CfgNode<T>>> globalNodes;
-//
-//
-//        tmp.reserve(functionsCfg.size());
-//        for (const auto e: functionsCfg) {
-//            tmp.emplace_back(e);
-//        }
-//        return new ProgramCfg(program, std::move(setEntry), globalCfg, std::move(setExit) , std::move(tmp) );
-//    }
-
-//    template<class T>
-//    FunctionCfg<T>::FunctionCfg(FunctionCfg &&fnc) : FragmentCfg<T>(std::move(fnc.entryNodes_), std::move(fnc.exitNodes_) ),
-//                                                     entry_(fnc.entry_), exit_(fnc.exit_), cfg_(fnc.cfg_),
-//                                                     nodes_(std::move(fnc.nodes_)),frags_(std::move(fnc.frags_)) {
-//        fnc.entry_ = nullptr;
-//        fnc.exit_ = nullptr;
-//        fnc.cfg_ = nullptr;
-//        fnc.nodes_.clear();
-//        fnc.frags_.clear();
-//    }
 
 } // namespace tiny::tvlm
