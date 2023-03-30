@@ -16,6 +16,9 @@ namespace tvlm{
         virtual ~FlatElem() = default;
         virtual FlatElem<A>* copy() const = 0;
         virtual bool operator == (const FlatElem<A> * other ) const = 0;
+        friend bool equals(const FlatElem<A> * x, const FlatElem<A> * y) {
+            return x->operator==(y);
+        }
         virtual A  get() = 0;
     };
 

@@ -395,14 +395,15 @@ namespace tvlm{
                         bb->removeInstr(src);
                     }
                 }
-            }else if(auto extend = dynamic_cast<Extend *>(first.get())){
+            }
+            else if(auto extend = dynamic_cast<Extend *>(first.get())){
 
                 if(auto src = dynamic_cast<LoadImm*>(extend->src())) {
                     if (src->resultType() == ResultType::Double) {
 
                         double value = src->valueFloat();
                         auto regName = first->name();
-                        bb->replaceInstr(first.get(), new LoadImm(value, trunc->ast()));
+                        bb->replaceInstr(first.get(), new LoadImm(value, extend->ast()));
                         first->setName(regName);
 
                         bb->removeInstr(src);
@@ -410,12 +411,13 @@ namespace tvlm{
 
                         double value = (double)src->valueInt();
                         auto regName = first->name();
-                        bb->replaceInstr(first.get(), new LoadImm(value, trunc->ast()));
+                        bb->replaceInstr(first.get(), new LoadImm(value, extend->ast()));
                         first->setName(regName);
                         bb->removeInstr(src);
                     }
                 }
-            }else if (auto load = dynamic_cast<Load *>(first.get())){
+            }
+            else if (auto load = dynamic_cast<Load *>(first.get())){
                 auto it = analysis.find((ILInstruction*)load->address());
                 if(it == analysis.end()){
                     std::cerr << "cannot find in analysis, dead code?";
@@ -440,7 +442,8 @@ namespace tvlm{
                     }
                 }
 
-            }else if (auto store = dynamic_cast<Store *>(first.get())){
+            }
+            else if (auto store = dynamic_cast<Store *>(first.get())){
                 auto it = analysis.find((ILInstruction*)store->address());
                 if(it == analysis.end()){
                     std::cerr << "cannot find in analysis, dead code?";

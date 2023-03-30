@@ -320,7 +320,10 @@ namespace tvlm{
         pb_.add(
                 tiny::t86::DBG(
                         [](tiny::t86::Cpu & cpu){
-                            auto & os = std::cerr;
+                            auto & os = std::cout;
+                            os <<std::endl
+                            << "*****************************************"
+                            <<std::endl;
                             os << "Pc: " << cpu.getRegister(tiny::t86::Pc()) << '\n';
                             os << "Sp: " << cpu.getRegister(tiny::t86::Sp()) << '\n';
                             os << "Bp: " << cpu.getRegister(tiny::t86::Bp()) << '\n';

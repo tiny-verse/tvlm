@@ -641,13 +641,14 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         if(auto term = dynamic_cast<Instruction::Terminator *>(ins)) {
             for (auto i = ins->getParentBB()->successor_.begin(); i != ins->getParentBB()->successor_.end(); i++) {
                 if (*i == this) { // remove matching me
-                    ins->getParentBB()->successor_.erase(i); // remove  with successors
+                    i = ins->getParentBB()->successor_.erase(i); // remove  with successors
                     break; //only once should be there
                 }
             }
             for (auto i = this->predecessor_.begin(); i != this->predecessor_.end(); i++) {
                 if (*i == ins->getParentBB()) { // remove cross check
-                    this->predecessor_.erase(i);
+                    i = this->predecessor_.erase(i);
+                    break; //only once should be there
                 }
             }
 

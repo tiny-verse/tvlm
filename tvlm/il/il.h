@@ -31,6 +31,9 @@ namespace tvlm{
         virtual ~IL() = default;
         virtual void accept(ILVisitor * v) = 0;
         virtual bool operator==(const IL * il) const = 0;
+        friend bool equals(const IL * x, const IL * y) {
+            return x->operator==(y);
+        }
     protected:
         friend class ILVisitor;
         friend class ILFriend;
@@ -495,7 +498,8 @@ namespace tvlm{
 
         bool operator==(const IL *il) const override {
             if( auto * other = dynamic_cast<const Instruction::ImmSize*>(il)){
-                return size_ == other->size_ && amount_->operator==(other->amount_);
+                return size_ == other->size_ && (  (amount_ == nullptr && other->amount_ == nullptr )
+                                                || (  amount_ != nullptr && other->amount_ != nullptr && amount_->operator==(other->amount_))) ;
             }
             else return false;
         }

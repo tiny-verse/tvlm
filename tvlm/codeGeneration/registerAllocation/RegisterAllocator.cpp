@@ -276,7 +276,7 @@ namespace tvlm{
                         writingPos_= 0;
                         setupRegister(((*virtRegs)[0]), ins->operand(), ins);
                         setupRegister(((*virtRegs)[1]), ins, ins);
-                        break;
+                        return;
                     }
                     case UnOpType::NOT:
                         writingPos_= 0;

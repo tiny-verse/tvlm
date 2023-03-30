@@ -237,6 +237,9 @@ namespace tvlm{
                 else if (auto store = dynamic_cast<Store *>(stmtNode->il())) {
                     auto newState = state;
 
+                    if(state.find(store->address()) == state.end()){
+                        return newState;
+                    }
                     Const * newValue = eval( store->value(),state);
                     Const * realValue = constPropLattice_->lub(newValue, state.access(store->address()));
                     newState.update(std::make_pair(store->address(), realValue));
@@ -274,7 +277,7 @@ namespace tvlm{
             auto x = X.access(n);
             auto y = funOne(n, X);
 
-            if (y != x) {
+            if (! equals(y,x)) {
                 X.update(std::make_pair(n, y));//X += n -> y
                 //W ++= n.pred;
                 W.insert( this->next(n).begin(), this->next(n).end());

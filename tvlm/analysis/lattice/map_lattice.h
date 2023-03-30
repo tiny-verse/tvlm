@@ -225,6 +225,9 @@ private:
 template<typename Aa, typename Bb>
 friend
 inline bool    operator==(const MAP<Aa, Bb>& x, const MAP<Aa, Bb>& y);
+template<typename Aa, typename Bb>
+friend
+inline bool    equals(const MAP<Aa, Bb>& x, const MAP<Aa, Bb>& y);
 };
 
 template<typename A, typename B>
@@ -242,6 +245,19 @@ inline bool
 operator==(const MAP<A, B>& x,
            const MAP<A, B>& y)
 { return x.contents_ == y.contents_; }
+
+template<typename A, typename B>
+inline bool
+equals(const MAP<A, B>& x,
+           const MAP<A, B>& y) {
+    if (x.contents_.size() != y.contents_.size()) return false;
+    auto itx = x.contents_.begin();
+    auto ity = y.contents_.begin();
+    for (; itx != x.contents_.end(); itx++, ity++) {
+        if (equals(itx->first, ity->first) && equals(itx->second, ity->second)) { continue; } else { return false; }
+    }
+    return true;
+}
 
 namespace tvlm{
 

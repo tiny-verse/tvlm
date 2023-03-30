@@ -37,6 +37,10 @@ namespace tvlm{
         bool operator!=(const Constant & other ) const {
             return ! operator==(other);
         }
+        friend
+        bool equals(const Constant * x, const Constant * y){
+            return x->operator==(*y);
+        }
     private:
         int64_t intVal_;
         double floatValue_;

@@ -7,7 +7,7 @@
 namespace tvlm{
     void Optimizer::optimize(IL &ir) {
 
-        std::stringstream ss;
+         std::stringstream ss;
         auto printer = tiny::ASTPrettyPrinter(ss);
         ir.print(printer);
         std::cerr << tiny::color::lightBlue << "IL before optimizer" << ":\n" << ss.str() << std::endl;
@@ -69,7 +69,7 @@ namespace tvlm{
             }
         }
         if(constant){
-            std::cerr<<"contant_propagation is ON!" << std::endl;
+//            std::cerr<<"contant_propagation is ON!" << std::endl;
             passes_.push_back(std::make_unique<ConstantPropagation>());
         }
         if(deadCodeElimination){

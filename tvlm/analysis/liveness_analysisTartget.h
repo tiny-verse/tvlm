@@ -465,7 +465,11 @@ private:
                     std::set<CLiveRange*> children = getSubtree(node);
                     newState.insert(children.begin(), children.end());
 
-                    combineLR(newState, unop, unop->operand());
+                    if(unop->opType() == UnOpType::UNSUB){
+                        //un sub uses second register for zero therefore cannot combine
+                    }else{
+                        combineLR(newState, unop, unop->operand());
+                    }
 //                    auto operand = varMaps_.find(unop->operand());
 //                    auto res = varMaps_.find(node->il());
 //
