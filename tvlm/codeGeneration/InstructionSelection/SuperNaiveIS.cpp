@@ -101,7 +101,7 @@ namespace tvlm {
 //        //args /*-> prepare values
         for (auto it = ins->args().crbegin() ; it != ins->args().crend();it++) {
             if((*it).second->registerType() == ResultType::Integer){
-                auto argReg = getReg(it->first, ins);
+                auto argReg = getAllocAddrReg(it->first, ins);
                 addF(LMBS tiny::t86::PUSH(vR(argReg)) LMBE, ins);
             }else if ((*it).second->registerType() == ResultType::Double){
                 auto argFReg = getFReg(it->first, ins);
@@ -728,7 +728,7 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
 
     void SuperNaiveIS::copyStruct(size_t from, Type *type, size_t to, const Instruction * ins) {
 
-        auto tmpReg = getReg(ins, ins);
+        auto tmpReg = getExtraIntReg(ins);
         Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
         for (int i = 0; i < strct->size(); ++i) {
             addF( LMBS tiny::t86::MOV( vR(tmpReg), tiny::t86::Mem( vR(from) + i )) LMBE, ins);
@@ -738,7 +738,7 @@ addF(LMBS tiny::t86::MUL(vR(regOffset),
     }
     void SuperNaiveIS::copyStruct(size_t from, Type *type, Register to, const Instruction * ins) {
 
-        auto tmpReg = getReg(ins, ins);
+        auto tmpReg = getExtraIntReg(ins);
         Type::Struct * strct =  dynamic_cast<Type::Struct *>(type);
         for (int i = 0; i < strct->size(); ++i) {
             addF( LMBS tiny::t86::MOV( vR(tmpReg), tiny::t86::Mem( vR(from) + i )) LMBE, ins);

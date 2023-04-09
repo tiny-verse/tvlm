@@ -213,14 +213,14 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         auto itr = swapInstr.find(rhs_);
 
         if(itl != swapInstr.end()){
-            cpy->lhs_->removeUsage(cpy);
+//            cpy->lhs_->removeUsage(this);
             cpy->lhs_ = itl->second;
             cpy->lhs_->registerUsage(cpy);
 
         }
 
         if(itr != swapInstr.end()){
-            cpy->rhs_->removeUsage(cpy);
+//            cpy->rhs_->removeUsage(this);
             cpy->rhs_ = itr->second;
             cpy->rhs_->registerUsage(cpy);
 
@@ -258,7 +258,7 @@ Instruction::Terminator2::Terminator2(Instruction *cond, BasicBlock * trueTarget
         UnaryOperator * cpy =static_cast<UnaryOperator*>(clone());
         auto it = swapInstr.find(operand_);
         if(it != swapInstr.end()){
-            cpy->operand_->removeUsage(cpy);
+//            cpy->operand_->removeUsage(this);
             cpy->operand_ = it->second;
             cpy->operand_->registerUsage(cpy);
 

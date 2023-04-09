@@ -35,8 +35,8 @@ namespace tvlm{
         //:/ INTERFACE
         void registerMemLocation( const Store * ins, const Instruction * currentIns);
 
-        VirtualRegister getReg( Instruction * currentIns) override;
-        VirtualRegister getFReg( Instruction * currentIns) override;
+        VirtualRegister getReg(Instruction * ins,  Instruction * currentIns) override;
+        VirtualRegister getFReg( Instruction * ins , Instruction * currentIns) override;
 //        VirtualRegister getFreeFRegister(const Instruction * currentIns);
 
         // :/ ---------------------
@@ -46,7 +46,7 @@ namespace tvlm{
         void releaseRegister(const VirtualRegister & reg);
         void eraseFromFreeReg(VirtualRegisterPlaceholder & reg);
 
-        VirtualRegister getLastRegister(const Instruction *currentIns) override;
+        VirtualRegister getLastRegister( Instruction *currentIns) override;
 
     protected:
 void removeFromRegisterDescriptor(const Instruction * ins);

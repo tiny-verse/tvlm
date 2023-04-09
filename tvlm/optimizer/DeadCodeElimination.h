@@ -6,9 +6,9 @@
 namespace tvlm{
     class DeadCodeElimination : public Pass {
 
-        void optimizeDeadCodeElimination(BasicBlock *bb);
-
         void optimizeBasicBlock(BasicBlock* bb);
+
+        void optimizeDeadCodeElimination(BasicBlock *bb);
 
 
     public:
@@ -16,5 +16,7 @@ namespace tvlm{
         std::string name() const override{
             return "DCE";
         }
+
+        bool unusedFunction(IL &program, const Symbol &symbol);
     };
 }

@@ -1,4 +1,5 @@
 #include "ColoringAllocator.h"
+#include "common/config.h"
 
 namespace tvlm {
 
@@ -8,7 +9,7 @@ namespace tvlm {
         return res;
     }
 
-    ColoringAllocator::VirtualRegister ColoringAllocator::getReg(Instruction *ins) {
+    ColoringAllocator::VirtualRegister ColoringAllocator::getReg(Instruction *ins, Instruction * currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::INTEGER, 0);
         auto it = colorPickingResult_.find(ins);
         if(it != colorPickingResult_.end()){
@@ -16,7 +17,7 @@ namespace tvlm {
             if(knownMapping != finalMapping_.end()){
                 res = knownMapping->second;
             }else{
-                VirtualRegister tmp = SuperNaiveRegisterAllocator::getReg(ins);
+                VirtualRegister tmp = SuperNaiveRegisterAllocator::getReg(ins, currentIns);
                 finalMapping_.emplace(it->second, tmp);
                 res = tmp;
             }
@@ -41,12 +42,12 @@ namespace tvlm {
             return res;
         }
         if(dynamic_cast<const AllocG*>(ins) || dynamic_cast<const AllocL*>(ins)){
-            return SuperNaiveRegisterAllocator::getReg(ins);
+            return SuperNaiveRegisterAllocator::getReg(ins, currentIns);
         }
         return res;
     }
 
-    ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(Instruction *ins) {
+    ColoringAllocator::VirtualRegister ColoringAllocator::getFReg(Instruction * ins, Instruction *currentIns) {
         VirtualRegister res = VirtualRegister(RegisterType::FLOAT, 0);
         auto it = colorPickingResult_.find(ins);
         if(it != colorPickingResult_.end()){
@@ -54,7 +55,7 @@ namespace tvlm {
             if(knownMapping != finalFMapping_.end()){
                 res = knownMapping->second;
             }else{
-                VirtualRegister tmp = SuperNaiveRegisterAllocator::getFReg(ins);
+                VirtualRegister tmp = SuperNaiveRegisterAllocator::getFReg(ins, currentIns);
                 finalFMapping_.emplace(it->second, tmp);
                 res = tmp;
             }
@@ -65,7 +66,25 @@ namespace tvlm {
 
             return res;
         }
-        throw "[Coloring Allocator] cannot find instruction in results for float";
+        else if (ins->usages().empty()){
+            // instruction is not used -- takes only free register overwrites and will be overwritten
+            if(freeFReg_.empty()){
+                res = *freeFReg_.begin();
+                freeFReg_.erase(freeFReg_.begin());
+            }
+            regQueue_.push_back(res);
+
+            bool global = false;
+            if(*ins->name().begin() == 'g'){global = true;}
+            ins->setAllocName(generateInstrName(res, global));
+
+            return res;
+        }
+        if(dynamic_cast<const AllocG*>(ins) || dynamic_cast<const AllocL*>(ins)){
+            return SuperNaiveRegisterAllocator::getFReg(ins, currentIns);
+        }
+        return res;
+
     }
 
     bool ColoringAllocator::setColors() {
@@ -310,7 +329,7 @@ namespace tvlm {
         liveRanges_.push_back(std::move(lr));
     }
 
-    void ColoringAllocator::callingConvCallerSave(const Instruction *currIns) {
+    void ColoringAllocator::callingConvCallerSave( Instruction *currIns) {
 
         auto cfgs = la_->instr_mapping().find(currIns);
         if(cfgs == la_->instr_mapping().end()){
@@ -345,4 +364,51 @@ namespace tvlm {
         finalFMapping_.clear();
         return RegisterAllocator::resetFreeRegs(except);
     }
+
+    RegisterAllocator::VirtualRegister ColoringAllocator::getLastRegister( Instruction *currentIns) {
+        return SuperNaiveRegisterAllocator::getReg(currentIns, currentIns);
+    }
+
+    void ColoringAllocator::visit(BasicBlock *bb) {
+
+            for (auto * ins : getBBsInstructions(bb)) {
+                visitChild(ins);
+            }
+
+    }
+    void ColoringAllocator::visit(tvlm::Jump *ins) {
+        writingPos_ = 0;
+//        spillAll(ins);
+
+        updateJumpPatchPositions(ins);
+    }
+
+    void ColoringAllocator::visit(tvlm::CondJump *ins) {
+
+        auto virtRegs = getAllocatedVirtualRegisters(ins);
+//        writingPos_= 0; .. preceding spill cannot decrease
+        writingPos_ = 0;
+        setupRegister(((*virtRegs)[0]), ins->condition(), ins);
+//        spillAll(ins);
+
+        updateJumpPatchPositions(ins);
+
+    }
+
+    void ColoringAllocator::visit(Return *ins) {
+        if(ins->returnValue()){
+            auto virtRegs = getAllocatedVirtualRegisters(ins);
+            if (ins->returnType()->registerType() == ResultType::Double){
+//                writingPos_= 0;.. preceding spill cannot decrease
+                setupFRegister(((*virtRegs)[0]), ins->returnValue(),ins);
+            }else if (ins->returnType()->registerType() == ResultType::Integer){
+//                writingPos_= 0;.. preceding spill cannot decrease
+                setupRegister(((*virtRegs)[0]), ins->returnValue(),ins);
+            }
+        }
+        callingConvCalleeRestore(ins);
+
+    }
+
+
 }

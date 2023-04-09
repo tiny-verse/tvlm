@@ -26,25 +26,26 @@ namespace tvlm{
         auto selected =  SuperNaiveIS::translate(std::move(il));
         bool color = setupColorConfig();
         std::unique_ptr<RegisterAllocator> regAllocator;
-        if(color){
-            regAllocator = std::make_unique<ColoringAllocator>( std::move(selected));
-        }else{
-            regAllocator = std::make_unique<SuperNaiveRegisterAllocator>( std::move(selected));
-
-        }
-        selected = std::move(regAllocator->run());
-        auto index = 0;
         std::stringstream ss;
         auto printer = tiny::ASTPrettyPrinter(ss);
-        bool again = regAllocator->changedProgram();
-        while(again){
-            ss.str("");
-            selected.program_->print(printer);
-            std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
-            selected = std::move(SuperNaiveIS::translate(std::move(selected)));
-            auto newregAllocator = ColoringAllocator(std::move(selected));
-            selected = std::move(newregAllocator.run());
-            again = newregAllocator.changedProgram();
+        auto index = 0;
+        if(color){
+            regAllocator = std::make_unique<ColoringAllocator>( std::move(selected));
+            selected = std::move(regAllocator->run());
+            bool again = regAllocator->changedProgram();
+            while(again){
+                ss.str("");
+                selected.program_->print(printer);
+                std::cerr << tiny::color::lightBlue << "IL" << index++  << ":\n" << ss.str() << std::endl;
+                selected = std::move(SuperNaiveIS::translate(std::move(selected)));
+                auto newregAllocator = ColoringAllocator(std::move(selected));
+                selected = std::move(newregAllocator.run());
+                again = newregAllocator.changedProgram();
+
+            }
+        }else{
+            regAllocator = std::make_unique<SuperNaiveRegisterAllocator>( std::move(selected));
+            selected = std::move(regAllocator->run());
 
         }
         ss.str("");

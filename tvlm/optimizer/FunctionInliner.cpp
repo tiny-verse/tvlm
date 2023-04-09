@@ -40,6 +40,7 @@ namespace tvlm{
                         std::unordered_map<BasicBlock*, BasicBlock*> bbMapping;
                         std::vector<std::pair<AllocL *, Store*>> argTable;
                         AllocL* returnAlloc = nullptr;
+                        Load * loadRet = nullptr;
                         BasicBlock* firstHalf;
                         BasicBlock* secondHalf;
                         //cpy phase
@@ -239,16 +240,16 @@ namespace tvlm{
                         phaseInlining.emplace_back(inliningInstrTransformation);
 //--------------------------------------------------------------------------------------------------------------------
                         FncInlineType
-                        afterInlineInstructionTransforms =[&instructionSwapping, &inlinedCall, returnAlloc ](std::unique_ptr<Instruction> & ins){
+                        afterInlineInstructionTransforms =[&instructionSwapping, &inlinedCall, returnAlloc, &loadRet](std::unique_ptr<Instruction> & ins){
                             if(ins.get() == inlinedCall && inlinedCall->resultType() != ResultType::Void){
-                                Instruction * tmp = new Load(returnAlloc, inlinedCall->resultType(), ins->ast());
+                                 loadRet = new Load(returnAlloc, inlinedCall->resultType(), ins->ast());
                                 for( auto us : inlinedCall->usages()){
 //                                    auto parentBB = us->getParentBB();
-                                    us->replaceWith(inlinedCall, tmp);
+                                    us->replaceWith(inlinedCall, loadRet);
                                 }
-                                tmp->setName("loadRet");
-                                instructionSwapping.emplace (ins.get(), tmp );
-                                return std::unique_ptr<Instruction>(tmp);
+                                loadRet->setName("loadRet");
+                                instructionSwapping.emplace (ins.get(), loadRet );
+                                return std::unique_ptr<Instruction>(loadRet);
                             }else if(ins.get() == inlinedCall && inlinedCall->resultType() == ResultType::Void){
                                 Instruction * tmp = new NOPInstruction( ins->ast());
 
@@ -325,8 +326,8 @@ namespace tvlm{
 //                                             phaseInlining
 //                            );
                         }
-                        //copy 2nd half;
 
+                        //copy 2nd half;
                         bbWithCall->copyFrom(new_BBs[i], instructionSwapping, ins, phase2ndHalf);
 //                        copyInstructions(ins,
 //                                         getpureBBsInstructions(bbWithCall).end(),
@@ -334,6 +335,10 @@ namespace tvlm{
 //                                         instructionSwapping,
 //                                         phase2ndHalf
 //                        );
+//                        //reconnect usage of inlined call
+                        for(auto & usage : inlinedCall->usages()){
+                            usage->replaceWith(inlinedCall, loadRet);
+                        }
                         i++;
                         //rest of "main"fnc
                         for(size_t j = bbWithCallToInlineIndex +1 ; j < fncCallerbbs.size();i++ , j++){

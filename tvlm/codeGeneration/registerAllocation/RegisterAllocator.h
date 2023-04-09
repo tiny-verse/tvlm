@@ -21,6 +21,10 @@ namespace tvlm{
                 register_(VirtualRegisterPlaceholder(RegisterType::FLOAT, 0)),
                 ins_(ins){}
 
+        LocationEntry(const LocationEntry & other) = default;
+        LocationEntry( LocationEntry && other) = default;
+        LocationEntry& operator=(const  LocationEntry & other) = default;
+
 
         LocationEntry(const VirtualRegisterPlaceholder& reg, const Instruction * ins) : loc_(Location::Register),
                                                                                         num_(0), addr_(nullptr),
@@ -128,24 +132,44 @@ namespace tvlm{
 
         //Inner Helpers
         void updateStructures(const VirtualRegisterPlaceholder & regToAssign, const Instruction * ins);
-        bool spill(const VirtualRegister & reg, const Instruction * currentIns);
-        void spillAll(const Instruction * currentIns);
+        bool spill(const VirtualRegister & reg, Instruction * currentIns);
+        void spillAll( Instruction * currentIns);
+        void forgetAllRegs(Instruction * currentIns);
         void restore(const VirtualRegister & whereTo, const LocationEntry & from, const Instruction * currentIns);
         virtual void resetFreeRegs(const Instruction * except = nullptr);
 
 
-        virtual VirtualRegister getReg( Instruction * currentIns) = 0;
-        virtual VirtualRegister getFReg( Instruction * currentIns) = 0;
+        virtual VirtualRegister getReg( Instruction * ins, Instruction * currentIns) = 0;
+        virtual VirtualRegister getFReg( Instruction * ins, Instruction * currentIns) = 0;
 
-        virtual VirtualRegister getLastRegister(const Instruction * currentIns) = 0;
+        virtual VirtualRegister getLastRegister( Instruction * currentIns) = 0;
         virtual void releaseRegister(const VirtualRegister & reg) = 0;
         void unsubscribeRegister(const VirtualRegister & reg);
+        void allocAddrRegwritePos(const Instruction * ins){
+            if(auto allocl = dynamic_cast<const AllocL*>(ins)){
+//                res = regAssigner_->getReg(ins, currentIns);
+//                int64_t baseOffset = regAssigner_->getAllocOffset(ins);
+//                addF(LMBS tiny::t86::MOV(vR(res), tiny::t86::Bp()) LMBE, currentIns);
+                writingPos_++;
+//                addF(LMBS tiny::t86::SUB(vR(res), baseOffset) LMBE, currentIns);
+                writingPos_++;
+            }else if (auto allocg =dynamic_cast<const AllocG*>(ins)){
+//                res = regAssigner_->getReg(ins, currentIns);
+//                int64_t baseOffset = regAssigner_->getAllocOffset(ins);
+//                addF(LMBS tiny::t86::MOV(vR(res),baseOffset) LMBE, currentIns);
+                writingPos_++;
+            }else{
+//                return  regAssigner_->getReg(ins,currentIns);
+
+            }
+        }
 
        void updateJumpPatchPositions(const Instruction *ins);
         void updateCallPatchPositions(const Instruction *ins);
+        void setCallPatchPositions(const Instruction *ins);
 
-        virtual void callingConvCallerSave(const Instruction *ins);
-        void callingConvCalleeRestore(const Instruction *ins);
+        virtual void callingConvCallerSave( Instruction *ins);
+        void callingConvCalleeRestore( Instruction *ins);
 
         //Inner Interface
         void setupRegister( VirtualRegisterPlaceholder & reg, Instruction * ins, Instruction * currentIns);

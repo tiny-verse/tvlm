@@ -87,6 +87,16 @@ namespace tvlm{
             return  state.access(load->address());
         }else if (auto loadImm = dynamic_cast<LoadImm *>(expr)){
 
+            bool isFunction = false;
+            for (auto & f : program_->functions()) {
+                if(program_->getGlobalVariableAddress(f.first) == loadImm){
+                    isFunction = true;
+                    break;
+                }
+            }
+            if(isFunction){
+                return constPropLattice_->top(); // ignore function address cannot be constant
+            }
             if(loadImm->resultType() == ResultType::Double){
                  return constPropLattice_->num(Constant(loadImm->valueFloat()));
             }else{
@@ -201,8 +211,12 @@ namespace tvlm{
                     newState.insert(std::make_pair(instr, constPropLattice_->bot()));
                     return newState;
 
-                } else if (dynamic_cast<AllocG *>(stmtNode->il())) {
+                } else if (auto allocG = dynamic_cast<AllocG *>(stmtNode->il())) {
                     auto newState = state;
+                    auto it = declaredVars_.find(allocG);
+                    if(it == declaredVars_.end()){
+                        return newState;
+                    }
                     newState.insert(std::make_pair(instr, constPropLattice_->bot()));
                     return newState;
 
@@ -214,9 +228,10 @@ namespace tvlm{
                 else if (auto store = dynamic_cast<Store *>(stmtNode->il())) {
                     auto newState = state;
 
-                    if(state.find(store->address()) == state.end()){
-                        return newState;
-                    }
+//                    if(state.find(store->address()) != state.end()){
+//                        return newState;
+//                    }// do not rewrite the value .. we already have last store saved -- going backwards
+
                     Const * newValue = eval( store->value(),state);
                     Const * realValue = constPropLattice_->lub(newValue, state.access(store->address()));
                     newState.update(std::make_pair(store->address(), realValue));

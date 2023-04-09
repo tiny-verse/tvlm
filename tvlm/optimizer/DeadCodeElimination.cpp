@@ -5,10 +5,20 @@ namespace tvlm{
 
     void DeadCodeElimination::run(Pass::IL &il) {
 
-
 //        for (int i = 0; i < 1000; i++) {
-            for(auto & fnc : il.functions()){
-                for( auto & bb : getpureFunctionBBs(fnc.second.get())){
+            for(auto fncIt = il.functions().begin();fncIt != il.functions().end();){
+                auto * fnc =  fncIt->second.get();
+                bool removed = false;
+                if(this->unusedFunction(il, fncIt->first)){
+                    fncIt = il.removeFunction(fnc);
+                    removed = true; continue;
+                }else{
+                    fncIt++;
+                }
+
+
+
+                for( auto & bb : getpureFunctionBBs(fnc)){
                     optimizeBasicBlock(bb.get());
                 }
             }
@@ -49,5 +59,39 @@ namespace tvlm{
 
     void DeadCodeElimination::optimizeBasicBlock(BasicBlock *bb) {
         optimizeDeadCodeElimination(bb);
+    }
+
+    bool DeadCodeElimination::unusedFunction(Pass::IL &program, const Symbol &symbol) {
+        if(symbol.name() == "main"){
+            return false; // cannot remove main fnc
+        }
+
+
+        std::map<Symbol, std::set<Instruction::CallInstruction*>> callFrequency;
+        bool programContainsIndirectCall = false;
+
+        for ( auto * gIns : getBBsInstructions(getProgramsGlobals(&program))){
+            if(dynamic_cast<Call*>(gIns)){
+                return false; // indirect call present
+            }else if (auto call = dynamic_cast<CallStatic*>(gIns)){
+                callFrequency[ call->f()->name()].emplace( call);
+            }
+        }
+        for (auto fnc : getProgramsFunctions(&program)) {
+            for(auto bb : getFunctionBBs(fnc.second)){
+                for(auto ins : getBBsInstructions(bb)){
+                    if(dynamic_cast<Call*>(ins)){
+                        return false; // indirect call present
+                    }else if (auto call = dynamic_cast<CallStatic*>(ins)){
+                        callFrequency[ call->f()->name()].emplace( call);
+                    }
+                }
+            }
+        }
+
+        if(callFrequency[symbol].empty()){
+            return true;
+        }
+        return false;
     }
 }
