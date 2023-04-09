@@ -55,9 +55,9 @@ namespace tvlm{
     void Optimizer::initialize_passes() {
         if(inlining){
             passes_.push_back(std::make_unique<FunctionInliner>());
-            if(deadCodeElimination){
-                passes_.push_back(std::make_unique<DeadCodeElimination>());
-            }
+//            if(deadCodeElimination){
+//                passes_.push_back(std::make_unique<DeadCodeElimination>());
+//            }
         }
         if(constant){
             passes_.push_back(std::make_unique<ConstantPropagation>());

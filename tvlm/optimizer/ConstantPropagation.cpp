@@ -236,10 +236,43 @@ namespace tvlm{
             for( auto & bb : bbs){
                 optimizeConstantPropagationLatePass(bb.get(), analysis);
             }
+            for( auto & bb : bbs){
+                optimizeConstantPropagationLateLatePass(bb.get(), analysis);
+            }
         }
     }
 
     void ConstantPropagation::optimizeConstantPropagationLatePass(BasicBlock * bb,  CPNodeState & analysis) {
+        auto & insns = getpureBBsInstructions(bb);
+
+        for (size_t idx = 0, len = insns.size();  idx < len; idx++) {
+            auto &first = insns[idx];
+            if (auto store = dynamic_cast<Store *>(first.get())){
+                auto it = analysis.find((ILInstruction*)store->address());
+                if(it == analysis.end()){
+//                    std::cerr << "cannot find in analysis, dead code?";
+                }else{
+                    auto tmp = store->address()->usages();
+                    for (auto it = tmp.begin(); it != tmp.end();) {
+                        auto anotherStore = dynamic_cast<Store*>(*it);
+                        if( (dynamic_cast<AllocG*>(*it) || dynamic_cast<AllocL*>(*it)) &&
+                            (*it == store || (anotherStore && anotherStore->address() == store->address() /*do not remove while taken pointer from*/) )){
+                            //
+                            it = tmp.erase(it);
+                        }else{it++;}
+                    }
+
+
+                    if ( tmp.empty() && dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+                        //remove Store while obsolete
+                        bb->removeInstr(store);
+                    }
+                }
+            }
+
+        }
+    }
+    void ConstantPropagation::optimizeConstantPropagationLateLatePass(BasicBlock * bb,  CPNodeState & analysis) {
         auto & insns = getpureBBsInstructions(bb);
 
         for (size_t idx = 0, len = insns.size();  idx < len; idx++) {
@@ -249,7 +282,8 @@ namespace tvlm{
                 if(it == analysis.end()){
 //                    std::cerr << "cannot find in analysis, dead code?";
                 }else{
-                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+
+                    if (allocL->usages().empty() &&  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
                         //remove Store while obsolete
                         bb->removeInstr(allocL);
                     }
@@ -260,7 +294,7 @@ namespace tvlm{
                 if(it == analysis.end()){
 //                    std::cerr << "cannot find in analysis, dead code?";
                 }else{
-                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
+                    if (allocG->usages().empty() &&  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
                         //remove Store while obsolete
                         bb->removeInstr(allocG);
                     }
@@ -410,17 +444,6 @@ namespace tvlm{
                     }
                 }
 
-            }
-            else if (auto store = dynamic_cast<Store *>(first.get())){
-                auto it = analysis.find((ILInstruction*)store->address());
-                if(it == analysis.end()){
-//                    std::cerr << "cannot find in analysis, dead code?";
-                }else{
-                    if (  dynamic_cast<FlatVal<Constant>*>(it->second)) {//found in analysis as constant
-                        //remove Store while obsolete
-                        bb->removeInstr(store);
-                    }
-                }
             }
         }
 

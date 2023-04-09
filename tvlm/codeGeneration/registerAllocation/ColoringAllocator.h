@@ -66,7 +66,7 @@ namespace tvlm{
                 getLRBundles();
 
                 //ColorPicking
-                !generateLiveRanges();
+                generateLiveRanges();
 
             //Next convert result of colorPicking to update VirtualRegisterPlaceholders
 
@@ -118,10 +118,16 @@ namespace tvlm{
         bool setColors();
 
         VirtualRegister getRegToSpill() override;
-        VirtualRegister getReg( Instruction *ins) override;
-        VirtualRegister getFReg( Instruction *ins) override;
-        void callingConvCallerSave(const Instruction *currIns) override;
+        VirtualRegister getReg( Instruction *ins, Instruction * currentIns) override;
+        VirtualRegister getFReg( Instruction *ins, Instruction * currentIns) override;
+        void callingConvCallerSave( Instruction *currIns) override;
         void resetFreeRegs(const Instruction * except = nullptr) override;
+        VirtualRegister getLastRegister( Instruction *currentIns) override;
+
+        void visit(BasicBlock * bb) override;
+        void visit(Jump * jump) override;
+        void visit(CondJump * condJump) override;
+        void visit(Return * ret) override;
 
     };
 }

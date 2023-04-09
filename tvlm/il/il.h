@@ -274,7 +274,7 @@ namespace tvlm{
         virtual void registerUsage(Instruction * usage){
             used_.push_back(usage);
         };
-        virtual void removeUsage(Instruction * usage){
+        virtual void removeUsage(const Instruction * usage){
             auto it = std::find(used_.begin(), used_.end(), usage);
             if(it != used_.end()){
                 used_.erase(it);
@@ -874,7 +874,7 @@ namespace tvlm{
             auto it = swapInstr.find(address_);
             auto * cpy = dynamic_cast<LoadAddress*>(clone());
             if(it != swapInstr.end()){
-                cpy->address_->removeUsage(cpy);
+//                cpy->address_->removeUsage(this);
                 cpy->address_ = it->second;
                 cpy->address_->registerUsage(cpy);
 
@@ -948,13 +948,13 @@ namespace tvlm{
             auto itvalue = swapInstr.find(value_);
             auto * cpy = dynamic_cast<StoreAddress*>(clone());
             if(itaddr != swapInstr.end()){
-                cpy->address_->removeUsage(cpy);
+//                cpy->address_->removeUsage(this);
                 cpy->address_ = itaddr->second;
                 cpy->address_->registerUsage(cpy);
 
             }
             if(itvalue != swapInstr.end()){
-                cpy->value_->removeUsage(cpy);
+//                cpy->value_->removeUsage(this);
                 cpy->value_ = itvalue->second;
                 cpy->value_->registerUsage(cpy);
 
@@ -1067,7 +1067,7 @@ namespace tvlm{
             auto itvalue = swapInstr.find(returnValue_);
             auto * cpy = dynamic_cast<Returnator*>(clone());
             if(itvalue != swapInstr.end()){
-                cpy->returnValue_->removeUsage(cpy);
+//                cpy->returnValue_->removeUsage(this);
                 cpy->returnValue_ = itvalue->second;
                 cpy->returnValue_->registerUsage(cpy);
 
@@ -1168,7 +1168,7 @@ namespace tvlm{
             auto itvalue = swapInstr.find(cond_);
             auto * cpy = dynamic_cast<Terminator2*>(clone());
             if(itvalue != swapInstr.end()){
-                cpy->cond_->removeUsage(cpy);
+//                cpy->cond_->removeUsage(this);
                 cpy->cond_ = itvalue->second;
                 cpy->cond_->registerUsage(cpy);
 
@@ -1230,7 +1230,7 @@ namespace tvlm{
             auto itvalue = swapInstr.find(src_);
             auto * cpy = dynamic_cast<SrcInstruction*>(clone());
             if(itvalue != swapInstr.end()){
-                cpy->src_->removeUsage(cpy);
+//                cpy->src_->removeUsage(this);
                 cpy->src_ = itvalue->second;
                 cpy->src_->registerUsage(cpy);
 
@@ -1334,7 +1334,7 @@ namespace tvlm{
             for (auto it = cpy->contents_.begin();it != cpy->contents_.end();it++ ) {
                 auto find = swapInstr.find(it->second);
                 if(find != swapInstr.end()){
-                    it->second->removeUsage(cpy);
+//                    it->second->removeUsage(this);
                     it->second = find->second;
                     it->second->registerUsage(cpy);
 
@@ -1407,13 +1407,13 @@ namespace tvlm{
           auto itdst = swapInstr.find(dstAddr_);
           auto * cpy = dynamic_cast<StructAssignInstruction*>(clone());
           if(itsrc != swapInstr.end()){
-              cpy->srcVal_->removeUsage(cpy);
+//              cpy->srcVal_->removeUsage(this);
               cpy->srcVal_ = itsrc->second;
               cpy->srcVal_->registerUsage(cpy);
 
           }
           if(itdst != swapInstr.end()){
-              cpy->dstAddr_->removeUsage(cpy);
+//              cpy->dstAddr_->removeUsage(this);
               cpy->dstAddr_ = itdst->second;
               cpy->dstAddr_->registerUsage(cpy);
 
@@ -1503,13 +1503,13 @@ namespace tvlm{
             auto itoffset = swapInstr.find(offset_);
             auto * cpy = dynamic_cast<ElemOffsetInstruction*>(clone());
             if(itbase != swapInstr.end()){
-                cpy->base_->removeUsage(cpy);
+//                cpy->base_->removeUsage(this);
                 cpy->base_ = itbase->second;
                 cpy->base_->registerUsage(cpy);
 
             }
             if(itoffset != swapInstr.end()){
-                cpy->offset_->removeUsage(cpy);
+//                cpy->offset_->removeUsage(this);
                 cpy->offset_ = itoffset->second;
                 cpy->offset_->registerUsage(cpy);
 
@@ -1577,17 +1577,17 @@ namespace tvlm{
             auto itindex = swapInstr.find(index_);
             auto * cpy = dynamic_cast<ElemIndexInstruction*>(clone());
             if(itbase != swapInstr.end()){
-                cpy->base_->removeUsage(cpy);
+//                cpy->base_->removeUsage(this);
                 cpy->base_ = itbase->second;
                 cpy->base_->registerUsage(cpy);
             }
             if(itoffset != swapInstr.end()){
-                cpy->offset_->removeUsage(cpy);
+//                cpy->offset_->removeUsage(this);
                 cpy->offset_ = itoffset->second;
                 cpy->offset_->registerUsage(cpy);
             }
             if(itindex != swapInstr.end()){
-                cpy->index_->removeUsage(cpy);
+//                cpy->index_->removeUsage(this);
                 cpy->index_ = itindex->second;
                 cpy->index_->registerUsage(cpy);
             }
@@ -1674,7 +1674,7 @@ namespace tvlm{
             for (size_t i = 0; i <  args_.size(); i++) {
                 auto it = swapInstr.find(args_[i].first);
                 if(it != swapInstr.end()){
-                    cpy->args_[i].first->removeUsage(cpy);
+//                    cpy->args_[i].first->removeUsage(this);
                     cpy->args_[i] = std::make_pair(it->second, args_[i].second);
                     cpy->args_[i].first->registerUsage(cpy);
 
@@ -1740,7 +1740,7 @@ namespace tvlm{
             for (size_t i = 0; i <  args_.size(); i++) {
                 swapInstr.find(args_[i].first);
                 if(it != swapInstr.end()){
-                    cpy->args_[i].first->removeUsage(cpy);
+//                    cpy->args_[i].first->removeUsage(this);
                     cpy->args_[i] = std::make_pair(it->second, args_[i].second);
                     cpy->args_[i].first->registerUsage(cpy);
                 }
@@ -1895,7 +1895,11 @@ namespace tvlm{
         { v->visit(this); } \
         Instruction * clone() const override {                          \
             NAME * tmp  = new NAME(*this);                              \
-            tmp->used_.clear();                                         \
+            tmp->used_.clear();                                                   \
+            for(auto * ch : tmp->children()){                                          \
+                ch->registerUsage(tmp);                                           \
+            }\
+            /*problem no into to values*/ \
             return tmp;                                                 \
         }                                                               \
 };

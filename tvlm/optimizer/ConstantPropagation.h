@@ -11,6 +11,7 @@ namespace tvlm{
         void optimizeBasicBlock(BasicBlock* bb,  CPNodeState &);
 
         void optimizeConstantPropagationLatePass(BasicBlock* bb,  CPNodeState &);
+        void optimizeConstantPropagationLateLatePass(BasicBlock* bb,  CPNodeState &);
 
         void optimizeStrengthReduction(BasicBlock *bb);
 
